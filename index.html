@@ -139,6 +139,57 @@ body.dark .analytics-lollipop-line{stroke:#607d76}
 .log-entry-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.log-entry-grid .log-notes-field{grid-column:1/-1}.log-form-actions{margin-top:15px}.log-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:4px 0 15px}.log-summary-item{padding:13px 15px;border:1px solid var(--line);border-radius:10px;background:var(--bg);min-width:0}.log-summary-item span{display:block;font-size:10px;color:var(--muted);font-weight:650}.log-summary-item strong{display:block;font-size:23px;letter-spacing:-.03em;margin-top:4px;font-variant-numeric:tabular-nums}.log-history-table{width:100%;border-collapse:collapse;font-size:12px;text-align:left}.log-history-table th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;background:var(--bg)}.log-history-table th,.log-history-table td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:middle}.log-history-table tr:last-child td{border-bottom:0}.log-history-table td:first-child{font-weight:700;white-space:nowrap}.log-history-table td:last-child{white-space:nowrap}.log-history-mobile{display:none}.log-history-card{padding:13px;border:1px solid var(--line);border-radius:11px;background:var(--surface)}.log-history-card+.log-history-card{margin-top:9px}.log-history-card-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}.log-history-date{font-size:12px;font-weight:750}.log-history-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.log-history-stat{padding:8px;border-radius:8px;background:var(--bg)}.log-history-stat span{display:block;color:var(--muted);font-size:9px}.log-history-stat strong{display:block;font-size:14px;margin-top:2px}.log-history-note{font-size:11px;color:var(--muted);margin-top:9px;line-height:1.45;overflow-wrap:anywhere}.log-history-card .btn{padding:7px 10px;font-size:11px}body.dark .log-summary-item,body.dark .log-history-stat{background:#202838}
 @media(max-width:760px){.settings-intro{align-items:flex-start}.settings-intro h2{font-size:19px}.settings-section{padding:15px;border-radius:12px}.settings-section .settings-grid{grid-template-columns:1fr}.settings-section .form-actions .btn{width:100%}.settings-option-row{align-items:flex-start}.log-entry-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.log-entry-grid .log-notes-field{grid-column:1/-1}.log-form-actions{display:grid;grid-template-columns:1fr 1fr}.log-form-actions .btn{width:100%}.log-summary-grid{gap:7px}.log-summary-item{padding:10px}.log-summary-item strong{font-size:19px}.log-history-table-wrap{display:none}.log-history-mobile{display:block}}
 @media(max-width:420px){.log-entry-grid{grid-template-columns:1fr 1fr}.log-summary-item span{font-size:9px}.log-history-stats{gap:5px}.log-history-stat{padding:7px 5px}}
+
+/* Uiverse theme switch */
+.theme-checkbox {
+  --toggle-size: 16px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 48px;
+  min-width: 48px;
+  height: 32px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: -webkit-gradient(linear,left top,right top,color-stop(50%,#efefef),color-stop(50%,#2a2a2a)) no-repeat;
+  background: -o-linear-gradient(left,#efefef 50%,#2a2a2a 50%) no-repeat;
+  background: linear-gradient(to right,#efefef 50%,#2a2a2a 50%) no-repeat;
+  background-size: 205%;
+  background-position: 0;
+  -webkit-transition: .4s;
+  -o-transition: .4s;
+  transition: .4s;
+  border-radius: 99em;
+  position: relative;
+  cursor: pointer;
+  font-size: var(--toggle-size);
+  flex: none;
+}
+.theme-checkbox::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: -webkit-gradient(linear,left top,right top,color-stop(50%,#efefef),color-stop(50%,#2a2a2a)) no-repeat;
+  background: -o-linear-gradient(left,#efefef 50%,#2a2a2a 50%) no-repeat;
+  background: linear-gradient(to right,#efefef 50%,#2a2a2a 50%) no-repeat;
+  background-size: 205%;
+  background-position: 100%;
+  border-radius: 50%;
+  -webkit-transition: .4s;
+  -o-transition: .4s;
+  transition: .4s;
+}
+.theme-checkbox:checked::before {
+  left: 24px;
+  background-position: 0;
+}
+.theme-checkbox:checked { background-position: 100%; }
+.theme-checkbox:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+
 </style>
 </head>
 <body>
@@ -170,7 +221,7 @@ body.dark .analytics-lollipop-line{stroke:#607d76}
  </article>
 </section>
 <section class="settings-page" data-page="settings">
- <div class="settings-intro"><div><div class="eyebrow">PERSONAL WORKSPACE</div><h2>Settings & customization</h2><p class="subtitle">Manage your study targets, appearance and personal study tools.</p></div><button class="btn" id="themeToggle">Switch theme</button></div>
+ <div class="settings-intro"><div><div class="eyebrow">PERSONAL WORKSPACE</div><h2>Settings & customization</h2><p class="subtitle">Manage your study targets, appearance and personal study tools.</p></div><input class="theme-checkbox" type="checkbox" id="themeToggle" aria-label="Toggle color theme"></div>
  <section class="settings-section"><div class="settings-section-head"><span class="settings-icon">◐</span><div><h3>Appearance</h3><p>Choose how Tracker looks on this device.</p></div></div><div class="settings-option-row"><div><strong>Color theme</strong><small>PC and phone themes can be customized independently.</small></div><span class="settings-live-note">Device-specific</span></div></section>
  <section class="settings-section"><div class="settings-section-head"><span class="settings-icon">◎</span><div><h3>Study goals</h3><p>Set the target date and your daily study commitment.</p></div></div><div class="settings-grid"><div class="field"><label for="targetDate">Prelims target date</label><input type="date" id="targetDate" value="2027-05-23"></div><div class="field"><label for="studyGoal">Daily study goal (hours)</label><input type="number" id="studyGoal" min="1" max="16" step="0.5" value="4"></div></div></section>
  <section class="settings-section"><div class="settings-section-head"><span class="settings-icon">＋</span><div><h3>Custom syllabus</h3><p>Add your own subject and topic to the syllabus tracker.</p></div></div><div class="settings-grid"><div class="field"><label for="newSubject">Subject name</label><input id="newSubject" placeholder="e.g. CSAT"></div><div class="field"><label for="newTopic">Topic name</label><input id="newTopic" placeholder="e.g. Reading comprehension"></div></div><div class="form-actions"><button class="btn primary" id="addCustomTopic">Add subject / topic</button></div></section>
@@ -586,7 +637,7 @@ function renderCharts(){
 }
 function setWorkspaceView(view){const names={overview:"Your daily preparation at a glance.",syllabus:"Track 256 PYQ-focused topics: Top 50 priority plus 206 curated micro-topics.",logs:"Record focused hours, MCQs and daily study notes.",plan:"Follow your weekly targets and full preparation roadmap.",settings:"Personalize your target date, study hours and workspace.",revision:"Revisit every topic you have already completed.",charts:"Visualize your syllabus, revision, study plan and study-time progress."};document.querySelectorAll("[data-page]").forEach(card=>{card.hidden=card.dataset.page!==view});document.querySelectorAll(".nav-item").forEach(button=>{const active=button.dataset.view===view;button.classList.toggle("active",active);button.setAttribute("aria-current",active?"page":"false")});$("pageHint").textContent=names[view]||names.overview}
 function activeDevice(){return window.matchMedia("(max-width: 760px)").matches?"mobile":"desktop"}
-function applyDeviceTheme(){state.settings=state.settings||{};state.settings.deviceThemes=state.settings.deviceThemes||{};const device=activeDevice();const theme=state.settings.deviceThemes[device]||(state.settings.theme||"light");document.body.classList.toggle("dark",theme==="dark");$("themeToggle").textContent=theme==="dark"?"Use light theme on this device":"Use dark theme on this device"}
+function applyDeviceTheme(){state.settings=state.settings||{};state.settings.deviceThemes=state.settings.deviceThemes||{};const device=activeDevice();const theme=state.settings.deviceThemes[device]||(state.settings.theme||"light");document.body.classList.toggle("dark",theme==="dark");$("themeToggle").checked=theme==="dark"}
 function renderAll(){syncSubjectFilter();applyDeviceTheme();renderStats();renderDaily();renderOverviewSchedule();renderSubjectOverview();renderTopics();renderRevision();renderCharts();renderWeekly();renderRoadmap();renderLogs();setWorkspaceView(window.trackerView||"overview")}
 async function showPhoneAccess(){
  const panel=$("phoneAccessPanel"),button=$("phoneAccessBtn");if(!panel)return;
@@ -610,7 +661,7 @@ $("resetBtn").addEventListener("click",()=>{if(confirm("Reset all topic ticks, c
 // Personal customization
 $("targetDate").addEventListener("change",()=>{state.settings=state.settings||{};state.settings.targetDate=$("targetDate").value||"2027-05-23";persist();renderStats()});
 $("studyGoal").addEventListener("change",()=>{state.settings=state.settings||{};state.settings.studyGoal=Math.max(1,Math.min(16,Number($("studyGoal").value)||4));$("studyGoal").value=state.settings.studyGoal;persist()});
-$("themeToggle").addEventListener("click",()=>{state.settings=state.settings||{};state.settings.deviceThemes=state.settings.deviceThemes||{};const device=activeDevice(),current=state.settings.deviceThemes[device]||(state.settings.theme||"light");state.settings.deviceThemes[device]=current==="dark"?"light":"dark";persist();renderAll()});
+$("themeToggle").addEventListener("change",()=>{state.settings=state.settings||{};state.settings.deviceThemes=state.settings.deviceThemes||{};const device=activeDevice();state.settings.deviceThemes[device]=$("themeToggle").checked?"dark":"light";persist();renderAll()});
 window.matchMedia("(max-width: 760px)").addEventListener("change",applyDeviceTheme);
 $("addCustomTopic").addEventListener("click",()=>{const subject=$("newSubject").value.trim(),topic=$("newTopic").value.trim();if(!subject||!topic){notify("Enter both a subject and topic.");return}state.customSubjects=state.customSubjects||[];let group=state.customSubjects.find(x=>x.name.toLowerCase()===subject.toLowerCase());if(!group){group={name:subject,topics:[]};state.customSubjects.push(group)}if(allSubjects().some(x=>x.name!==group.name&&x.name.toLowerCase()===subject.toLowerCase())){notify("That subject already exists in the base syllabus.");return}if(group.topics.some(x=>x[0].toLowerCase()===topic.toLowerCase())){notify("This topic already exists.");return}group.topics.push([topic,0]);persist();$("newSubject").value="";$("newTopic").value="";const option=Array.from($("subjectFilter").options).find(x=>x.value===subject);if(!option){const opt=document.createElement("option");opt.value=subject;opt.textContent=subject;$("subjectFilter").append(opt)}renderAll();notify("Your topic was added.")});
 $("addDailyTask").addEventListener("click",()=>{const name=$("newTaskName").value.trim(),time=$("newTaskTime").value.trim();if(!name){notify("Enter a task name.");return}state.customDaily=state.customDaily||[];state.customDaily.push(["custom-"+Date.now(),name,time,"Personal task"]);persist();$("newTaskName").value="";$("newTaskTime").value="";renderDaily();notify("Daily task added.")});
