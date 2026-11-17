@@ -209,10 +209,10 @@ body.dark .checkbox-wrapper-12 input[type="checkbox"]{border-color:#788397}
 @media(prefers-reduced-motion:reduce){.checkbox-wrapper-12 .cbx input:checked+label{animation:none;background:#866efb}.checkbox-wrapper-12 .cbx svg path{transition:none}}
 
 
-/* Slightly larger workspace navigation */
-.cir-tabs{gap:5px;padding:7px 8px}
-.cir-tabs__t{height:42px;padding:0 22px;font-size:15px;font-weight:550}
-@media(max-width:760px){.cir-tabs{gap:4px;padding:6px}.cir-tabs__t{height:40px;padding:0 16px;font-size:14px}}
+/* Wider workspace navigation */
+.cir-tabs{display:flex;width:100%;max-width:100%;gap:5px;padding:7px 8px}
+.cir-tabs__t{flex:1 1 0;min-width:0;height:42px;padding:0 14px;font-size:15px;font-weight:550}
+@media(max-width:760px){.cir-tabs{width:100%;gap:4px;padding:6px}.cir-tabs__t{flex:0 0 auto;height:40px;padding:0 16px;font-size:14px}}
 
 </style>
 </head>
