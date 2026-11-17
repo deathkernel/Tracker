@@ -260,9 +260,9 @@ function renderOverviewSchedule(){
  const row=document.createElement("tr");row.className="current-row";
  [date.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}),date.toLocaleDateString("en-IN",{weekday:"long"}),week.subject,topic].forEach(value=>{const cell=document.createElement("td");cell.textContent=value;row.append(cell)});
  const doneCell=document.createElement("td"),check=document.createElement("input");
- check.type="checkbox";check.checked=!!(state.studyPlanDone&&state.studyPlanDone[today]);
+ check.type="checkbox";check.checked=!!(state.studyPlanDone&&state.studyPlanDone[today]);check.disabled=check.checked;
  check.setAttribute("aria-label","Mark today's study topic complete");
- check.addEventListener("change",()=>{state.studyPlanDone=state.studyPlanDone||{};state.studyPlanDone[today]=check.checked;persist();});
+ check.addEventListener("change",()=>{if(!check.checked)return;state.studyPlanDone=state.studyPlanDone||{};state.studyPlanDone[today]=true;check.checked=true;check.disabled=true;persist();});
  doneCell.append(check);row.append(doneCell);
  const body=document.createElement("tbody");body.append(row);table.append(body);
  const wrap=document.createElement("div");wrap.className="data-table-wrap overview-schedule-wrap";wrap.append(table);host.append(wrap);
@@ -281,8 +281,8 @@ function renderRoadmap(){
   const dayCell=document.createElement("td");dayCell.textContent=date.toLocaleDateString("en-IN",{weekday:"long"});
   const subjectCell=document.createElement("td");subjectCell.textContent=week.subject;
   const topicCell=document.createElement("td");topicCell.textContent=topic;topicCell.className="single-daily-topic";
-  const doneCell=document.createElement("td");const check=document.createElement("input");check.type="checkbox";check.checked=!!(state.studyPlanDone&&state.studyPlanDone[dateKey]);check.setAttribute("aria-label","Mark "+dateKey+" study task complete");
-  check.addEventListener("change",()=>{state.studyPlanDone=state.studyPlanDone||{};state.studyPlanDone[dateKey]=check.checked;persist();});
+  const doneCell=document.createElement("td");const check=document.createElement("input");check.type="checkbox";check.checked=!!(state.studyPlanDone&&state.studyPlanDone[dateKey]);check.disabled=check.checked;check.setAttribute("aria-label","Mark "+dateKey+" study task complete");
+  check.addEventListener("change",()=>{if(!check.checked)return;state.studyPlanDone=state.studyPlanDone||{};state.studyPlanDone[dateKey]=true;check.checked=true;check.disabled=true;persist();});
   doneCell.append(check);row.append(dateCell,dayCell,subjectCell,topicCell,doneCell);body.append(row);
  }));
  table.append(body);const wrap=document.createElement("div");wrap.className="data-table-wrap";wrap.append(table);host.append(wrap);
