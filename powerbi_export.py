@@ -1,5 +1,5 @@
 from __future__ import annotations
-import csv, json, sqlite3
+import csv, json, re, sqlite3
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -46,7 +46,13 @@ def main():
     html = HTML_PATH.read_text(encoding="utf-8")
     subjects = extract_array(html, "const SUBJECTS=")
     daily = extract_array(html, "const DAILY=")
-    plan = extract_array(html, "const DAILY_STUDY_PLAN=")
+    plan = []
+    plan_start = html.find("const DAILY_STUDY_PLAN=")
+    plan_end = html.find("];", plan_start) + 1
+    plan_source = html[plan_start:plan_end]
+    for match in re.finditer(r'\{subject:"([^"]+)",days:\[(.*?)\]\}', plan_source, re.S):
+        topics = json.loads("[" + match.group(2) + "]")
+        plan.append({"subject": match.group(1), "days": topics})
     topic_rows, progress_rows = [], []
     for subject in subjects + state.get("customSubjects", []):
         for name, pyq, priority in subject["topics"]:
