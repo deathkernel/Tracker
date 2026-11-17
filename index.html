@@ -278,7 +278,7 @@ function markStudyDayComplete(dateKey,subject,topic){
   }
  }
  persist();
- renderStats();renderSubjectOverview();renderTopics();
+ renderStats();renderSubjectOverview();renderTopics();renderRoadmap();renderOverviewSchedule();
 }
 function renderOverviewSchedule(){
  const host=$("overviewDailySchedule");if(!host)return;host.innerHTML="";
