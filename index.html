@@ -543,7 +543,7 @@ function renderOverviewSchedule(){
 function renderRoadmap(){
  const host=$("roadmap");host.innerHTML="";
  const table=document.createElement("table");table.className="data-table daily-plan-table";
- table.innerHTML="<thead><tr><th>Date</th><th>Day</th><th>Subject</th><th>One topic for today</th><th>Status</th><th>Done</th></tr></thead>";
+ table.innerHTML="<thead><tr><th>Date</th><th>Day</th><th>Subject</th><th>One topic for today</th><th>Notion Notes</th><th>Status</th><th>Done</th></tr></thead>";
  const body=document.createElement("tbody");
  const start=new Date(2026,10,17);const today=localDate();
  DAILY_STUDY_PLAN.forEach((week,weekIndex)=>week.days.forEach((topic,dayIndex)=>{
@@ -554,9 +554,13 @@ function renderRoadmap(){
   const dayCell=document.createElement("td");dayCell.textContent=date.toLocaleDateString("en-IN",{weekday:"long"});
   const subjectCell=document.createElement("td");subjectCell.textContent=week.subject;
   const topicCell=document.createElement("td");topicCell.textContent=topic;topicCell.className="single-daily-topic";
+  const notesCell=document.createElement("td");
+  if(week.subject==="Polity"&&topic.toLowerCase()==="constitutional development and historical background"){
+   const notesLink=document.createElement("a");notesLink.href="https://app.notion.com/p/41b49f5bc65481ebb2d0ed8421a2df63?pvs=204";notesLink.textContent="Open notes";notesLink.target="_blank";notesLink.rel="noopener noreferrer";notesCell.append(notesLink);
+  }else{notesCell.textContent="—";}
   const statusCell=document.createElement("td");const status=document.createElement("span");status.className="table-status"+(isDone?" done":"");status.textContent=isDone?"Completed":(dateKey<=today?"Missed": "Upcoming");statusCell.append(status);const doneCell=document.createElement("td");const check=document.createElement("input");check.type="checkbox";check.checked=isDone;check.disabled=check.checked;check.title=check.checked?"Completed — permanently locked":"Tick once to complete; cannot be unticked";check.setAttribute("aria-label","Mark "+dateKey+" study task complete; completion is permanent");
   check.addEventListener("change",()=>{if(!check.checked){check.checked=true;return;}check.disabled=true;check.title="Completed — permanently locked";markStudyDayComplete(dateKey,week.subject,topic);});
-  doneCell.append(check);row.append(dateCell,dayCell,subjectCell,topicCell,statusCell,doneCell);body.append(row);
+  doneCell.append(check);row.append(dateCell,dayCell,subjectCell,topicCell,notesCell,statusCell,doneCell);body.append(row);
  }));
  table.append(body);const wrap=document.createElement("div");wrap.className="data-table-wrap";wrap.append(table);host.append(wrap);
  const todayRow=Array.from(body.rows).find(row=>row.classList.contains("current-row"));
