@@ -31,7 +31,7 @@ goto end
 
 :error
 echo.
-echo Setup failed. Check that Python 3.10 or newer is installed and available in PATH.
+echo Setup failed. Read the error above before trying again.
 pause
 
 :end
