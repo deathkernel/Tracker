@@ -79,6 +79,15 @@ body.dark .stat:nth-child(5){border-top-color:#765e4b}
 .analytics-extra-card .chart-title{font-size:14px}
 .analytics-extra-card .analytics-line-graph{width:100%;height:auto;display:block;overflow:visible}
 @media(max-width:760px){.analytics-extra-grid{grid-template-columns:1fr}}
+
+.analytics-heat-active{fill:#27836d;stroke:#27836d}
+.analytics-heat-empty{fill:#e9edf1;stroke:#d8dee5}
+.analytics-treemap-cell{fill:#dcebe7;stroke:#fff;stroke-width:2}
+.analytics-lollipop-line{stroke:#b8c9c5;stroke-width:3;stroke-linecap:round}
+.analytics-area-fill{fill:rgba(39,131,109,.14);stroke:none}
+body.dark .analytics-heat-empty{fill:#343c45;stroke:#46515d}
+body.dark .analytics-treemap-cell{fill:#31564f;stroke:#202a33}
+body.dark .analytics-lollipop-line{stroke:#607d76}
 </style>
 </head>
 <body>
@@ -486,22 +495,49 @@ function renderCharts(){
   const logEntries=Object.entries(state.logs||{}).map(([key,value])=>({key,date:new Date(key+"T00:00:00"),hours:Number(value.hours)||0,mcqs:Number(value.mcqs)||0,csat:Number(value.csat)||0}));
   const sumRange=(start,end,field)=>logEntries.filter(item=>item.date>=start&&item.date<=end).reduce((sum,item)=>sum+item[field],0);
   const makeSeries=(count,step,field,format)=>{const result=[];for(let offset=count-1;offset>=0;offset--){const end=new Date(maxDate);end.setDate(end.getDate()-offset*step);const start=new Date(end);start.setDate(start.getDate()-step+1);result.push({label:format(end),value:sumRange(start,end,field)});}return result};
-  const renderTrend=(title,subtitle,series,unit)=>{const card=document.createElement("div");card.className="chart-card analytics-graph-card analytics-extra-card";const head=document.createElement("div");head.className="chart-heading-row";const heading=document.createElement("h3");heading.className="chart-title";heading.textContent=title;const sub=document.createElement("span");sub.className="analytics-subtitle";sub.textContent=subtitle;head.append(heading,sub);const chart=document.createElement("div");const width=760,height=220,pad=38,maxValue=Math.max(1,...series.map(item=>item.value));const points=series.map((item,index)=>({x:pad+(series.length===1?0:index*(width-pad*2)/(series.length-1)),y:height-pad-(item.value/maxValue)*(height-pad*2)}));const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");svg.setAttribute("viewBox","0 0 "+width+" "+height);svg.setAttribute("class","analytics-line-graph");svg.setAttribute("role","img");svg.setAttribute("aria-label",title);[0,.5,1].forEach(f=>{const y=pad+f*(height-pad*2),line=document.createElementNS("http://www.w3.org/2000/svg","line");line.setAttribute("x1",pad);line.setAttribute("x2",width-pad);line.setAttribute("y1",y);line.setAttribute("y2",y);line.setAttribute("class","analytics-gridline");svg.append(line)});const line=document.createElementNS("http://www.w3.org/2000/svg","polyline");line.setAttribute("points",points.map(point=>point.x+","+point.y).join(" "));line.setAttribute("fill","none");line.setAttribute("class","analytics-hours-line");svg.append(line);points.forEach((point,index)=>{const dot=document.createElementNS("http://www.w3.org/2000/svg","circle");dot.setAttribute("cx",point.x);dot.setAttribute("cy",point.y);dot.setAttribute("r","4.5");dot.setAttribute("class","analytics-hours-dot");svg.append(dot);const value=document.createElementNS("http://www.w3.org/2000/svg","text");value.setAttribute("x",point.x);value.setAttribute("y",point.y-10);value.setAttribute("text-anchor","middle");value.setAttribute("class","analytics-point-value");value.textContent=series[index].value+unit;svg.append(value);const label=document.createElementNS("http://www.w3.org/2000/svg","text");label.setAttribute("x",point.x);label.setAttribute("y",height-8);label.setAttribute("text-anchor","middle");label.setAttribute("class","analytics-axis-label");label.textContent=series[index].label;svg.append(label)});chart.append(svg);card.append(head,chart);extraHost.append(card)};
+  const renderTrend=(title,subtitle,series,unit,type="line")=>{
+   const card=document.createElement("div");card.className="chart-card analytics-graph-card analytics-extra-card";
+   const head=document.createElement("div");head.className="chart-heading-row";
+   const heading=document.createElement("h3");heading.className="chart-title";heading.textContent=title;
+   const sub=document.createElement("span");sub.className="analytics-subtitle";sub.textContent=subtitle;head.append(heading,sub);
+   const chart=document.createElement("div"),width=760,height=230,pad=38,maxValue=Math.max(1,...series.map(item=>item.value));
+   const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");svg.setAttribute("viewBox","0 0 "+width+" "+height);svg.setAttribute("class","analytics-line-graph");svg.setAttribute("role","img");svg.setAttribute("aria-label",title);
+   const addText=(x,y,value,anchor="middle",className="analytics-axis-label")=>{const t=document.createElementNS("http://www.w3.org/2000/svg","text");t.setAttribute("x",x);t.setAttribute("y",y);t.setAttribute("text-anchor",anchor);t.setAttribute("class",className);t.textContent=value;svg.append(t)};
+   if(type==="heatmap"){
+    const cols=7,gap=7,cell=25,startX=45,startY=20;
+    series.forEach((item,index)=>{const rect=document.createElementNS("http://www.w3.org/2000/svg","rect"),x=startX+(index%cols)*(cell+gap),y=startY+Math.floor(index/cols)*(cell+gap);rect.setAttribute("x",x);rect.setAttribute("y",y);rect.setAttribute("width",cell);rect.setAttribute("height",cell);rect.setAttribute("rx","5");rect.setAttribute("class",item.value?"analytics-heat-active":"analytics-heat-empty");rect.setAttribute("aria-label",item.label+": "+(item.value?"study activity":"no recorded activity"));svg.append(rect)});
+    for(let d=0;d<7;d++)addText(startX+d*(cell+gap)+cell/2,startY+4*(cell+gap)+cell+18,["S","M","T","W","T","F","S"][d]);
+   }else if(type==="treemap"){
+    const total=series.reduce((sum,item)=>sum+item.value,0),gap=5;let x=12;
+    series.forEach((item,index)=>{const fraction=total?item.value/total:1/series.length,w=Math.max(2,(width-24)*fraction-gap),rect=document.createElementNS("http://www.w3.org/2000/svg","rect");rect.setAttribute("x",x);rect.setAttribute("y",24);rect.setAttribute("width",w);rect.setAttribute("height",150);rect.setAttribute("rx","7");rect.setAttribute("class","analytics-treemap-cell");rect.setAttribute("aria-label",item.label+": "+item.value);svg.append(rect);if(w>55){addText(x+w/2,85,item.label);addText(x+w/2,108,String(item.value),"middle","analytics-point-value")}x+=w+gap});
+    addText(width/2,205,"Completed topics by priority");
+   }else if(type==="lollipop"){
+    const rowH=Math.min(32,180/Math.max(1,series.length)),labelW=130,plotW=width-labelW-55;
+    series.forEach((item,index)=>{const y=24+index*rowH,x=labelW+plotW*item.value/maxValue,line=document.createElementNS("http://www.w3.org/2000/svg","line");line.setAttribute("x1",labelW);line.setAttribute("x2",x);line.setAttribute("y1",y);line.setAttribute("y2",y);line.setAttribute("class","analytics-lollipop-line");svg.append(line);const dot=document.createElementNS("http://www.w3.org/2000/svg","circle");dot.setAttribute("cx",x);dot.setAttribute("cy",y);dot.setAttribute("r","5");dot.setAttribute("class","analytics-subject-dot");svg.append(dot);addText(labelW-10,y+4,item.label,"end","analytics-subject-label");addText(Math.min(width-20,x+12),y+4,String(item.value)+unit,"start","analytics-point-value")});
+   }else{
+    const points=series.map((item,index)=>({x:pad+(series.length===1?0:index*(width-pad*2)/(series.length-1)),y:height-pad-(item.value/maxValue)*(height-pad*2)}));
+    [0,.5,1].forEach(f=>{const y=pad+f*(height-pad*2),line=document.createElementNS("http://www.w3.org/2000/svg","line");line.setAttribute("x1",pad);line.setAttribute("x2",width-pad);line.setAttribute("y1",y);line.setAttribute("y2",y);line.setAttribute("class","analytics-gridline");svg.append(line)});
+    if(type==="area"){const area=document.createElementNS("http://www.w3.org/2000/svg","polygon");area.setAttribute("points",points[0].x+","+ (height-pad)+" "+points.map(point=>point.x+","+point.y).join(" ")+" "+points[points.length-1].x+","+(height-pad));area.setAttribute("class","analytics-area-fill");svg.append(area)}
+    const line=document.createElementNS("http://www.w3.org/2000/svg","polyline");line.setAttribute("points",points.map(point=>point.x+","+point.y).join(" "));line.setAttribute("fill","none");line.setAttribute("class","analytics-hours-line");svg.append(line);
+    points.forEach((point,index)=>{const dot=document.createElementNS("http://www.w3.org/2000/svg","circle");dot.setAttribute("cx",point.x);dot.setAttribute("cy",point.y);dot.setAttribute("r","4.5");dot.setAttribute("class","analytics-hours-dot");svg.append(dot);addText(point.x,point.y-10,series[index].value+unit,"middle","analytics-point-value");addText(point.x,height-8,series[index].label)});
+   }
+   chart.append(svg);card.append(head,chart);extraHost.append(card)
+  };
   const weeklyLabel=date=>date.toLocaleDateString("en-IN",{day:"2-digit",month:"short"});
   renderTrend("Weekly study hours","Last 8 weeks",makeSeries(8,7,"hours",weeklyLabel),"h");
-  renderTrend("Monthly study hours","Last 6 months",makeSeries(6,30,"hours",weeklyLabel),"h");
-  renderTrend("Daily MCQs solved","Last 7 days",days.map(day=>({label:day.label,value:Number(state.logs[day.key]?.mcqs)||0})),"");
+  renderTrend("Monthly study hours","Last 6 × 30-day periods",makeSeries(6,30,"hours",weeklyLabel),"h","area");
+  renderTrend("Daily MCQs solved","Last 7 days",days.map(day=>({label:day.label,value:Number(state.logs[day.key]?.mcqs)||0})),"","lollipop");
   renderTrend("Weekly MCQs solved","Last 8 weeks",makeSeries(8,7,"mcqs",weeklyLabel),"");
-  renderTrend("Daily CSAT practice","Last 7 days",days.map(day=>({label:day.label,value:Number(state.logs[day.key]?.csat)||0})),"");
+  renderTrend("Daily CSAT practice","Last 7 days",days.map(day=>({label:day.label,value:Number(state.logs[day.key]?.csat)||0})),"","lollipop");
   renderTrend("Weekly CSAT practice","Last 8 weeks",makeSeries(8,7,"csat",weeklyLabel),"");
   const consistency=[];for(let offset=13;offset>=0;offset--){const date=new Date(maxDate);date.setDate(date.getDate()-offset);const key=dateKey(date),daily=state.daily[key]||{};const active=!!state.logs[key]||Object.values(daily).some(Boolean);consistency.push({label:date.toLocaleDateString("en-IN",{day:"2-digit",month:"short"}),value:active?1:0})}
-  renderTrend("Study consistency","Active study days · last 14 days",consistency,"");
+  renderTrend("Study consistency","Active study days · last 14 days",consistency,"","heatmap");
   const revisionBySubject=allSubjects().map(subject=>({label:subject.name.slice(0,8),value:subject.topics.filter(topic=>state.revisionDone?.[subject.name+"::"+topic[0]]).length}));
-  renderTrend("Revisions by subject","Completed revision checklists",revisionBySubject,"");
+  renderTrend("Revisions by subject","Completed revision checklists",revisionBySubject,"","lollipop");
   const planWeekly=[];for(let week=0;week<8;week++){let done=0;for(let day=0;day<7;day++){const date=new Date(2026,10,17);date.setDate(date.getDate()+week*7+day);if(state.studyPlanDone?.[dateKey(date)])done++}planWeekly.push({label:"W"+(week+1),value:done})}
   renderTrend("Weekly study-plan completion","Completed days · first 8 weeks",planWeekly,"/7");
   const prioritySeries=["P1","P2"].map(priority=>({label:priority,value:allSubjects().flatMap(subject=>subject.topics.filter(topic=>topic[2]===priority&&state.topics[subject.name+"::"+topic[0]])).length}));
-  renderTrend("Priority topics completed","P1 vs P2 · completed topics",prioritySeries,"");
+  renderTrend("Priority topics completed","P1 vs P2 · completed topics",prioritySeries,"","treemap");
  }
  $("chartsUpdated").textContent="Updated "+new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
 }
