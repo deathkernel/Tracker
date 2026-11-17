@@ -37,6 +37,9 @@ class TrackerState(BaseModel):
     daily: dict[str, Any] = {}
     weekly: dict[str, Any] = {}
     logs: dict[str, Any] = {}
+    settings: dict[str, Any] = {}
+    customSubjects: list[dict[str, Any]] = []
+    customDaily: list[list[Any]] = []
 
 
 @app.on_event("startup")
