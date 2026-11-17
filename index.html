@@ -444,12 +444,16 @@ function renderCharts(){
  const todayDate=new Date(today+"T00:00:00"),planStart=new Date(2026,10,17);let pastCompleted=0,missed=0;
  DAILY_STUDY_PLAN.forEach((week,weekIndex)=>week.days.forEach((topic,dayIndex)=>{const date=new Date(planStart);date.setDate(planStart.getDate()+weekIndex*7+dayIndex);const key=[date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-");if(date<=todayDate){if(state.studyPlanDone&&state.studyPlanDone[key])pastCompleted++;else missed++;}}));
  const pastTotal=pastCompleted+missed;
+ const p1Topics=allSubjects().flatMap(subject=>subject.topics.map(topic=>({subject:subject.name,name:topic[0],priority:topic[2]}))).filter(topic=>topic.priority==="P1");
+ const p1Done=p1Topics.filter(topic=>!!state.topics[topic.subject+"::"+topic.name]).length;
+ const p1Total=p1Topics.length,p1Pending=Math.max(0,p1Total-p1Done);
  const cards=[
   {title:"Syllabus completion",done:completed,total,pending,label:"topics"},
   {title:"Revision progress",done:revisionDone,total:revisionTotal,pending:revisionPending,label:"revisions"},
   {title:"Study plan completion",done:planDone,total:planTotal,pending:planPending,label:"days"},
   {title:"Today's checklist",done:dailyDone,total:dailyTotal,pending:dailyPending,label:"tasks"},
-  {title:"Missed-day tracking",done:missed,total:pastTotal,pending:pastCompleted,label:"past days",doneLabel:"missed",pendingLabel:"completed"}
+  {title:"Missed-day tracking",done:missed,total:pastTotal,pending:pastCompleted,label:"past days",doneLabel:"missed",pendingLabel:"completed"},
+  {title:"P1 priority topics",done:p1Done,total:p1Total,pending:p1Pending,label:"high-priority topics"}
  ];
  cards.forEach(item=>{
   const percent=item.total?Math.round(item.done/item.total*100):0;
