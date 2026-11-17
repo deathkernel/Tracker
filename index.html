@@ -379,8 +379,9 @@ const localDate=()=>{const d=new Date();return [d.getFullYear(),String(d.getMont
 const defaultState=()=>({topics:{},daily:{},weekly:{},logs:{},studyPlanDone:{},revisionDone:{},settings:{targetDate:"2027-05-23",studyGoal:4,theme:"light"},customSubjects:[],customDaily:[]});
 function normalizeProgressState(value){
  const next={...defaultState(),...(value||{})};
- const subjects=[...SUBJECTS,...(Array.isArray(next.customSubjects)?next.customSubjects:[])];
- const validKeys=new Set(subjects.flatMap(subject=>(Array.isArray(subject.topics)?subject.topics:[]).map(topic=>subject.name+"::"+topic[0])));
+ const subjects=SUBJECTS.map(subject=>({name:subject.name,topics:[...subject.topics]}));
+ (Array.isArray(next.customSubjects)?next.customSubjects:[]).forEach(custom=>{let group=subjects.find(subject=>subject.name.toLowerCase()===String(custom.name||"").toLowerCase());if(!group){group={name:custom.name,topics:[]};subjects.push(group)}(Array.isArray(custom.topics)?custom.topics:[]).forEach(topic=>{if(Array.isArray(topic)&&topic.length&& !group.topics.some(item=>item[0].toLowerCase()===String(topic[0]).toLowerCase()))group.topics.push(topic)})});
+ const validKeys=new Set(subjects.flatMap(subject=>subject.topics.map(topic=>subject.name+"::"+topic[0])));
  next.topics=Object.fromEntries(Object.entries(next.topics||{}).filter(([key,done])=>validKeys.has(key)&&!!done));
  next.revisionDone=Object.fromEntries(Object.entries(next.revisionDone||{}).filter(([key,done])=>validKeys.has(key)&&!!done&&!!next.topics[key]));
  return next;
@@ -389,7 +390,11 @@ let state=normalizeProgressState(readState());
 function readState(){try{const v=JSON.parse(localStorage.getItem(STORE)||"{}");return {...defaultState(),...v}}catch{return defaultState()}}
 function persist(){try{state=normalizeProgressState(state);localStorage.setItem(STORE,JSON.stringify(state));fetch("/api/state",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(state)}).catch(()=>notify("Local backup saved, but database sync failed. Keep the app running and retry."));return true}catch{notify("Could not save. Export a backup and check browser storage.");return false}}
 function notify(message){const el=$("toast");el.textContent=message;el.classList.add("show");clearTimeout(notify.timer);notify.timer=setTimeout(()=>el.classList.remove("show"),2200)}
-const allSubjects=()=>[...SUBJECTS,...(state.customSubjects||[])];
+const allSubjects=()=>{
+ const subjects=SUBJECTS.map(subject=>({name:subject.name,topics:[...subject.topics]}));
+ (state.customSubjects||[]).forEach(custom=>{let group=subjects.find(subject=>subject.name.toLowerCase()===custom.name.toLowerCase());if(!group){group={name:custom.name,topics:[]};subjects.push(group)}(custom.topics||[]).forEach(topic=>{if(!group.topics.some(item=>item[0].toLowerCase()===topic[0].toLowerCase()))group.topics.push(topic)})});
+ return subjects;
+};
 const dailyItems=()=>[...DAILY,...(state.customDaily||[])];
 const totalTopics=()=>allSubjects().reduce((n,s)=>n+s.topics.length,0);
 const validTopicKeys=()=>new Set(allSubjects().flatMap(subject=>subject.topics.map(topic=>subject.name+"::"+topic[0])));
@@ -712,10 +717,11 @@ window.matchMedia("(max-width: 760px)").addEventListener("change",applyDeviceThe
 $("addCustomTopic").addEventListener("click",()=>{
  const subject=$("newSubject").value.trim(),topic=$("newTopic").value.trim();
  if(!subject||!topic){notify("Enter both a subject and topic.");return}
- if(SUBJECTS.some(item=>item.name.toLowerCase()===subject.toLowerCase())){notify("That subject already exists in the base syllabus. Add a topic under its existing subject instead.");return}
+ const existing=allSubjects().find(item=>item.name.toLowerCase()===subject.toLowerCase());
+ if(existing&&existing.topics.some(item=>item[0].toLowerCase()===topic.toLowerCase())){notify("This topic already exists in that subject.");return}
  state.customSubjects=state.customSubjects||[];
  let group=state.customSubjects.find(item=>item.name.toLowerCase()===subject.toLowerCase());
- if(!group){group={name:subject,topics:[]};state.customSubjects.push(group)}
+ if(!group){group={name:existing?existing.name:subject,topics:[]};state.customSubjects.push(group)}
  if(group.topics.some(item=>item[0].toLowerCase()===topic.toLowerCase())){notify("This topic already exists.");return}
  group.topics.push([topic,0]);persist();$("newSubject").value="";$("newTopic").value="";
  const option=Array.from($("subjectFilter").options).find(item=>item.value.toLowerCase()===group.name.toLowerCase());
