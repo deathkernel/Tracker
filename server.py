@@ -7,7 +7,6 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -90,5 +89,3 @@ def dashboard() -> FileResponse:
         raise HTTPException(status_code=404, detail="index.html not found")
     return FileResponse(INDEX_PATH)
 
-
-app.mount("/assets", StaticFiles(directory=BASE_DIR), name="assets")
