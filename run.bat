@@ -21,13 +21,15 @@ if errorlevel 1 goto error
 pip install -r requirements.txt
 if errorlevel 1 goto error
 
+if not defined TRACKER_HOST set "TRACKER_HOST=127.0.0.1"
 echo.
-echo Starting UPSC Tracker...
+echo Starting UPSC Tracker on %TRACKER_HOST%...
 echo Open http://127.0.0.1:8000 on this PC.
-echo For phone access, use Open on phone and scan its QR code.
+if "%TRACKER_HOST%"=="127.0.0.1" echo Network access is disabled by default for safety.
+if not "%TRACKER_HOST%"=="127.0.0.1" echo Network access is enabled. Use only on a trusted private network.
 echo Keep this window open while using the tracker.
 start "" http://127.0.0.1:8000
-python -m uvicorn server:app --host 0.0.0.0 --port 8000
+python -m uvicorn server:app --host "%TRACKER_HOST%" --port 8000
 goto end
 
 :error
