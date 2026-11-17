@@ -21,12 +21,12 @@ app = FastAPI(title="UPSC 2027 Tracker", version="1.1.0")
 def connect_database() -> sqlite3.Connection:
     connection = sqlite3.connect(DB_PATH, timeout=15)
     connection.execute("PRAGMA busy_timeout = 15000")
-    connection.execute("PRAGMA journal_mode = WAL")
     return connection
 
 
 def initialize_database() -> None:
     with connect_database() as connection:
+        connection.execute("PRAGMA journal_mode = WAL")
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS app_state (
