@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
+import socket
 import sqlite3
 from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -47,6 +48,34 @@ class TrackerState(BaseModel):
 @app.on_event("startup")
 def on_startup() -> None:
     initialize_database()
+
+
+def get_lan_ip() -> str:
+    probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        probe.connect(("8.8.8.8", 80))
+        return str(probe.getsockname()[0])
+    except OSError:
+        return "127.0.0.1"
+    finally:
+        probe.close()
+
+
+@app.get("/api/network-info")
+def network_info() -> dict[str, str]:
+    return {"url": f"http://{get_lan_ip()}:8000"}
+
+
+@app.get("/api/qr-code")
+def qr_code(url: str) -> Response:
+    from io import BytesIO
+    import qrcode
+    from qrcode.image.svg import SvgPathImage
+
+    image = qrcode.make(url, image_factory=SvgPathImage, box_size=8, border=4)
+    output = BytesIO()
+    image.save(output)
+    return Response(content=output.getvalue(), media_type="image/svg+xml")
 
 
 @app.get("/api/health")
