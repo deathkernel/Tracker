@@ -2,83 +2,83 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#101827">
-<title>UPSC 2027 Study Tracker</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f5f7fb">
+<title>UPSC 2027 — Study Dashboard</title>
 <style>
-:root{color-scheme:dark;--bg:#0b1220;--panel:#111c2d;--panel2:#172438;--line:#26364d;--text:#e8eef7;--muted:#91a1b7;--accent:#75a7ff;--green:#46c79a;--amber:#e9b968;--red:#ed8585}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer}.app{max-width:1180px;margin:auto;padding:28px 20px 60px}.top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:24px}.eyebrow{color:var(--accent);font-size:12px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}.top h1{font-size:clamp(26px,4vw,38px);line-height:1.12;margin:7px 0}.sub{color:var(--muted);margin:0}.pill{border:1px solid var(--line);border-radius:999px;padding:7px 12px;color:var(--muted);font-size:13px;white-space:nowrap}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:22px 0}.stat,.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px}.stat{padding:17px}.stat small{display:block;color:var(--muted);font-size:12px}.stat strong{display:block;font-size:27px;margin-top:4px}.layout{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}.panel{padding:20px;margin-bottom:16px}.panel h2{font-size:17px;margin:0 0 15px}.panel h3{font-size:14px;margin:0 0 10px}.muted{color:var(--muted)}.progress{height:8px;border-radius:99px;background:#26364d;overflow:hidden}.progress span{display:block;height:100%;background:var(--green);border-radius:99px;width:0;transition:width .2s}.row{display:flex;justify-content:space-between;align-items:center;gap:12px}.row+.progress{margin-top:12px}.today-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:flex;flex-direction:column;gap:6px}.field label{font-size:12px;color:var(--muted)}input,select,textarea{width:100%;border:1px solid var(--line);background:#0d1727;color:var(--text);border-radius:9px;padding:10px 11px;outline:none}input:focus,select:focus,textarea:focus{border-color:var(--accent)}.btn{border:1px solid var(--line);border-radius:9px;padding:9px 13px;background:var(--panel2);color:var(--text)}.btn.primary{background:var(--accent);color:#081326;border-color:var(--accent);font-weight:700}.btn:disabled{opacity:.5;cursor:not-allowed}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.checklist{display:grid;gap:10px}.check{display:flex;gap:10px;align-items:flex-start;color:var(--text)}.check input{width:16px;height:16px;margin:3px 0 0;accent-color:var(--green)}.check span{flex:1}.check.done span{text-decoration:line-through;color:var(--muted)}.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}.tab{padding:7px 11px;border-radius:9px;background:transparent;border:1px solid var(--line);color:var(--muted)}.tab.active{background:var(--panel2);border-color:var(--accent);color:var(--text)}.subject{border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden}.subject summary{padding:12px 14px;cursor:pointer;display:flex;justify-content:space-between;gap:12px;list-style:none}.subject summary::-webkit-details-marker{display:none}.subject summary b{font-size:14px}.subject summary small{color:var(--muted)}.topic-list{padding:0 14px 13px;display:grid;grid-template-columns:1fr 1fr;gap:9px 16px}.topic{display:flex;align-items:flex-start;gap:8px;font-size:13px}.topic input{width:15px;height:15px;margin:2px 0 0;accent-color:var(--green)}.topic small{color:var(--muted);margin-left:4px}.subject-progress{padding:0 14px 12px}.barlabel{font-size:11px;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:5px}.note{font-size:12px;color:var(--muted);margin-top:10px}.weeklist{display:grid;gap:9px}.week{padding:12px;border:1px solid var(--line);border-radius:11px;background:#0e1929}.week strong{font-size:13px}.week p{margin:4px 0 0;color:var(--muted);font-size:13px}.history{display:grid;gap:8px}.entry{padding:10px 12px;background:#0e1929;border-radius:9px;border:1px solid var(--line);font-size:13px}.entry span{color:var(--muted)}footer{text-align:center;color:var(--muted);font-size:12px;padding:18px}.empty{color:var(--muted);font-size:13px;padding:10px 0}
-@media(max-width:800px){.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}@media(max-width:480px){.app{padding:20px 13px 40px}.top{align-items:flex-start;flex-direction:column}.today-grid,.topic-list{grid-template-columns:1fr}.panel{padding:16px}}
+:root{--bg:#f5f7fb;--surface:#fff;--ink:#182230;--muted:#687586;--line:#e5eaf1;--blue:#315efb;--blue-soft:#edf1ff;--green:#16865d;--green-soft:#e9f7f0;--amber:#a96512;--amber-soft:#fff5e6;--shadow:0 8px 28px rgba(24,34,48,.045)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer}.shell{max-width:1280px;margin:auto;padding:26px 24px 48px}.header{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:24px}.brand{display:flex;align-items:center;gap:12px}.mark{width:42px;height:42px;border-radius:13px;background:var(--blue);color:white;display:grid;place-items:center;font-weight:800;font-size:17px}.eyebrow{font-size:11px;letter-spacing:.13em;text-transform:uppercase;font-weight:800;color:var(--blue)}h1{font-size:25px;line-height:1.2;margin:2px 0}.subtitle{margin:3px 0 0;color:var(--muted);font-size:13px}.header-right{display:flex;align-items:center;gap:10px}.date-chip,.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 12px;color:var(--muted);font-size:12px}.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:9px 13px;border-radius:9px;font-weight:650}.btn:hover{border-color:#b9c6dc}.btn.primary{background:var(--blue);border-color:var(--blue);color:white}.btn.danger{color:#b23b3b}.grid-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:16px}.stat,.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}.stat{padding:17px 18px}.stat-label{font-size:12px;color:var(--muted)}.stat-value{font-size:28px;font-weight:750;letter-spacing:-.04em;margin:4px 0 1px}.stat-foot{font-size:11px;color:var(--muted)}.main-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,.85fr);gap:16px;align-items:start}.card{padding:19px;margin-bottom:16px}.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.card h2{font-size:16px;margin:0}.card h3{font-size:13px;margin:0}.muted{color:var(--muted)}.progress{height:8px;border-radius:99px;background:#edf0f5;overflow:hidden}.progress>span{display:block;height:100%;width:0;background:var(--blue);border-radius:99px;transition:width .2s}.progress.green>span{background:var(--green)}.overall-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;margin:13px 0 7px;color:var(--muted)}.today-focus{background:var(--blue-soft);border:1px solid #dce4ff;border-radius:12px;padding:14px;margin-bottom:14px}.focus-label{font-size:11px;color:#5367b6;font-weight:800;text-transform:uppercase;letter-spacing:.08em}.focus-title{font-size:16px;font-weight:750;margin:4px 0}.focus-desc{color:#56627e;font-size:12px}.task-list{display:grid;gap:9px}.task{display:flex;align-items:flex-start;gap:10px;padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:#fff}.task input,.topic input{accent-color:var(--green);width:16px;height:16px;margin:2px 0 0;flex:none}.task label{flex:1;cursor:pointer}.task-title{font-weight:650;font-size:13px}.task-meta{font-size:11px;color:var(--muted)}.task.completed{background:#f8fbf9}.task.completed .task-title{text-decoration:line-through;color:#829087}.task-time{font-size:11px;color:var(--muted);white-space:nowrap}.inline-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.field{display:grid;gap:5px}.field.full{grid-column:1/-1}.field label{font-size:11px;color:var(--muted);font-weight:650}input,select,textarea{width:100%;border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 10px;color:var(--ink);outline:none}input:focus,select:focus,textarea:focus{border-color:#8ba2ff;box-shadow:0 0 0 3px #315efb12}textarea{resize:vertical}.form-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}.subject-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.subject-card{border:1px solid var(--line);border-radius:11px;padding:12px}.subject-top{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:9px}.subject-name{font-weight:750;font-size:13px}.subject-count{font-size:11px;color:var(--muted)}.subject-card .progress{height:6px}.subject-open{border:0;background:transparent;color:var(--blue);padding:7px 0 0;font-size:11px;font-weight:700}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.toolbar input{flex:1;min-width:180px}.toolbar select{width:auto;min-width:145px}.topic-subject{border:1px solid var(--line);border-radius:11px;margin:9px 0;overflow:hidden}.topic-subject summary{padding:12px 13px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;list-style:none;background:#fbfcfe}.topic-subject summary::-webkit-details-marker{display:none}.summary-left{font-weight:700;font-size:13px}.summary-right{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:11px}.topic-rows{padding:7px 13px 12px;display:grid;grid-template-columns:1fr 1fr;gap:3px 15px}.topic{display:flex;gap:8px;align-items:flex-start;padding:7px 0;font-size:12px}.topic span{flex:1}.topic small{color:var(--muted);font-size:10px;white-space:nowrap}.topic.done span{text-decoration:line-through;color:#87928c}.section-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.tab{background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:11px;color:var(--muted)}.tab.active{background:var(--blue-soft);border-color:#cbd6ff;color:#2448d8;font-weight:750}.week-list{display:grid;gap:8px}.week-item{border:1px solid var(--line);border-radius:10px;padding:11px 12px}.week-item.current{border-color:#9aafff;background:#f8f9ff}.week-top{display:flex;justify-content:space-between;gap:10px;align-items:center}.week-title{font-size:12px;font-weight:750}.week-date{font-size:10px;color:var(--muted)}.week-desc{font-size:11px;color:var(--muted);margin-top:5px}.badge{font-size:10px;padding:3px 7px;border-radius:99px;background:var(--blue-soft);color:#3454d5}.log-list{display:grid;gap:8px}.log-item{border:1px solid var(--line);border-radius:9px;padding:10px 11px}.log-head{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:700}.log-stats{font-size:11px;color:var(--muted);margin-top:3px}.log-note{font-size:11px;color:var(--muted);margin-top:4px}.empty{font-size:12px;color:var(--muted);padding:10px 0}.small-note{font-size:11px;color:var(--muted);margin:9px 0 0}.weekly-checks{display:grid;gap:9px}.weekly-check{display:flex;gap:9px;align-items:center;font-size:12px}.weekly-check input{width:15px;height:15px;accent-color:var(--green)}.weekly-check.done span{text-decoration:line-through;color:var(--muted)}.footer{text-align:center;color:var(--muted);font-size:11px;padding:15px 0}.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#172438;color:white;padding:10px 15px;border-radius:9px;font-size:12px;opacity:0;pointer-events:none;transition:opacity .2s}.toast.show{opacity:1}
+@media(max-width:900px){.main-grid{grid-template-columns:1fr}.grid-stats{grid-template-columns:repeat(2,1fr)}}@media(max-width:560px){.shell{padding:17px 12px 35px}.header{align-items:flex-start;flex-direction:column}.header-right{width:100%;justify-content:space-between}.subject-grid{grid-template-columns:1fr}.topic-rows{grid-template-columns:1fr}.inline-form{grid-template-columns:1fr}.field.full{grid-column:auto}.stat{padding:13px}.stat-value{font-size:24px}}
 </style>
 </head>
 <body>
-<div class="app">
-<header class="top"><div><div class="eyebrow">Personal preparation dashboard</div><h1>UPSC Prelims 2027</h1><p class="sub">A simple, consistent plan. One focused session at a time.</p></div><div class="pill">Target: 23 May 2027</div></header>
-<section class="stats">
- <div class="stat"><small>Days to exam</small><strong id="daysLeft">—</strong></div>
- <div class="stat"><small>Topics completed</small><strong id="topicsDone">0 / 65</strong></div>
- <div class="stat"><small>Study hours logged</small><strong id="hoursDone">0h</strong></div>
- <div class="stat"><small>Study days logged</small><strong id="daysDone">0</strong></div>
+<div class="shell">
+<header class="header">
+ <div class="brand"><div class="mark">UP</div><div><div class="eyebrow">Personal study workspace</div><h1>UPSC Prelims 2027</h1><p class="subtitle">Plan your day. Track every topic. Review your progress.</p></div></div>
+ <div class="header-right"><div class="date-chip" id="todayLabel">Today</div><button class="btn" id="exportBtn">Export backup</button></div>
+</header>
+<section class="grid-stats">
+ <div class="stat"><div class="stat-label">Days to target</div><div class="stat-value" id="daysLeft">—</div><div class="stat-foot">Target: 23 May 2027</div></div>
+ <div class="stat"><div class="stat-label">PYQ topics completed</div><div class="stat-value" id="topicsDone">0/65</div><div class="stat-foot" id="topicSub">0% of mapped topics</div></div>
+ <div class="stat"><div class="stat-label">Focused study time</div><div class="stat-value" id="hoursDone">0h</div><div class="stat-foot">Total hours logged</div></div>
+ <div class="stat"><div class="stat-label">Study days recorded</div><div class="stat-value" id="daysDone">0</div><div class="stat-foot">Days with a saved study log</div></div>
 </section>
-<div class="layout">
+<div class="main-grid">
 <main>
- <section class="panel">
-  <div class="row"><h2>Today's study log</h2><span class="pill" id="todayDate"></span></div>
-  <div class="today-grid">
-   <div class="field"><label for="studyDate">Date</label><input id="studyDate" type="date"></div>
-   <div class="field"><label for="hours">Focused study hours</label><input id="hours" type="number" min="0" max="16" step=".25" placeholder="e.g. 3"></div>
-   <div class="field"><label for="mcqs">MCQs solved</label><input id="mcqs" type="number" min="0" max="500" placeholder="e.g. 20"></div>
-   <div class="field"><label for="csat">CSAT practice (minutes)</label><input id="csat" type="number" min="0" max="300" placeholder="e.g. 30"></div>
-  </div>
-  <div class="field" style="margin-top:12px"><label for="notes">What did you study / what needs revision?</label><textarea id="notes" rows="3" placeholder="Write a short note about today's study..."></textarea></div>
-  <div class="actions"><button class="btn primary" id="saveLog">Save study log</button><button class="btn" id="clearLog">Clear fields</button></div>
+ <section class="card">
+  <div class="card-head"><h2>Today's checklist</h2><span class="chip" id="todayProgress">0/5 done</span></div>
+  <div class="today-focus"><div class="focus-label">This week's focus</div><div class="focus-title" id="focusTitle">Loading your study plan…</div><div class="focus-desc" id="focusDesc"></div></div>
+  <div class="task-list" id="dailyTasks"></div>
+  <div class="overall-row"><span>Daily completion</span><b id="dailyPercent">0%</b></div><div class="progress green"><span id="dailyBar"></span></div>
+  <p class="small-note">Tick tasks as you finish them. Your checklist saves automatically in this browser.</p>
  </section>
- <section class="panel">
-  <div class="row"><h2>PYQ topic checklist</h2><span class="muted" id="topicPercent">0% complete</span></div>
-  <div class="progress"><span id="topicBar"></span></div>
-  <p class="note">Tick a topic only after studying its concepts and solving relevant PYQs. Counts are approximate editorial mapping, not official UPSC classifications.</p>
-  <div class="tabs" id="subjectTabs"></div>
-  <div id="subjects"></div>
+ <section class="card">
+  <div class="card-head"><h2>Subject progress</h2><span class="chip" id="subjectCount">9 subjects</span></div>
+  <div class="subject-grid" id="subjectOverview"></div>
  </section>
- <section class="panel">
-  <h2>Recent study logs</h2><div class="history" id="history"><div class="empty">No study logs yet.</div></div>
+ <section class="card">
+  <div class="card-head"><h2>PYQ topic checklist</h2><span class="chip" id="topicCompletion">0 of 65</span></div>
+  <div class="toolbar"><input id="topicSearch" type="search" placeholder="Search topics…"><select id="subjectFilter"><option value="all">All subjects</option></select><select id="topicStatus"><option value="all">All topics</option><option value="pending">Pending</option><option value="done">Completed</option></select></div>
+  <div id="topicChecklist"></div>
+  <p class="small-note">Mapped question counts are approximate editorial classifications, not official UPSC topic-wise counts. Mark a topic complete after concept study, PYQs and a quick revision.</p>
  </section>
 </main>
 <aside>
- <section class="panel">
-  <h2>Daily routine</h2>
-  <div class="checklist">
-   <label class="check"><input type="checkbox" data-daily="reading"><span>7:00–8:15 · Main topic reading</span></label>
-   <label class="check"><input type="checkbox" data-daily="pyq"><span>8:25–9:10 · Notes and PYQs</span></label>
-   <label class="check"><input type="checkbox" data-daily="mcq"><span>9:20–9:50 · 15–20 MCQs</span></label>
-   <label class="check"><input type="checkbox" data-daily="ca"><span>9:50–10:10 · Current affairs</span></label>
-   <label class="check"><input type="checkbox" data-daily="csat"><span>10:10–10:40 · CSAT / revision</span></label>
+ <section class="card">
+  <div class="card-head"><h2>Save today's study</h2><span class="chip">Daily log</span></div>
+  <div class="inline-form">
+   <div class="field"><label for="logDate">Study date</label><input type="date" id="logDate"></div>
+   <div class="field"><label for="logHours">Focused hours</label><input type="number" id="logHours" min="0" max="16" step=".25" placeholder="3"></div>
+   <div class="field"><label for="logMcq">MCQs solved</label><input type="number" id="logMcq" min="0" max="500" placeholder="20"></div>
+   <div class="field"><label for="logCsat">CSAT minutes</label><input type="number" id="logCsat" min="0" max="300" placeholder="30"></div>
+   <div class="field full"><label for="logNotes">Notes / weak areas</label><textarea id="logNotes" rows="3" placeholder="What did you study? What needs another revision?"></textarea></div>
   </div>
-  <p class="note">Daily checklist resets automatically when the date changes.</p>
+  <div class="form-actions"><button class="btn primary" id="saveLog">Save study log</button><button class="btn" id="clearLog">Clear</button></div>
  </section>
- <section class="panel">
-  <h2>Weekly plan</h2><div class="weeklist" id="weeklyPlan"></div>
+ <section class="card">
+  <div class="card-head"><h2>Weekly targets</h2><span class="chip" id="weekLabel">This week</span></div>
+  <div class="weekly-checks" id="weeklyTasks"></div>
+  <div class="overall-row"><span>Weekly targets</span><b id="weeklyPercent">0%</b></div><div class="progress green"><span id="weeklyBar"></span></div>
  </section>
- <section class="panel">
-  <h2>Weekly targets</h2>
-  <div class="checklist">
-   <label class="check"><input type="checkbox" data-weekly="topics"><span>Complete this week's topics</span></label>
-   <label class="check"><input type="checkbox" data-weekly="pyqs"><span>Solve relevant PYQs</span></label>
-   <label class="check"><input type="checkbox" data-weekly="test"><span>Take one sectional test</span></label>
-   <label class="check"><input type="checkbox" data-weekly="review"><span>Review mistakes and backlog</span></label>
-  </div>
+ <section class="card">
+  <div class="card-head"><h2>Study roadmap</h2><span class="chip">27 weeks</span></div>
+  <div class="week-list" id="roadmap"></div>
  </section>
- <section class="panel">
-  <h2>Data & backup</h2>
-  <p class="muted" style="font-size:13px">Your progress is saved in this browser on this device. Export a backup regularly.</p>
-  <div class="actions"><button class="btn" id="export">Export backup</button><button class="btn" id="import">Import backup</button><button class="btn" id="reset">Reset progress</button><input id="fileInput" type="file" accept="application/json" hidden></div>
+ <section class="card">
+  <div class="card-head"><h2>Recent study logs</h2><button class="btn" id="importBtn">Import backup</button></div>
+  <div class="log-list" id="recentLogs"><div class="empty">No logs saved yet.</div></div>
+  <input type="file" id="importFile" accept="application/json" hidden>
+  <p class="small-note">Progress is stored locally in this browser. Export a backup before changing devices or clearing browser data.</p>
+  <div class="form-actions"><button class="btn danger" id="resetBtn">Reset all progress</button></div>
  </section>
 </aside>
 </div>
-<footer>Built for steady preparation · Local data stays in your browser · Backup recommended</footer>
+<div class="footer">UPSC Prelims 2027 · Personal checklist dashboard · Works offline after the page is loaded</div>
 </div>
+<div class="toast" id="toast"></div>
 <script>
-const subjects=[
+"use strict";
+const SUBJECTS=[
 {name:"Polity",topics:[["Parliament",33],["Fundamental Rights",17],["Miscellaneous Acts",15],["DPSP",9],["Constitutional Schedules & Parts",8],["Basic Constitutional Concepts",8],["Supreme Court & High Courts",8],["President",6],["Systems of Government",6],["Constitutional Bodies",5]]},
 {name:"Economy",topics:[["Banking Sector",48],["Agriculture",29],["Reports, Indices & Schemes",29],["External Sector / BoP",22],["Public Finance & Taxation",19],["Industry & Minerals",18],["Securities Market",17],["Money Market",7],["Inflation",6]]},
 {name:"Environment",topics:[["Pollution",33],["Species – Flora & Fauna",29],["Environmental Laws & Conventions",28],["Climate Change & Sustainability",26],["Agriculture & Environment",18],["Protected Areas",16],["Biodiversity",13],["Ecology & Ecosystem",10]]},
@@ -89,82 +89,66 @@ const subjects=[
 {name:"Medieval History",topics:[["Regional Kingdoms",6],["Vijayanagara Empire",6],["Early Medieval Period",5],["Mughal Period",5],["Delhi Sultanate",4],["Bhakti and Sufi Movement",3]]},
 {name:"Art & Culture",topics:[["Buddhism and Jainism",14],["Culture in India",9],["Indian Architecture",6],["Temple Architecture",3],["Indian Painting",3],["Literature",3]]}
 ];
-const plan=[
+const ROADMAP=[
 ["17–23 Nov 2026","Polity","Constitution, Preamble, Parliament, Fundamental Rights, Miscellaneous Acts"],
-["24–30 Nov 2026","Polity","DPSP, Schedules & Parts, Constitutional Concepts, Judiciary"],
+["24–30 Nov 2026","Polity","DPSP, Schedules & Parts, Constitutional Concepts, Supreme Court & High Courts"],
 ["1–7 Dec 2026","Polity","President, Systems of Government, Constitutional Bodies + revision"],
-["8–14 Dec 2026","Modern History","Personalities and National Movement 1930–1947"],
+["8–14 Dec 2026","Modern History","Prominent personalities, National Movement 1930–1947"],
 ["15–21 Dec 2026","Modern History","British economic policies, administration after 1857, movements 1905–1929, education"],
-["22–28 Dec 2026","Ancient History","Ancient sites, ports, terms, Gupta and Mauryan periods"],
-["29 Dec–4 Jan","Ancient + Medieval","Ancient art, literature, Harappa, regional kingdoms, Vijayanagara"],
-["5–11 Jan 2027","Medieval + Culture","Early Medieval, Mughal, Sultanate, Bhakti-Sufi, Buddhism-Jainism"],
-["12–18 Jan 2027","Art & Culture","Indian culture, architecture, temple architecture, painting, literature"],
-["19–25 Jan 2027","Economy","Banking sector and RBI"],
-["26 Jan–1 Feb 2027","Economy","Agriculture, reports, indices and schemes"],
-["2–8 Feb 2027","Economy","External sector, BoP, public finance and taxation"],
-["9–15 Feb 2027","Economy","Industry, minerals, securities market, money market, inflation"],
-["16–22 Feb 2027","Environment","Pollution, flora and fauna"],
-["23 Feb–1 Mar 2027","Environment","Environmental laws, conventions, climate change, sustainability"],
-["2–8 Mar 2027","Environment","Agriculture & environment, protected areas, biodiversity, ecosystems"],
-["9–15 Mar 2027","Geography","Indian geography, human & economic geography, climatology"],
-["16–22 Mar 2027","Geography","World maps, Indian maps, oceanography, geomorphology"],
-["23–29 Mar 2027","Science & Tech","ICT, space technology, biotechnology"],
-["30 Mar–5 Apr 2027","Science & Tech","Health, diseases, defence technology, nanotechnology"],
-["6–12 Apr 2027","Revision","Polity + Modern History; sectional tests"],
+["22–28 Dec 2026","Ancient History","Ancient sites, ports & terms, Gupta Period, Mauryan Age"],
+["29 Dec–4 Jan","Ancient + Medieval","Ancient art/literature, Harappan Civilization, Regional Kingdoms, Vijayanagara"],
+["5–11 Jan 2027","Medieval History","Early Medieval, Mughal Period, Delhi Sultanate, Bhakti-Sufi Movement"],
+["12–18 Jan 2027","Art & Culture","Buddhism-Jainism, Indian culture, architecture, temple architecture, painting, literature"],
+["19–25 Jan 2027","Economy","Banking Sector, RBI and monetary policy"],
+["26 Jan–1 Feb 2027","Economy","Agriculture, Reports, Indices & Schemes"],
+["2–8 Feb 2027","Economy","External Sector / BoP, Public Finance & Taxation"],
+["9–15 Feb 2027","Economy","Industry & Minerals, Securities Market, Money Market, Inflation"],
+["16–22 Feb 2027","Environment","Pollution, Species – Flora & Fauna"],
+["23 Feb–1 Mar 2027","Environment","Environmental Laws & Conventions, Climate Change & Sustainability"],
+["2–8 Mar 2027","Environment","Agriculture & Environment, Protected Areas, Biodiversity, Ecology"],
+["9–15 Mar 2027","Geography","Indian Geography, Human & Economic Geography, Climatology"],
+["16–22 Mar 2027","Geography","World Map, Indian Map, Oceanography, Geomorphology"],
+["23–29 Mar 2027","Science & Technology","ICT, Space Technology, Biotechnology"],
+["30 Mar–5 Apr 2027","Science & Technology","Health, Diseases, Defence Technology, Nanotechnology"],
+["6–12 Apr 2027","Revision","Polity + Modern History + sectional tests"],
 ["13–19 Apr 2027","Revision","Economy + Ancient, Medieval and Art & Culture"],
 ["20–26 Apr 2027","Revision","Environment + Geography + Science & Technology"],
 ["27 Apr–3 May 2027","Revision","Full GS revision + sectional tests"],
 ["4–10 May 2027","Mock tests","Full mocks + weak topics"],
 ["11–17 May 2027","Mock tests","Full mocks + CSAT + mistake notebook"],
-["18–22 May 2027","Final revision","Short notes, maps, facts, light revision"]
+["18–22 May 2027","Final revision","Short notes, maps, important facts, light revision"]
 ];
-const KEY="upscTracker2027.v1";
-const blank=()=>({completed:{},logs:{},daily:{},weekly:{}});
-let state=load(),activeSubject=0;
-function load(){try{return {...blank(),...JSON.parse(localStorage.getItem(KEY)||"{}")}}catch{return blank()}}
-function save(){localStorage.setItem(KEY,JSON.stringify(state));renderStats()}
-function dateKey(d=new Date()){return d.toISOString().slice(0,10)}
-function totalTopics(){return subjects.reduce((n,s)=>n+s.topics.length,0)}
-function allTopics(){return subjects.flatMap(s=>s.topics.map(t=>s.name+"::"+t[0]))}
-function completedCount(){return Object.values(state.completed).filter(Boolean).length}
-function renderStats(){
- const days=Math.ceil((new Date("2027-05-23T00:00:00")-new Date(new Date().toDateString()))/86400000);
- document.getElementById("daysLeft").textContent=Math.max(0,days);
- document.getElementById("topicsDone").textContent=completedCount()+" / "+totalTopics();
- const logs=Object.values(state.logs);
- document.getElementById("hoursDone").textContent=logs.reduce((a,x)=>a+(Number(x.hours)||0),0).toFixed(1)+"h";
- document.getElementById("daysDone").textContent=logs.length;
- const p=completedCount()/totalTopics()*100;
- document.getElementById("topicPercent").textContent=Math.round(p)+"% complete";
- document.getElementById("topicBar").style.width=p+"%";
-}
-function renderSubjects(){
- const tabs=document.getElementById("subjectTabs"),host=document.getElementById("subjects");
- tabs.innerHTML="";subjects.forEach((s,i)=>{const b=document.createElement("button");b.className="tab"+(i===activeSubject?" active":"");b.textContent=s.name;b.onclick=()=>{activeSubject=i;renderSubjects()};tabs.append(b)});
- const s=subjects[activeSubject],done=s.topics.filter(t=>state.completed[s.name+"::"+t[0]]).length;
- const d=document.createElement("details");d.className="subject";d.open=true;
- const summary=document.createElement("summary");summary.innerHTML="<b>"+s.name+"</b><small>"+done+" / "+s.topics.length+" complete</small>";d.append(summary);
- const prog=document.createElement("div");prog.className="subject-progress";prog.innerHTML='<div class="progress"><span style="width:'+(done/s.topics.length*100)+'%"></span></div>';d.append(prog);
- const list=document.createElement("div");list.className="topic-list";
- s.topics.forEach(([name,count])=>{const label=document.createElement("label");label.className="topic";const cb=document.createElement("input");cb.type="checkbox";cb.checked=!!state.completed[s.name+"::"+name];cb.onchange=()=>{state.completed[s.name+"::"+name]=cb.checked;save();renderSubjects()};const text=document.createElement("span");text.textContent=name;const small=document.createElement("small");small.textContent=count; label.append(cb,text,small);list.append(label)});
- d.append(list);host.innerHTML="";host.append(d);
-}
-function renderPlan(){const host=document.getElementById("weeklyPlan");host.innerHTML="";plan.forEach((p,i)=>{const div=document.createElement("div");div.className="week";const date=document.createElement("strong");date.textContent="Week "+(i+1)+" · "+p[0];const title=document.createElement("p");title.textContent=p[1]+" — "+p[2];div.append(date,title);host.append(div)})}
-function renderHistory(){const host=document.getElementById("history"),logs=Object.entries(state.logs).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,7);host.innerHTML="";if(!logs.length){host.innerHTML='<div class="empty">No study logs yet.</div>';return}logs.forEach(([date,x])=>{const div=document.createElement("div");div.className="entry";const title=document.createElement("b");title.textContent=date+" · "+(x.hours||0)+"h";const detail=document.createElement("div");detail.innerHTML='<span>MCQs: '+(x.mcqs||0)+' · CSAT: '+(x.csat||0)+' min</span>';const note=document.createElement("div");note.textContent=x.notes||"";note.className="muted";div.append(title,detail,note);host.append(div)})}
-function renderChecks(){
- const today=dateKey(),week=Math.floor((Date.now()-new Date("2026-11-17T00:00:00").getTime())/(7*86400000));
- document.querySelectorAll("[data-daily]").forEach(cb=>{cb.checked=!!(state.daily[today]||{})[cb.dataset.daily];cb.onchange=()=>{state.daily[today]=state.daily[today]||{};state.daily[today][cb.dataset.daily]=cb.checked;save()}});
- document.querySelectorAll("[data-weekly]").forEach(cb=>{cb.checked=!!(state.weekly[week]||{})[cb.dataset.weekly];cb.onchange=()=>{state.weekly[week]=state.weekly[week]||{};state.weekly[week][cb.dataset.weekly]=cb.checked;save()}});
-}
-function render(){renderStats();renderSubjects();renderPlan();renderHistory();renderChecks()}
-const dateInput=document.getElementById("studyDate");dateInput.value=dateKey();document.getElementById("todayDate").textContent=new Date().toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"});
-document.getElementById("saveLog").onclick=()=>{const date=dateInput.value;if(!date){alert("Choose a date first.");return}state.logs[date]={hours:Number(document.getElementById("hours").value)||0,mcqs:Number(document.getElementById("mcqs").value)||0,csat:Number(document.getElementById("csat").value)||0,notes:document.getElementById("notes").value.trim()};save();renderHistory();alert("Study log saved.")};
-document.getElementById("clearLog").onclick=()=>["hours","mcqs","csat","notes"].forEach(id=>document.getElementById(id).value="");
-document.getElementById("export").onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="upsc-2027-tracker-backup.json";a.click();URL.revokeObjectURL(url)};
-document.getElementById("import").onclick=()=>document.getElementById("fileInput").click();
-document.getElementById("fileInput").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text());if(!data||typeof data!=="object"||!data.completed||!data.logs)throw new Error("Invalid backup");state={...blank(),...data};save();render();alert("Backup imported.")}catch(err){alert("Could not import this backup: "+err.message)}e.target.value=""};
-document.getElementById("reset").onclick=()=>{if(confirm("Delete all saved tracker progress? Export a backup first if needed.")){state=blank();save();render()}};
-render();
+const DAILY=[["reading","Main topic study","7:00–8:15 AM","Read concepts from the primary source"],["pyq","Notes + PYQs","8:25–9:10 AM","Make concise notes and solve topic PYQs"],["mcq","MCQ practice","9:20–9:50 AM","Solve 15–20 questions and review explanations"],["current","Current affairs","9:50–10:10 AM","Read and connect news to static syllabus"],["csat","CSAT / revision","10:10–10:40 AM","CSAT on Mon/Wed/Fri; revision on other days"]];
+const WEEKLY=[["topics","Finish planned topics"],["pyqs","Solve relevant PYQs"],["test","Take one sectional test"],["review","Review mistakes and backlog"]];
+const STORE="upsc-dashboard-v2";
+const $=id=>document.getElementById(id);
+const localDate=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-")};
+const defaultState=()=>({topics:{},daily:{},weekly:{},logs:{}});
+let state=readState();
+function readState(){try{const v=JSON.parse(localStorage.getItem(STORE)||"{}");return {...defaultState(),...v}}catch{return defaultState()}}
+function persist(){try{localStorage.setItem(STORE,JSON.stringify(state));return true}catch{notify("Could not save. Export a backup and check browser storage.");return false}}
+function notify(message){const el=$("toast");el.textContent=message;el.classList.add("show");clearTimeout(notify.timer);notify.timer=setTimeout(()=>el.classList.remove("show"),2200)}
+const totalTopics=()=>SUBJECTS.reduce((n,s)=>n+s.topics.length,0);
+const doneTopics=()=>Object.values(state.topics).filter(Boolean).length;
+const totalDays=()=>Math.max(0,Math.ceil((new Date("2027-05-23T00:00:00")-new Date(localDate()+"T00:00:00"))/86400000));
+const weekIndex=()=>{const start=new Date("2026-11-17T00:00:00"),now=new Date(localDate()+"T00:00:00");return Math.max(0,Math.min(26,Math.floor((now-start)/604800000)))};
+function renderStats(){const logs=Object.values(state.logs);$("daysLeft").textContent=totalDays();$("topicsDone").textContent=doneTopics()+"/"+totalTopics();$("topicSub").textContent=Math.round(doneTopics()/totalTopics()*100)+"% of mapped topics";$("hoursDone").textContent=logs.reduce((n,x)=>n+(Number(x.hours)||0),0).toFixed(1)+"h";$("daysDone").textContent=logs.length;$("topicCompletion").textContent=doneTopics()+" of "+totalTopics();$("todayLabel").textContent=new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short",year:"numeric"})}
+function renderDaily(){const day=localDate(),items=state.daily[day]||{};const host=$("dailyTasks");host.innerHTML="";DAILY.forEach(([id,title,time,desc])=>{const row=document.createElement("div");row.className="task"+(items[id]?" completed":"");const cb=document.createElement("input");cb.type="checkbox";cb.checked=!!items[id];cb.id="daily-"+id;cb.addEventListener("change",()=>{state.daily[day]=state.daily[day]||{};state.daily[day][id]=cb.checked;persist();renderDaily()});const label=document.createElement("label");label.htmlFor=cb.id;const t=document.createElement("div");t.className="task-title";t.textContent=title;const m=document.createElement("div");m.className="task-meta";m.textContent=desc;label.append(t,m);const tm=document.createElement("span");tm.className="task-time";tm.textContent=time;row.append(cb,label,tm);host.append(row)});const count=DAILY.filter(x=>items[x[0]]).length,p=count/DAILY.length*100;$("todayProgress").textContent=count+"/"+DAILY.length+" done";$("dailyPercent").textContent=Math.round(p)+"%";$("dailyBar").style.width=p+"%";const w=ROADMAP[weekIndex()];$("focusTitle").textContent=w[1]+" · Week "+(weekIndex()+1);$("focusDesc").textContent=w[2]}
+function renderSubjectOverview(){const host=$("subjectOverview");host.innerHTML="";SUBJECTS.forEach(s=>{const done=s.topics.filter(t=>state.topics[s.name+"::"+t[0]]).length,p=done/s.topics.length*100;const card=document.createElement("div");card.className="subject-card";const top=document.createElement("div");top.className="subject-top";const name=document.createElement("span");name.className="subject-name";name.textContent=s.name;const count=document.createElement("span");count.className="subject-count";count.textContent=done+"/"+s.topics.length;top.append(name,count);const bar=document.createElement("div");bar.className="progress green";const fill=document.createElement("span");fill.style.width=p+"%";bar.append(fill);card.append(top,bar);host.append(card)})}
+function renderTopics(){const host=$("topicChecklist"),q=$("topicSearch").value.trim().toLowerCase(),filter=$("subjectFilter").value,status=$("topicStatus").value;host.innerHTML="";let shown=0;SUBJECTS.forEach(s=>{if(filter!=="all"&&filter!==s.name)return;const matching=s.topics.filter(([name])=>{const done=!!state.topics[s.name+"::"+name];return name.toLowerCase().includes(q)&&(status==="all"||(status==="done"&&done)||(status==="pending"&&!done))});if(!matching.length)return;shown+=matching.length;const done=s.topics.filter(t=>state.topics[s.name+"::"+t[0]]).length;const details=document.createElement("details");details.className="topic-subject";details.open=!!q||filter!=="all";const summary=document.createElement("summary");const left=document.createElement("span");left.className="summary-left";left.textContent=s.name;const right=document.createElement("span");right.className="summary-right";right.textContent=done+"/"+s.topics.length+" complete";summary.append(left,right);const rows=document.createElement("div");rows.className="topic-rows";matching.forEach(([name,count])=>{const label=document.createElement("label");label.className="topic"+(state.topics[s.name+"::"+name]?" done":"");const cb=document.createElement("input");cb.type="checkbox";cb.checked=!!state.topics[s.name+"::"+name];cb.addEventListener("change",()=>{state.topics[s.name+"::"+name]=cb.checked;persist();renderAll()});const text=document.createElement("span");text.textContent=name;const small=document.createElement("small");small.textContent=count+" mapped";label.append(cb,text,small);rows.append(label)});details.append(summary,rows);host.append(details)});if(!shown)host.innerHTML='<div class="empty">No topics match your filters.</div>'}
+function renderWeekly(){const idx=weekIndex(),key="week-"+idx,items=state.weekly[key]||{},host=$("weeklyTasks");host.innerHTML="";WEEKLY.forEach(([id,title])=>{const label=document.createElement("label");label.className="weekly-check"+(items[id]?" done":"");const cb=document.createElement("input");cb.type="checkbox";cb.checked=!!items[id];cb.addEventListener("change",()=>{state.weekly[key]=state.weekly[key]||{};state.weekly[key][id]=cb.checked;persist();renderWeekly()});const span=document.createElement("span");span.textContent=title;label.append(cb,span);host.append(label)});const count=WEEKLY.filter(x=>items[x[0]]).length,p=count/WEEKLY.length*100;$("weeklyPercent").textContent=Math.round(p)+"%";$("weeklyBar").style.width=p+"%";$("weekLabel").textContent="Week "+(idx+1)}
+function renderRoadmap(){const host=$("roadmap"),idx=weekIndex();host.innerHTML="";ROADMAP.forEach((w,i)=>{const item=document.createElement("div");item.className="week-item"+(i===idx?" current":"");const top=document.createElement("div");top.className="week-top";const title=document.createElement("span");title.className="week-title";title.textContent="Week "+(i+1)+" · "+w[1];const date=document.createElement("span");date.className="week-date";date.textContent=w[0];top.append(title,date);const desc=document.createElement("div");desc.className="week-desc";desc.textContent=w[2];item.append(top,desc);if(i===idx){const badge=document.createElement("span");badge.className="badge";badge.textContent="Current week";item.append(badge)}host.append(item)})}
+function renderLogs(){const host=$("recentLogs"),logs=Object.entries(state.logs).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,7);host.innerHTML="";if(!logs.length){host.innerHTML='<div class="empty">No study logs yet. Save your first session above.</div>';return}logs.forEach(([date,x])=>{const item=document.createElement("div");item.className="log-item";const head=document.createElement("div");head.className="log-head";const d=document.createElement("span");d.textContent=date;const h=document.createElement("span");h.textContent=(Number(x.hours)||0)+" focused hours";head.append(d,h);const stats=document.createElement("div");stats.className="log-stats";stats.textContent=(x.mcqs||0)+" MCQs · "+(x.csat||0)+" CSAT minutes";item.append(head,stats);if(x.notes){const note=document.createElement("div");note.className="log-note";note.textContent=x.notes;item.append(note)}const edit=document.createElement("button");edit.className="subject-open";edit.textContent="Edit this log";edit.addEventListener("click",()=>{ $("logDate").value=date;$("logHours").value=x.hours||"";$("logMcq").value=x.mcqs||"";$("logCsat").value=x.csat||"";$("logNotes").value=x.notes||"";window.scrollTo({top:0,behavior:"smooth"})});item.append(edit);host.append(item)})}
+function renderAll(){renderStats();renderDaily();renderSubjectOverview();renderTopics();renderWeekly();renderRoadmap();renderLogs()}
+function initFilters(){SUBJECTS.forEach(s=>{const opt=document.createElement("option");opt.value=s.name;opt.textContent=s.name;$("subjectFilter").append(opt)});$("topicSearch").addEventListener("input",renderTopics);$("subjectFilter").addEventListener("change",renderTopics);$("topicStatus").addEventListener("change",renderTopics)}
+$("logDate").value=localDate();
+$("saveLog").addEventListener("click",()=>{const date=$("logDate").value;if(!date){notify("Choose a date first.");return}const hours=Number($("logHours").value),mcqs=Number($("logMcq").value),csat=Number($("logCsat").value);if([hours,mcqs,csat].some(x=>x<0||!Number.isFinite(x))){notify("Enter valid non-negative numbers.");return}state.logs[date]={hours,mcqs,csat,notes:$("logNotes").value.trim()};persist();renderStats();renderLogs();notify("Study log saved.")});
+$("clearLog").addEventListener("click",()=>{["logHours","logMcq","logCsat","logNotes"].forEach(id=>$(id).value="")});
+$("exportBtn").addEventListener("click",()=>{const blob=new Blob([JSON.stringify({version:2,exportedAt:new Date().toISOString(),data:state},null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="upsc-2027-progress-backup.json";a.click();URL.revokeObjectURL(url);notify("Backup exported.")});
+$("importBtn").addEventListener("click",()=>$("importFile").click());
+$("importFile").addEventListener("change",async e=>{const file=e.target.files[0];if(!file)return;try{const parsed=JSON.parse(await file.text()),incoming=parsed.data||parsed;if(!incoming||typeof incoming!=="object"||!incoming.topics||!incoming.logs)throw new Error("This file is not a valid UPSC tracker backup.");if(!confirm("Import backup and replace the progress currently saved in this browser?"))return;state={...defaultState(),...incoming};persist();renderAll();notify("Backup imported successfully.")}catch(err){notify(err.message||"Could not import backup.")}finally{e.target.value=""}});
+$("resetBtn").addEventListener("click",()=>{if(confirm("Reset all topic ticks, checklists and study logs? Export a backup first if you may need this data.")){state=defaultState();persist();$("logHours").value="";$("logMcq").value="";$("logCsat").value="";$("logNotes").value="";renderAll();notify("Progress reset.")}});
+initFilters();renderAll();
 </script>
 </body>
 </html>
