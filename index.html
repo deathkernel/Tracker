@@ -73,7 +73,7 @@ body.dark{--bg:#10141d;--surface:#191f2b;--ink:#edf1f8;--muted:#a1acbd;--line:#2
   <div class="card-head"><h2>Today's checklist</h2><span class="chip" id="todayProgress">0/5 done</span></div>
   <div class="today-focus"><div class="focus-label">This week's focus</div><div class="focus-title" id="focusTitle">Loading your study plan…</div><div class="focus-desc" id="focusDesc"></div></div>
   <div class="task-list" id="dailyTasks"></div>
-  <div class="card-head schedule-overview-head"><h2>Daily topic schedule</h2><span class="chip">27 weeks · 1 topic/day</span></div>
+  <div class="card-head schedule-overview-head"><h2>Today’s study topic</h2><span class="chip">Only today</span></div>
   <div id="overviewDailySchedule"></div>
   <div class="overall-row"><span>Daily completion</span><b id="dailyPercent">0%</b></div><div class="progress green"><span id="dailyBar"></span></div>
   <p class="small-note">Tick tasks as you finish them. Your checklist saves automatically in this browser.</p>
@@ -242,20 +242,18 @@ const DAILY_STUDY_PLAN=[
 ];
 function renderOverviewSchedule(){
  const host=$("overviewDailySchedule");if(!host)return;host.innerHTML="";
+ const today=localDate(),startDate=new Date(2026,10,17);
+ const target=new Date(today+"T00:00:00");
+ const dayOffset=Math.round((target-startDate)/86400000);
+ const weekIndex=Math.floor(dayOffset/7),dayIndex=dayOffset%7;
+ if(dayOffset<0||weekIndex>=DAILY_STUDY_PLAN.length){host.textContent="No study topic is scheduled for today.";return;}
+ const week=DAILY_STUDY_PLAN[weekIndex],topic=week.days[dayIndex],date=new Date(target);
  const table=document.createElement("table");table.className="data-table";
- table.innerHTML="<thead><tr><th>Date</th><th>Day</th><th>Subject</th><th>Topic to study</th></tr></thead>";
- const body=document.createElement("tbody"),start=new Date(2026,10,17),today=localDate();
- DAILY_STUDY_PLAN.forEach((week,weekIndex)=>week.days.forEach((topic,dayIndex)=>{
-  const date=new Date(start);date.setDate(start.getDate()+weekIndex*7+dayIndex);
-  const dateKey=[date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-");
-  const row=document.createElement("tr");if(dateKey===today)row.className="current-row";
-  const dateCell=document.createElement("td");dateCell.textContent=date.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
-  const dayCell=document.createElement("td");dayCell.textContent=date.toLocaleDateString("en-IN",{weekday:"long"});
-  const subjectCell=document.createElement("td");subjectCell.textContent=week.subject;
-  const topicCell=document.createElement("td");topicCell.textContent=topic;topicCell.className="single-daily-topic";
-  row.append(dateCell,dayCell,subjectCell,topicCell);body.append(row);
- }));
- table.append(body);const wrap=document.createElement("div");wrap.className="data-table-wrap overview-schedule-wrap";wrap.append(table);host.append(wrap);
+ table.innerHTML="<thead><tr><th>Date</th><th>Day</th><th>Subject</th><th>Today's topic</th></tr></thead>";
+ const row=document.createElement("tr");row.className="current-row";
+ [date.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}),date.toLocaleDateString("en-IN",{weekday:"long"}),week.subject,topic].forEach(value=>{const cell=document.createElement("td");cell.textContent=value;row.append(cell)});
+ const body=document.createElement("tbody");body.append(row);table.append(body);
+ const wrap=document.createElement("div");wrap.className="data-table-wrap overview-schedule-wrap";wrap.append(table);host.append(wrap);
 }
 function renderRoadmap(){
  const host=$("roadmap");host.innerHTML="";
