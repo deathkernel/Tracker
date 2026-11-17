@@ -23,10 +23,11 @@ if errorlevel 1 goto error
 
 echo.
 echo Starting UPSC Tracker...
-echo Open http://127.0.0.1:8000 in your browser.
+echo Open http://127.0.0.1:8000 on this PC.
+echo For phone access, use Open on phone and scan its QR code.
 echo Keep this window open while using the tracker.
 start "" http://127.0.0.1:8000
-python -m uvicorn server:app --host 127.0.0.1 --port 8000
+python -m uvicorn server:app --host 0.0.0.0 --port 8000
 goto end
 
 :error
