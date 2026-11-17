@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import socket
 import sqlite3
 from pathlib import Path
@@ -8,17 +9,24 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "tracker.db"
 INDEX_PATH = BASE_DIR / "index.html"
 
-app = FastAPI(title="UPSC 2027 Tracker", version="1.0.0")
+app = FastAPI(title="UPSC 2027 Tracker", version="1.1.0")
+
+
+def connect_database() -> sqlite3.Connection:
+    connection = sqlite3.connect(DB_PATH, timeout=15)
+    connection.execute("PRAGMA busy_timeout = 15000")
+    connection.execute("PRAGMA journal_mode = WAL")
+    return connection
 
 
 def initialize_database() -> None:
-    with sqlite3.connect(DB_PATH) as connection:
+    with connect_database() as connection:
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS app_state (
@@ -34,15 +42,16 @@ def initialize_database() -> None:
 
 
 class TrackerState(BaseModel):
-    topics: dict[str, Any] = {}
-    daily: dict[str, Any] = {}
-    weekly: dict[str, Any] = {}
-    logs: dict[str, Any] = {}
-    studyPlanDone: dict[str, Any] = {}
-    revisionDone: dict[str, Any] = {}
-    settings: dict[str, Any] = {}
-    customSubjects: list[dict[str, Any]] = []
-    customDaily: list[list[Any]] = []
+    version: int = 0
+    topics: dict[str, Any] = Field(default_factory=dict)
+    daily: dict[str, Any] = Field(default_factory=dict)
+    weekly: dict[str, Any] = Field(default_factory=dict)
+    logs: dict[str, Any] = Field(default_factory=dict)
+    studyPlanDone: dict[str, Any] = Field(default_factory=dict)
+    revisionDone: dict[str, Any] = Field(default_factory=dict)
+    settings: dict[str, Any] = Field(default_factory=dict)
+    customSubjects: list[dict[str, Any]] = Field(default_factory=list)
+    customDaily: list[list[Any]] = Field(default_factory=list)
 
 
 @app.on_event("startup")
@@ -62,8 +71,12 @@ def get_lan_ip() -> str:
 
 
 @app.get("/api/network-info")
-def network_info() -> dict[str, str]:
-    return {"url": f"http://{get_lan_ip()}:8000"}
+def network_info() -> dict[str, Any]:
+    host = os.environ.get("TRACKER_HOST", "127.0.0.1")
+    return {
+        "url": f"http://{get_lan_ip()}:8000",
+        "network_access_enabled": host in {"0.0.0.0", "::"},
+    }
 
 
 @app.get("/api/qr-code")
@@ -86,7 +99,7 @@ def health() -> dict[str, str]:
 @app.get("/api/state")
 def get_state() -> dict[str, Any]:
     initialize_database()
-    with sqlite3.connect(DB_PATH) as connection:
+    with connect_database() as connection:
         row = connection.execute(
             "SELECT payload FROM app_state WHERE id = 1"
         ).fetchone()
@@ -100,10 +113,38 @@ def get_state() -> dict[str, Any]:
 
 
 @app.put("/api/state")
-def save_state(state: TrackerState) -> dict[str, str]:
+def save_state(state: TrackerState) -> dict[str, Any]:
     initialize_database()
-    payload = json.dumps(state.model_dump(), ensure_ascii=False)
-    with sqlite3.connect(DB_PATH) as connection:
+    with connect_database() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        row = connection.execute(
+            "SELECT payload FROM app_state WHERE id = 1"
+        ).fetchone()
+        try:
+            current = json.loads(row[0]) if row else {}
+            current_version = int(current.get("version", 0))
+        except (json.JSONDecodeError, TypeError, ValueError) as exc:
+            connection.rollback()
+            raise HTTPException(
+                status_code=500, detail="Saved tracker data is invalid."
+            ) from exc
+
+        if state.version != current_version:
+            connection.rollback()
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "message": "Tracker state changed since it was loaded.",
+                    "current_version": current_version,
+                    "submitted_version": state.version,
+                },
+            )
+
+        next_version = current_version + 1
+        payload = json.dumps(
+            {**state.model_dump(), "version": next_version},
+            ensure_ascii=False,
+        )
         connection.execute(
             """
             INSERT INTO app_state (id, payload, updated_at)
@@ -114,7 +155,8 @@ def save_state(state: TrackerState) -> dict[str, str]:
             """,
             (payload,),
         )
-    return {"status": "saved"}
+        connection.commit()
+    return {"status": "saved", "version": next_version}
 
 
 @app.get("/")
@@ -122,4 +164,3 @@ def dashboard() -> FileResponse:
     if not INDEX_PATH.exists():
         raise HTTPException(status_code=404, detail="index.html not found")
     return FileResponse(INDEX_PATH)
-
