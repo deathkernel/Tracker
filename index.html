@@ -390,11 +390,15 @@ function renderCharts(){
  const revisionTotal=completed,revisionDone=Object.values(state.revisionDone||{}).filter(Boolean).length,revisionPending=Math.max(0,revisionTotal-revisionDone);
  const planTotal=DAILY_STUDY_PLAN.reduce((sum,week)=>sum+week.days.length,0),planDone=Object.values(state.studyPlanDone||{}).filter(Boolean).length,planPending=Math.max(0,planTotal-planDone);
  const today=localDate(),dailyState=state.daily[today]||{},dailyTotal=dailyItems().length,dailyDone=dailyItems().filter(item=>dailyState[item[0]]).length,dailyPending=Math.max(0,dailyTotal-dailyDone);
+ const todayDate=new Date(today+"T00:00:00"),planStart=new Date(2026,10,17);let pastCompleted=0,missed=0;
+ DAILY_STUDY_PLAN.forEach((week,weekIndex)=>week.days.forEach((topic,dayIndex)=>{const date=new Date(planStart);date.setDate(planStart.getDate()+weekIndex*7+dayIndex);const key=[date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-");if(date<todayDate){if(state.studyPlanDone&&state.studyPlanDone[key])pastCompleted++;else missed++;}}));
+ const pastTotal=pastCompleted+missed;
  const cards=[
   {title:"Syllabus completion",done:completed,total,pending,label:"topics"},
   {title:"Revision progress",done:revisionDone,total:revisionTotal,pending:revisionPending,label:"revisions"},
   {title:"Study plan completion",done:planDone,total:planTotal,pending:planPending,label:"days"},
-  {title:"Today's checklist",done:dailyDone,total:dailyTotal,pending:dailyPending,label:"tasks"}
+  {title:"Today's checklist",done:dailyDone,total:dailyTotal,pending:dailyPending,label:"tasks"},
+  {title:"Missed-day tracking",done:missed,total:pastTotal,pending:pastCompleted,label:"past days",doneLabel:"missed",pendingLabel:"completed"}
  ];
  cards.forEach(item=>{
   const percent=item.total?Math.round(item.done/item.total*100):0;
@@ -407,7 +411,7 @@ function renderCharts(){
   const caption=document.createElement("div");caption.className="donut-caption";caption.textContent=item.done+" / "+item.total+" "+item.label;
   hole.append(value,caption);donut.append(hole);
   const legend=document.createElement("div");legend.className="chart-legend";
-  [[item.done+" completed",""],[item.pending+" pending","pending"]].forEach(([label,kind])=>{const line=document.createElement("div");line.className="legend-line";const dot=document.createElement("span");dot.className="legend-dot"+(kind?" "+kind:"");const text=document.createElement("span");text.textContent=label;line.append(dot,text);legend.append(line)});
+  [[item.done+" "+(item.doneLabel||"completed"),""],[item.pending+" "+(item.pendingLabel||"pending"),"pending"]].forEach(([label,kind])=>{const line=document.createElement("div");line.className="legend-line";const dot=document.createElement("span");dot.className="legend-dot"+(kind?" "+kind:"");const text=document.createElement("span");text.textContent=label;line.append(dot,text);legend.append(line)});
   layout.append(donut,legend);card.append(title,layout);host.append(card);
  });
  const subjectHost=$("subjectProgressChart");subjectHost.innerHTML="";
