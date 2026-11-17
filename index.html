@@ -72,6 +72,13 @@ body.dark .stat:nth-child(2){border-top-color:#53668c}
 body.dark .stat:nth-child(3){border-top-color:#426a59}
 body.dark .stat:nth-child(4){border-top-color:#70634c}
 body.dark .stat:nth-child(5){border-top-color:#765e4b}
+
+.analytics-extra-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+.analytics-extra-card{min-width:0;margin:0}
+.analytics-extra-card .chart-heading-row{gap:10px;align-items:flex-start;flex-wrap:wrap}
+.analytics-extra-card .chart-title{font-size:14px}
+.analytics-extra-card .analytics-line-graph{width:100%;height:auto;display:block;overflow:visible}
+@media(max-width:760px){.analytics-extra-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -173,6 +180,7 @@ body.dark .stat:nth-child(5){border-top-color:#765e4b}
   <div class="analytics-metrics-grid" id="progressCharts"></div>
   <div class="chart-card analytics-graph-card" style="margin-top:14px"><div class="chart-heading-row"><h3 class="chart-title">Subject-wise syllabus progress</h3><span class="analytics-subtitle">Completion percentage</span></div><div id="subjectProgressChart"></div></div>
   <div class="chart-card analytics-graph-card" style="margin-top:14px"><div class="chart-heading-row"><h3 class="chart-title">Study hours — last 7 days</h3><span class="analytics-subtitle" id="studyHoursTotal"></span></div><div id="studyHoursChart"></div></div>
+  <div class="analytics-extra-grid" id="extraAnalyticsCharts"></div>
  </section>
 </main>
 <aside>
@@ -472,6 +480,29 @@ function renderCharts(){
  const poly=document.createElementNS("http://www.w3.org/2000/svg","polyline");poly.setAttribute("points",pts.map(point=>point.x+","+point.y).join(" "));poly.setAttribute("fill","none");poly.setAttribute("class","analytics-hours-line");lineSvg.append(poly);
  pts.forEach((point,index)=>{const dot=document.createElementNS("http://www.w3.org/2000/svg","circle");dot.setAttribute("cx",point.x);dot.setAttribute("cy",point.y);dot.setAttribute("r","5");dot.setAttribute("class","analytics-hours-dot");lineSvg.append(dot);const value=document.createElementNS("http://www.w3.org/2000/svg","text");value.setAttribute("x",point.x);value.setAttribute("y",point.y-11);value.setAttribute("text-anchor","middle");value.setAttribute("class","analytics-point-value");value.textContent=days[index].hours.toFixed(1)+"h";lineSvg.append(value);const label=document.createElementNS("http://www.w3.org/2000/svg","text");label.setAttribute("x",point.x);label.setAttribute("y",h-8);label.setAttribute("text-anchor","middle");label.setAttribute("class","analytics-axis-label");label.textContent=days[index].label;lineSvg.append(label)});
  hoursHost.append(lineSvg);
+ const extraHost=$("extraAnalyticsCharts");if(extraHost){
+  extraHost.innerHTML="";
+  const dateKey=date=>[date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-");
+  const logEntries=Object.entries(state.logs||{}).map(([key,value])=>({key,date:new Date(key+"T00:00:00"),hours:Number(value.hours)||0,mcqs:Number(value.mcqs)||0,csat:Number(value.csat)||0}));
+  const sumRange=(start,end,field)=>logEntries.filter(item=>item.date>=start&&item.date<=end).reduce((sum,item)=>sum+item[field],0);
+  const makeSeries=(count,step,field,format)=>{const result=[];for(let offset=count-1;offset>=0;offset--){const end=new Date(maxDate);end.setDate(end.getDate()-offset*step);const start=new Date(end);start.setDate(start.getDate()-step+1);result.push({label:format(end),value:sumRange(start,end,field)});}return result};
+  const renderTrend=(title,subtitle,series,unit)=>{const card=document.createElement("div");card.className="chart-card analytics-graph-card analytics-extra-card";const head=document.createElement("div");head.className="chart-heading-row";const heading=document.createElement("h3");heading.className="chart-title";heading.textContent=title;const sub=document.createElement("span");sub.className="analytics-subtitle";sub.textContent=subtitle;head.append(heading,sub);const chart=document.createElement("div");const width=760,height=220,pad=38,maxValue=Math.max(1,...series.map(item=>item.value));const points=series.map((item,index)=>({x:pad+(series.length===1?0:index*(width-pad*2)/(series.length-1)),y:height-pad-(item.value/maxValue)*(height-pad*2)}));const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");svg.setAttribute("viewBox","0 0 "+width+" "+height);svg.setAttribute("class","analytics-line-graph");svg.setAttribute("role","img");svg.setAttribute("aria-label",title);[0,.5,1].forEach(f=>{const y=pad+f*(height-pad*2),line=document.createElementNS("http://www.w3.org/2000/svg","line");line.setAttribute("x1",pad);line.setAttribute("x2",width-pad);line.setAttribute("y1",y);line.setAttribute("y2",y);line.setAttribute("class","analytics-gridline");svg.append(line)});const line=document.createElementNS("http://www.w3.org/2000/svg","polyline");line.setAttribute("points",points.map(point=>point.x+","+point.y).join(" "));line.setAttribute("fill","none");line.setAttribute("class","analytics-hours-line");svg.append(line);points.forEach((point,index)=>{const dot=document.createElementNS("http://www.w3.org/2000/svg","circle");dot.setAttribute("cx",point.x);dot.setAttribute("cy",point.y);dot.setAttribute("r","4.5");dot.setAttribute("class","analytics-hours-dot");svg.append(dot);const value=document.createElementNS("http://www.w3.org/2000/svg","text");value.setAttribute("x",point.x);value.setAttribute("y",point.y-10);value.setAttribute("text-anchor","middle");value.setAttribute("class","analytics-point-value");value.textContent=series[index].value+unit;svg.append(value);const label=document.createElementNS("http://www.w3.org/2000/svg","text");label.setAttribute("x",point.x);label.setAttribute("y",height-8);label.setAttribute("text-anchor","middle");label.setAttribute("class","analytics-axis-label");label.textContent=series[index].label;svg.append(label)});chart.append(svg);card.append(head,chart);extraHost.append(card)};
+  const weeklyLabel=date=>date.toLocaleDateString("en-IN",{day:"2-digit",month:"short"});
+  renderTrend("Weekly study hours","Last 8 weeks",makeSeries(8,7,"hours",weeklyLabel),"h");
+  renderTrend("Monthly study hours","Last 6 months",makeSeries(6,30,"hours",weeklyLabel),"h");
+  renderTrend("Daily MCQs solved","Last 7 days",days.map(day=>({label:day.label,value:Number(state.logs[day.key]?.mcqs)||0})),"");
+  renderTrend("Weekly MCQs solved","Last 8 weeks",makeSeries(8,7,"mcqs",weeklyLabel),"");
+  renderTrend("Daily CSAT practice","Last 7 days",days.map(day=>({label:day.label,value:Number(state.logs[day.key]?.csat)||0})),"");
+  renderTrend("Weekly CSAT practice","Last 8 weeks",makeSeries(8,7,"csat",weeklyLabel),"");
+  const consistency=[];for(let offset=13;offset>=0;offset--){const date=new Date(maxDate);date.setDate(date.getDate()-offset);const key=dateKey(date),daily=state.daily[key]||{};const active=!!state.logs[key]||Object.values(daily).some(Boolean);consistency.push({label:date.toLocaleDateString("en-IN",{day:"2-digit",month:"short"}),value:active?1:0})}
+  renderTrend("Study consistency","Active study days · last 14 days",consistency,"");
+  const revisionBySubject=allSubjects().map(subject=>({label:subject.name.slice(0,8),value:subject.topics.filter(topic=>state.revisionDone?.[subject.name+"::"+topic[0]]).length}));
+  renderTrend("Revisions by subject","Completed revision checklists",revisionBySubject,"");
+  const planWeekly=[];for(let week=0;week<8;week++){let done=0;for(let day=0;day<7;day++){const date=new Date(2026,10,17);date.setDate(date.getDate()+week*7+day);if(state.studyPlanDone?.[dateKey(date)])done++}planWeekly.push({label:"W"+(week+1),value:done})}
+  renderTrend("Weekly study-plan completion","Completed days · first 8 weeks",planWeekly,"/7");
+  const prioritySeries=["P1","P2"].map(priority=>({label:priority,value:allSubjects().flatMap(subject=>subject.topics.filter(topic=>topic[2]===priority&&state.topics[subject.name+"::"+topic[0]])).length}));
+  renderTrend("Priority topics completed","P1 vs P2 · completed topics",prioritySeries,"");
+ }
  $("chartsUpdated").textContent="Updated "+new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
 }
 function setWorkspaceView(view){const names={overview:"Your daily preparation at a glance.",syllabus:"Track 256 PYQ-focused topics: Top 50 priority plus 206 curated micro-topics.",logs:"Record focused hours, MCQs and daily study notes.",plan:"Follow your weekly targets and full preparation roadmap.",settings:"Personalize your target date, study hours and workspace.",revision:"Revisit every topic you have already completed.",charts:"Visualize your syllabus, revision, study plan and study-time progress."};document.querySelectorAll("[data-page]").forEach(card=>{card.hidden=card.dataset.page!==view});document.querySelectorAll(".nav-item").forEach(button=>{const active=button.dataset.view===view;button.classList.toggle("active",active);button.setAttribute("aria-current",active?"page":"false")});$("pageHint").textContent=names[view]||names.overview}
