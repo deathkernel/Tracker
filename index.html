@@ -73,6 +73,8 @@ body.dark{--bg:#10141d;--surface:#191f2b;--ink:#edf1f8;--muted:#a1acbd;--line:#2
   <div class="card-head"><h2>Today's checklist</h2><span class="chip" id="todayProgress">0/5 done</span></div>
   <div class="today-focus"><div class="focus-label">This week's focus</div><div class="focus-title" id="focusTitle">Loading your study plan…</div><div class="focus-desc" id="focusDesc"></div></div>
   <div class="task-list" id="dailyTasks"></div>
+  <div class="card-head schedule-overview-head"><h2>Daily topic schedule</h2><span class="chip">27 weeks · 1 topic/day</span></div>
+  <div id="overviewDailySchedule"></div>
   <div class="overall-row"><span>Daily completion</span><b id="dailyPercent">0%</b></div><div class="progress green"><span id="dailyBar"></span></div>
   <p class="small-note">Tick tasks as you finish them. Your checklist saves automatically in this browser.</p>
  </section>
@@ -238,6 +240,23 @@ const DAILY_STUDY_PLAN=[
 {subject:"Mock Tests",days:["Full GS mock test 5 + analysis","Revise Geography and mapping mistakes","Full GS mock test 6 + analysis","CSAT practice: comprehension and reasoning","Full GS mock test 7 + analysis","Mistake notebook: revise repeated errors","Light revision of short notes and facts"]},
 {subject:"Final Revision",days:["Polity: important Constitutional Articles","Modern History: dates, acts and movements","Economy: key terms, budget and institutions","Environment: species, parks and conventions","Geography: maps, rivers, passes and locations","Art & Culture + Science: quick facts and current links","Final short-note revision; rest and exam readiness"]}
 ];
+function renderOverviewSchedule(){
+ const host=$("overviewDailySchedule");if(!host)return;host.innerHTML="";
+ const table=document.createElement("table");table.className="data-table";
+ table.innerHTML="<thead><tr><th>Date</th><th>Day</th><th>Subject</th><th>Topic to study</th></tr></thead>";
+ const body=document.createElement("tbody"),start=new Date(2026,10,17),today=localDate();
+ DAILY_STUDY_PLAN.forEach((week,weekIndex)=>week.days.forEach((topic,dayIndex)=>{
+  const date=new Date(start);date.setDate(start.getDate()+weekIndex*7+dayIndex);
+  const dateKey=[date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-");
+  const row=document.createElement("tr");if(dateKey===today)row.className="current-row";
+  const dateCell=document.createElement("td");dateCell.textContent=date.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
+  const dayCell=document.createElement("td");dayCell.textContent=date.toLocaleDateString("en-IN",{weekday:"long"});
+  const subjectCell=document.createElement("td");subjectCell.textContent=week.subject;
+  const topicCell=document.createElement("td");topicCell.textContent=topic;topicCell.className="single-daily-topic";
+  row.append(dateCell,dayCell,subjectCell,topicCell);body.append(row);
+ }));
+ table.append(body);const wrap=document.createElement("div");wrap.className="data-table-wrap overview-schedule-wrap";wrap.append(table);host.append(wrap);
+}
 function renderRoadmap(){
  const host=$("roadmap");host.innerHTML="";
  const table=document.createElement("table");table.className="data-table daily-plan-table";
@@ -273,7 +292,7 @@ function renderLogs(){
 }
 function syncSubjectFilter(){const select=$("subjectFilter"),selected=select.value;select.innerHTML='<option value="all">All subjects</option>';allSubjects().forEach(s=>{const opt=document.createElement("option");opt.value=s.name;opt.textContent=s.name;select.append(opt)});select.value=allSubjects().some(s=>s.name===selected)?selected:"all"}
 function setWorkspaceView(view){const names={overview:"Your daily preparation at a glance.",syllabus:"Track every mapped topic, subject by subject.",logs:"Record focused hours, MCQs and daily study notes.",plan:"Follow your weekly targets and full preparation roadmap.",settings:"Personalize your target date, study hours and workspace."};document.querySelectorAll("[data-page]").forEach(card=>{card.hidden=card.dataset.page!==view});document.querySelectorAll(".nav-item").forEach(button=>{const active=button.dataset.view===view;button.classList.toggle("active",active);button.setAttribute("aria-current",active?"page":"false")});$("pageHint").textContent=names[view]||names.overview}
-function renderAll(){syncSubjectFilter();document.body.classList.toggle("dark",(state.settings||{}).theme==="dark");$("themeToggle").textContent=(state.settings||{}).theme==="dark"?"Use light theme":"Use dark theme";renderStats();renderDaily();renderSubjectOverview();renderTopics();renderWeekly();renderRoadmap();renderLogs();setWorkspaceView(window.trackerView||"overview")}
+function renderAll(){syncSubjectFilter();document.body.classList.toggle("dark",(state.settings||{}).theme==="dark");$("themeToggle").textContent=(state.settings||{}).theme==="dark"?"Use light theme":"Use dark theme";renderStats();renderDaily();renderOverviewSchedule();renderSubjectOverview();renderTopics();renderWeekly();renderRoadmap();renderLogs();setWorkspaceView(window.trackerView||"overview")}
 function initFilters(){allSubjects().forEach(s=>{const opt=document.createElement("option");opt.value=s.name;opt.textContent=s.name;$("subjectFilter").append(opt)});$("topicSearch").addEventListener("input",renderTopics);$("subjectFilter").addEventListener("change",renderTopics);$("topicStatus").addEventListener("change",renderTopics)}
 $("logDate").value=localDate();
 $("saveLog").addEventListener("click",()=>{const date=$("logDate").value;if(!date){notify("Choose a date first.");return}const hours=Number($("logHours").value),mcqs=Number($("logMcq").value),csat=Number($("logCsat").value);if([hours,mcqs,csat].some(x=>x<0||!Number.isFinite(x))){notify("Enter valid non-negative numbers.");return}state.logs[date]={hours,mcqs,csat,notes:$("logNotes").value.trim()};persist();renderStats();renderLogs();notify("Study log saved.")});
