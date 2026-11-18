@@ -57,6 +57,12 @@ class TrackerState(BaseModel):
     testResults: list[dict[str, Any]] = Field(default_factory=list)
     errorNotebook: list[dict[str, Any]] = Field(default_factory=list)
     strictRules: dict[str, Any] = Field(default_factory=dict)
+    questionBank: list[dict[str, Any]] = Field(default_factory=list)
+    masteryProgress: dict[str, Any] = Field(default_factory=dict)
+    retestSchedule: dict[str, Any] = Field(default_factory=dict)
+    recoveryQueue: list[dict[str, Any]] = Field(default_factory=list)
+    examSession: dict[str, Any] | None = None
+    pendingTopicEvidence: dict[str, Any] = Field(default_factory=dict)
 
 
 @app.on_event("startup")
