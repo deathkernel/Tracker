@@ -13,6 +13,7 @@ jobs:
         with:
           node-version: 22
       - run: node --test tests/*.test.cjs
+      - run: python tests/check_inline_script.py
   python-syntax:
     runs-on: ubuntu-latest
     steps:

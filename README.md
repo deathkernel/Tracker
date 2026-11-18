@@ -33,7 +33,9 @@ Existing topic ticks and study records are preserved when upgrading. Previously 
 
 ## Personal data and privacy
 
-The local server binds to `127.0.0.1` by default. Study progress is stored in `tracker.db` in this folder and is not uploaded to a cloud service. Use Export backup regularly. Do not delete `tracker.db` if you want to keep the database.\n\nFor optional phone access, set the `TRACKER_HOST` environment variable to `0.0.0.0` before running `run.bat`. This exposes the app and its unauthenticated state API to your local network. Use this only on a trusted private Wi-Fi network and disable it again after use. Do not expose the app directly to the internet.
+The local server binds to `127.0.0.1` by default. Study progress is stored in `tracker.db` in this folder and is not uploaded to a cloud service. Use Export backup regularly. Do not delete `tracker.db` if you want to keep the database.
+
+For optional phone access, set the `TRACKER_HOST` environment variable to `0.0.0.0` before running `run.bat`. This exposes the app and its unauthenticated state API to your local network. Use this only on a trusted private Wi-Fi network and disable it again after use. Do not expose the app directly to the internet.
 
 ## Topic data note
 
