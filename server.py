@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import socket
+from contextlib import asynccontextmanager
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -15,7 +16,13 @@ BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "tracker.db"
 INDEX_PATH = BASE_DIR / "index.html"
 
-app = FastAPI(title="UPSC 2027 Tracker", version="1.1.0")
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    initialize_database()
+    yield
+
+
+app = FastAPI(title="UPSC 2027 Tracker", version="1.1.0", lifespan=lifespan)
 
 
 def connect_database() -> sqlite3.Connection:
@@ -63,11 +70,6 @@ class TrackerState(BaseModel):
     recoveryQueue: list[dict[str, Any]] = Field(default_factory=list)
     examSession: dict[str, Any] | None = None
     pendingTopicEvidence: dict[str, Any] = Field(default_factory=dict)
-
-
-@app.on_event("startup")
-def on_startup() -> None:
-    initialize_database()
 
 
 def get_lan_ip() -> str:
