@@ -190,14 +190,6 @@ def save_state(state: TrackerState) -> dict[str, Any]:
     return {"status": "saved", "version": next_version}
 
 
-@app.get("/strict_engine.js")
-def strict_engine_asset() -> FileResponse:
-    return FileResponse(BASE_DIR / "strict_engine.js", media_type="application/javascript")
-
-
-@app.get("/strict_rules.js")
-def strict_rules_asset() -> FileResponse:
-    return FileResponse(BASE_DIR / "strict_rules.js", media_type="application/javascript")
 
 
 @app.get("/")
