@@ -27,7 +27,7 @@ Keep the command window open while using the tracker. Press Ctrl+C to stop the l
 
 ## Strict preparation rules
 
-The tracker includes an evidence-based mastery workflow. A topic requires study notes, at least 5 related PYQs, and a topic test of at least 10 questions with 70% accuracy before mastery completion. Verified topics receive D1, D3, D7, D15, D30 and D60 revision checkpoints. Daily targets default to 4 focused hours and 50 MCQs; CSAT is scheduled on alternate days. Missed targets remain visible for manual recovery. Sunday review combines a mock/test, revision and backlog review.
+The tracker includes an evidence-based mastery workflow. A topic requires study notes, at least 15 related PYQs, at least 50 characters of study notes, and a topic test of at least 20 questions with 95% accuracy before mastery completion. Verified topics receive D1, D3, D7, D15, D30 and D60 revision checkpoints. Every revision test also requires at least 20 questions with 95% accuracy. Daily targets default to 4 focused hours and 50 MCQs; CSAT is scheduled on alternate days. Missed targets remain visible for manual recovery. Sunday review combines a mock/test, revision and backlog review.
 
 Existing topic ticks and study records are preserved when upgrading. Previously completed topics without mastery evidence are treated as legacy progress and must be verified before they enter the new mastery/revision workflow.
 
