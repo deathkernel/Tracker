@@ -68,16 +68,47 @@ def merge_subjects(base: list[dict[str, Any]], custom: list[dict[str, Any]]) -> 
     return merged
 
 
+CSV_COLUMNS = {
+    "Topics": ["TopicKey", "Subject", "Topic", "Priority", "PYQCount"],
+    "TopicProgress": ["TopicKey", "Subject", "Topic", "Priority", "IsCompleted", "IsRevised"],
+    "StudyLogs": ["Date", "StudyHours", "MCQs", "CSAT", "Notes"],
+    "DailyChecklist": ["Date", "TaskID", "Task", "IsCompleted"],
+    "StudyPlan": ["Date", "Week", "Subject", "PlannedTopic", "IsCompleted"],
+    "Calendar": ["Date", "Year", "MonthNumber", "Month", "Weekday", "WeekdayNumber"],
+}
+
+
 def write_csv(name: str, rows: list[dict[str, Any]]) -> None:
+    if name not in CSV_COLUMNS:
+        raise ValueError(f"Unknown Power BI table: {name}")
     path = OUT / f"{name}.csv"
     with path.open("w", newline="", encoding="utf-8-sig") as file:
-        if rows:
-            writer = csv.DictWriter(file, fieldnames=list(rows[0]))
-            writer.writeheader()
-            writer.writerows(rows)
-        else:
-            file.write("")
+        writer = csv.DictWriter(file, fieldnames=CSV_COLUMNS[name], extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
     print(f"{path.name}: {len(rows)} rows")
+
+
+def valid_iso_date(value: Any) -> bool:
+    if not isinstance(value, str) or not re.fullmatch(r"\\d{4}-\\d{2}-\\d{2}", value):
+        return False
+    try:
+        date.fromisoformat(value)
+        return True
+    except ValueError:
+        return False
+
+
+def safe_number(value: Any, *, integer: bool = False) -> int | float | str:
+    try:
+        number = float(value)
+        if not (number >= 0 and number < float("inf")):
+            return ""
+        if integer:
+            return int(number) if number.is_integer() else ""
+        return number
+    except (TypeError, ValueError, OverflowError):
+        return ""
 
 
 def main() -> None:
@@ -129,14 +160,14 @@ def main() -> None:
     logs_state = state.get("logs", {}) if isinstance(state.get("logs", {}), dict) else {}
     logs = []
     for day, value in sorted(logs_state.items()):
-        if not isinstance(value, dict):
+        if not isinstance(value, dict) or not valid_iso_date(day):
             continue
-        logs.append({"Date": day, "StudyHours": float(value.get("hours") or 0), "MCQs": int(value.get("mcqs") or 0), "CSAT": int(value.get("csat") or 0), "Notes": value.get("notes", "")})
+        logs.append({"Date": day, "StudyHours": safe_number(value.get("hours")), "MCQs": safe_number(value.get("mcqs"), integer=True), "CSAT": safe_number(value.get("csat"), integer=True), "Notes": str(value.get("notes") or "")})
 
     checklist = []
     daily_state = state.get("daily", {}) if isinstance(state.get("daily", {}), dict) else {}
     for day, checks in sorted(daily_state.items()):
-        if not isinstance(checks, dict):
+        if not isinstance(checks, dict) or not valid_iso_date(day):
             continue
         for item in daily_items:
             checklist.append({"Date": day, "TaskID": item[0], "Task": item[1], "IsCompleted": bool(checks.get(item[0], False))})
@@ -150,7 +181,7 @@ def main() -> None:
             day_key = day.isoformat()
             plan_rows.append({"Date": day_key, "Week": wi + 1, "Subject": week.get("subject", ""), "PlannedTopic": topic, "IsCompleted": bool(plan_state.get(day_key, False))})
 
-    dates = sorted({row["Date"] for row in logs + checklist + plan_rows})
+    dates = sorted({row["Date"] for row in logs + checklist + plan_rows if valid_iso_date(row.get("Date"))})
     calendar = []
     for value in dates:
         day = date.fromisoformat(value)
