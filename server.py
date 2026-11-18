@@ -52,6 +52,11 @@ class TrackerState(BaseModel):
     settings: dict[str, Any] = Field(default_factory=dict)
     customSubjects: list[dict[str, Any]] = Field(default_factory=list)
     customDaily: list[list[Any]] = Field(default_factory=list)
+    topicEvidence: dict[str, Any] = Field(default_factory=dict)
+    revisionSchedule: dict[str, Any] = Field(default_factory=dict)
+    testResults: list[dict[str, Any]] = Field(default_factory=list)
+    errorNotebook: list[dict[str, Any]] = Field(default_factory=list)
+    strictRules: dict[str, Any] = Field(default_factory=dict)
 
 
 @app.on_event("startup")

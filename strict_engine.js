@@ -1,0 +1,9 @@
+(function(root,factory){const api=factory();if(typeof module==="object"&&module.exports)module.exports=api;root.TrackerStrictEngine=api})(typeof globalThis!=="undefined"?globalThis:this,function(){
+ const REVISION_OFFSETS=[1,3,7,15,30,60];
+ function addDays(date,days){const d=new Date(date+"T12:00:00");d.setDate(d.getDate()+days);return d.toISOString().slice(0,10)}
+ function accuracy(correct,total){if(!Number.isInteger(correct)||!Number.isInteger(total)||total<=0||correct<0||correct>total)return 0;return Math.round(correct/total*100)}
+ function validateMastery(input){const notes=String(input.notes||"").trim(),pyqs=Number(input.pyqs),total=Number(input.total),correct=Number(input.correct);const score=accuracy(correct,total);return {valid:notes.length>=20&&Number.isInteger(pyqs)&&pyqs>=5&&Number.isInteger(total)&&total>=10&&Number.isInteger(correct)&&correct>=0&&correct<=total&&score>=70,score,errors:[...(notes.length<20?["Study notes must contain at least 20 characters."]:[]),...(!Number.isInteger(pyqs)||pyqs<5?["Complete at least 5 related PYQs."]:[]),...(!Number.isInteger(total)||total<10?["A topic test must contain at least 10 questions."]:[]),...(!Number.isInteger(correct)||correct<0||correct>total?["Enter a valid number of correct answers."]:[]),...(Number.isInteger(total)&&total>=10&&Number.isInteger(correct)&&correct>=0&&correct<=total&&score<70?["Topic-test accuracy must be at least 70%."]:[])]}}
+ function schedule(completedAt){return REVISION_OFFSETS.map((days,index)=>({number:index+1,offset:days,dueDate:addDays(completedAt,days),completed:false,completedAt:null,score:null}))}
+ function dueStatus(items,today){const pending=(items||[]).filter(x=>!x.completed);return {overdue:pending.filter(x=>x.dueDate<today),due:pending.filter(x=>x.dueDate===today),upcoming:pending.filter(x=>x.dueDate>today)}}
+ return {REVISION_OFFSETS,addDays,accuracy,validateMastery,schedule,dueStatus};
+});
