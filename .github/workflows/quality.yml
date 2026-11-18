@@ -13,6 +13,7 @@ jobs:
         with:
           node-version: 22
       - run: node --test tests/*.test.cjs
+      - run: node --check strict_engine.js && node --check strict_rules.js
       - run: python tests/check_inline_script.py
   python-syntax:
     runs-on: ubuntu-latest
