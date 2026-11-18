@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -66,3 +67,32 @@ def test_state_rejects_stale_writes_without_overwriting_newer_data(client):
     response = client.put("/api/state", json=stale_payload)
     assert response.status_code == 409
     assert client.get("/api/state").json()["logs"]["2026-11-18"]["hours"] == 4
+
+
+def test_state_rejects_negative_version(client):
+    payload = client.get("/api/state").json()
+    payload["version"] = -1
+    response = client.put("/api/state", json=payload)
+    assert response.status_code == 422
+
+
+def test_state_rejects_non_object_saved_json(client):
+    with sqlite3.connect(server.DB_PATH) as db:
+        db.execute("UPDATE app_state SET payload = ? WHERE id = 1", ('["not", "an", "object"]',))
+    response = client.put("/api/state", json={"version": 0})
+    assert response.status_code == 500
+
+
+def test_database_sessions_close_connections(client, monkeypatch):
+    connections = []
+    original_connect = server.connect_database
+    def tracked_connect():
+        connection = original_connect()
+        connections.append(connection)
+        return connection
+    monkeypatch.setattr(server, "connect_database", tracked_connect)
+    assert client.get("/api/state").status_code == 200
+    assert connections
+    for connection in connections:
+        with pytest.raises(sqlite3.ProgrammingError):
+            connection.execute("SELECT 1")

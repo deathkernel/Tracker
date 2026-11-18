@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 import socket
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -31,8 +31,22 @@ def connect_database() -> sqlite3.Connection:
     return connection
 
 
+@contextmanager
+def database_session():
+    connection = connect_database()
+    try:
+        yield connection
+    except Exception:
+        connection.rollback()
+        raise
+    else:
+        connection.commit()
+    finally:
+        connection.close()
+
+
 def initialize_database() -> None:
-    with connect_database() as connection:
+    with database_session() as connection:
         connection.execute("PRAGMA journal_mode = WAL")
         connection.execute(
             """
@@ -49,7 +63,7 @@ def initialize_database() -> None:
 
 
 class TrackerState(BaseModel):
-    version: int = 0
+    version: int = Field(default=0, ge=0)
     topics: dict[str, Any] = Field(default_factory=dict)
     daily: dict[str, Any] = Field(default_factory=dict)
     weekly: dict[str, Any] = Field(default_factory=dict)
@@ -112,7 +126,7 @@ def health() -> dict[str, str]:
 @app.get("/api/state")
 def get_state() -> dict[str, Any]:
     initialize_database()
-    with connect_database() as connection:
+    with database_session() as connection:
         row = connection.execute(
             "SELECT payload FROM app_state WHERE id = 1"
         ).fetchone()
@@ -128,14 +142,18 @@ def get_state() -> dict[str, Any]:
 @app.put("/api/state")
 def save_state(state: TrackerState) -> dict[str, Any]:
     initialize_database()
-    with connect_database() as connection:
+    with database_session() as connection:
         connection.execute("BEGIN IMMEDIATE")
         row = connection.execute(
             "SELECT payload FROM app_state WHERE id = 1"
         ).fetchone()
         try:
             current = json.loads(row[0]) if row else {}
+            if not isinstance(current, dict):
+                raise ValueError("Saved tracker state must be a JSON object.")
             current_version = int(current.get("version", 0))
+            if current_version < 0:
+                raise ValueError("Saved tracker version cannot be negative.")
         except (json.JSONDecodeError, TypeError, ValueError) as exc:
             connection.rollback()
             raise HTTPException(

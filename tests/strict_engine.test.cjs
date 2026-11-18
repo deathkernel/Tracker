@@ -11,3 +11,8 @@ test("surprise retest date is bounded to three through seven days",()=>{assert.e
 test("invalid question bank records are rejected",()=>{assert.equal(e.validateQuestion(q("1")),true);assert.equal(e.validateQuestion({...q("2"),options:["A","B"]}),false);assert.equal(e.validateQuestion({...q("3"),correctIndex:4}),false)});
 
 test("question records require stable IDs and duplicate IDs cannot enter an exam twice",()=>{assert.equal(e.validateQuestion({...q("missing"),id:""}),false);const bank=[...Array.from({length:20},(_,i)=>q("id-"+i)),q("id-0")];const built=e.buildExam(bank,{count:20,random:()=>0});assert.equal(built.ok,true);assert.equal(new Set(built.questions.map(item=>item.id)).size,20);assert.equal(e.buildExam(bank,{count:21}).ok,false)});
+
+test("mastery validation safely rejects missing input",()=>{assert.equal(e.validateMastery(null).valid,false);assert.equal(e.validateMastery(undefined).valid,false)});
+test("exam grading rejects invalid scoring settings",()=>{const questions=[q("1")];assert.throws(()=>e.gradeExam(questions,{}, {marksPerQuestion:0}),RangeError);assert.throws(()=>e.gradeExam(questions,{}, {negativeFraction:-0.1}),RangeError);assert.throws(()=>e.gradeExam(questions,{}, {negativeFraction:1.1}),RangeError)});
+test("exam grading rejects malformed question and answer containers",()=>{assert.throws(()=>e.gradeExam({},{}),TypeError);assert.throws(()=>e.gradeExam([{}],{}),TypeError);assert.throws(()=>e.gradeExam([q("1")],[]),TypeError)});
+test("exam builder safely rejects malformed banks and counts",()=>{assert.equal(e.buildExam({},{}).ok,false);assert.equal(e.buildExam([q("1")],{count:0}).ok,false);assert.equal(e.buildExam([q("1")],{count:1}).ok,true)});
