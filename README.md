@@ -38,6 +38,38 @@ The floating AI Study Planner connects to Ollama at `http://127.0.0.1:11434` and
 
 Tracker sends the selected prompt or planning context only to the local Ollama service. It does not call a hosted AI API. AI-generated schedules are validated against pending syllabus topics and checked for duplicate dates and overlapping time blocks. If Ollama is not running, the rest of Tracker continues to work normally.
 
+## Strict AI Teacher — product concept and implementation target
+
+Tracker is being extended from a timetable generator into a local-first **Strict AI Teacher**. The teacher is the primary AI experience; chat remains available as an optional way to ask questions, not as the main workflow.
+
+### Teacher behaviour
+
+- Take initiative instead of waiting for the student to open chat: ask whether assigned study and revision were completed, request a truthful status, and follow up on incomplete work.
+- Ask spontaneous, syllabus-relevant recall and concept-check questions, including questions about previously studied topics and earlier mistakes.
+- Evaluate the student's answers, explain errors, identify weak concepts and schedule targeted revision.
+- Ask for a short explanation or evidence of understanding rather than accepting an unsupported “done” response.
+- Adapt the timetable to verified progress, missed sessions, available study time and revision needs.
+- Maintain continuity using study history, prior answers, weak-topic signals, commitments and teacher interaction history.
+- Use a firm, disciplined and respectful tone: no insults, humiliation, threats or guilt-based pressure.
+- Respect configured quiet hours, rest periods and the student's ability to pause proactive prompts.
+
+### Server-aware operation
+
+- When the Tracker server and local Ollama runtime are available, the teacher engine can run its scheduled checks and deliver proactive prompts.
+- When the server is stopped, proactive checks pause; the next start should recover persisted teacher state and resume eligible checks without duplicating prompts.
+- Browser notifications require user permission. Reliable notifications when the browser is closed require a separate Windows background/notification component; a web page alone cannot guarantee this.
+- Ollama remains local at `http://127.0.0.1:11434`; no hosted AI API is required.
+
+### Safety, control and Tracker data integrity
+
+- The teacher may analyse progress and propose schedule changes, but must not silently mark syllabus topics complete, delete records, or overwrite study history.
+- Schedule changes and material progress corrections require explicit student confirmation.
+- Tracker's deterministic backend remains authoritative for completion, the Day 1 study → Day 2 MCQ attempt-count + revision cycle, and all persistence rules.
+- MCQ attempt counts may be tracked; this feature does not introduce an MCQ question bank or generate/store MCQ question content.
+- Proactive questions must be relevant, rate-limited, deduplicated and controlled by configurable study windows and quiet hours.
+
+The Strict AI Teacher behaviour is the next implementation target; the existing floating planner is the foundation, not proof that all proactive teacher capabilities are already available.
+
 ## Personal data and privacy
 
 The local server binds to `127.0.0.1` by default. Study progress is stored in `tracker.db` in this folder and is not uploaded to a cloud service. Use Export backup regularly. Do not delete `tracker.db` if you want to keep the database.
@@ -51,4 +83,3 @@ The topic list and mapped PYQ counts are curated editorial references for this p
 ## Exam date
 
 The default target is 23 May 2027. You can change it in the dashboard. Confirm official exam dates and notices on the UPSC website.
-
