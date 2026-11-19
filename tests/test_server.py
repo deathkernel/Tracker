@@ -362,8 +362,8 @@ def test_teacher_cycle_creates_one_syllabus_grounded_question(client, monkeypatc
         json={
             "enabled": True,
             "interval_minutes": 120,
-            "quiet_start": "22:00",
-            "quiet_end": "07:00",
+            "quiet_start": "00:00",
+            "quiet_end": "00:00",
             "model": "qwen3.5:9b",
         },
     )
@@ -393,8 +393,8 @@ def test_teacher_cycle_does_not_duplicate_an_unanswered_question(client, monkeyp
         json={
             "enabled": True,
             "interval_minutes": 120,
-            "quiet_start": "22:00",
-            "quiet_end": "07:00",
+            "quiet_start": "00:00",
+            "quiet_end": "00:00",
             "model": "qwen3.5:9b",
         },
     )
