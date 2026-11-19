@@ -939,7 +939,7 @@ async function generateAiSchedule(){
  }catch(error){aiPlannerDraft=null;$("aiPlannerPreview").textContent=error.message||"Ollama could not generate a schedule."}
  finally{button.disabled=false;button.textContent="Generate my schedule";}
 }
-async async function applyAiSchedule(){
+async function applyAiSchedule(){
  if(!Array.isArray(aiPlannerDraft)||!aiPlannerDraft.length)return;
  const dates=aiPlannerDraft.map(day=>day.date);
  if(new Set(dates).size!==dates.length){notify("The generated schedule has duplicate dates. Generate it again.");return}
