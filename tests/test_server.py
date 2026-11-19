@@ -416,6 +416,10 @@ def test_teacher_cycle_does_not_duplicate_an_unanswered_question(client, monkeyp
 
 
 def test_teacher_answer_is_evaluated_and_saved(client, monkeypatch):
+    client.put(
+        "/api/teacher/settings",
+        json={"enabled": True, "interval_minutes": 120, "quiet_start": "22:00", "quiet_end": "07:00", "model": "qwen3.5:9b"},
+    )
     with server.database_session() as connection:
         cursor = connection.execute(
             """
@@ -452,6 +456,10 @@ def test_teacher_answer_is_evaluated_and_saved(client, monkeypatch):
 
 
 def test_teacher_question_cannot_be_answered_twice(client, monkeypatch):
+    client.put(
+        "/api/teacher/settings",
+        json={"enabled": True, "interval_minutes": 120, "quiet_start": "22:00", "quiet_end": "07:00", "model": "qwen3.5:9b"},
+    )
     with server.database_session() as connection:
         cursor = connection.execute(
             """
