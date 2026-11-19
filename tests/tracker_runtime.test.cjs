@@ -112,7 +112,7 @@ test("revision analytics count due dates rather than permanent historical checkm
 
 
 test("subject progress crosswalk targets only existing canonical syllabus topics", () => {
-  const subjectData = JSON.parse(script.match(/const SUBJECTS=(\[[\s\S]*?\]);\nconst ROADMAP/)[1]);
+  const subjectData = JSON.parse(script.match(/const SUBJECTS=(\[[\s\S]*?\]);\r?\nconst ROADMAP/)[1]);
   const mappingStart = script.indexOf("const STUDY_PLAN_TOPIC_ALIASES=");
   const mappingEnd = script.indexOf(";\nfunction findMatchingSyllabusTopics", mappingStart);
   assert.ok(mappingStart >= 0 && mappingEnd > mappingStart);
@@ -171,7 +171,7 @@ test("remaining subject-labelled lessons are either mapped or explicitly classif
 
 
 test("subject progress mapping executes exact multi-topic aliases", () => {
-  const subjectData = JSON.parse(script.match(/const SUBJECTS=(\[[\s\S]*?\]);\nconst ROADMAP/)[1]);
+  const subjectData = JSON.parse(script.match(/const SUBJECTS=(\[[\s\S]*?\]);\r?\nconst ROADMAP/)[1]);
   const start = script.indexOf("function normalizePlanTopic(value){");
   const end = script.indexOf("function syncSyllabusCompletionToStudyPlan(subject,topic)", start);
   assert.ok(start >= 0 && end > start);
