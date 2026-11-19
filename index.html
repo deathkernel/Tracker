@@ -483,7 +483,7 @@ function renderRevision(){
  if(!shown)host.innerHTML='<div class="empty">No completed topics match this filter yet. Complete a topic in Syllabus to add it here.</div>';
 }
 function renderWeekly(){const idx=weekIndex(),key="week-"+idx,items=state.weekly[key]||{},host=$("weeklyTasks");host.innerHTML="";WEEKLY.forEach(([id,title])=>{const label=document.createElement("div");label.className="weekly-check"+(items[id]?" done":"");const check=createAnimatedCheckbox(!!items[id],"Mark "+title+" complete"),cb=check.input;cb.addEventListener("change",()=>{state.weekly[key]=state.weekly[key]||{};state.weekly[key][id]=cb.checked;persist();renderWeekly()});const span=document.createElement("span");span.textContent=title;label.append(check.wrapper,span);host.append(label)});const count=WEEKLY.filter(x=>items[x[0]]).length,p=count/WEEKLY.length*100;$("weeklyPercent").textContent=Math.round(p)+"%";$("weeklyBar").style.width=p+"%";$("weekLabel").textContent="Week "+(idx+1)}
-const DAILY_STUDY_PLAN=[
+const BASE_STUDY_PLAN=[
 {subject:"Polity",days:["Constitutional development and historical background","Constituent Assembly and making of the Constitution","Preamble: keywords and philosophy","Union and its Territory","Citizenship provisions","Fundamental Rights: overview and Articles","Fundamental Rights: key cases + PYQs"]},
 {subject:"Polity",days:["Right to Equality","Right against Exploitation","Right to Constitutional Remedies","Directive Principles of State Policy","Fundamental Duties and their comparison with DPSP","Parliament: composition, sessions and officers","Parliament: legislative procedure + PYQs"]},
 {subject:"Polity",days:["President of India","Prime Minister and Council of Ministers","Supreme Court: jurisdiction and powers","High Courts","Constitutional and statutory bodies","Emergency provisions","Systems of Government + full Polity revision test"]},
@@ -512,9 +512,33 @@ const DAILY_STUDY_PLAN=[
 {subject:"Mock Tests",days:["Full GS mock test 5 + analysis","Revise Geography and mapping mistakes","Full GS mock test 6 + analysis","CSAT practice: comprehension and reasoning","Full GS mock test 7 + analysis","Mistake notebook: revise repeated errors","Light revision of short notes and facts"]},
 {subject:"Final Revision",days:["Polity: important Constitutional Articles","Modern History: dates, acts and movements","Economy: key terms, budget and institutions","Environment: species, parks and conventions","Geography: maps, rivers, passes and locations","Art & Culture + Science: quick facts and current links","Final short-note revision; rest and exam readiness"]}
 ];
-function markStudyDayComplete(dateKey,subject,topic){
+const CYCLE_START_DATE="2026-11-17";
+const DAILY_STUDY_PLAN=BASE_STUDY_PLAN.flatMap(week=>week.days.flatMap(topic=>[
+ {subject:week.subject,topic,phase:"study",label:"Study"},
+ {subject:week.subject,topic,phase:"mcq_revision",label:"MCQ + Revision"}
+]));
+function getStudyPlanEntry(dateKey=localDate()){
+ const start=new Date(CYCLE_START_DATE+"T00:00:00");
+ const target=new Date(dateKey+"T00:00:00");
+ const dayOffset=Math.round((target-start)/86400000);
+ if(!Number.isFinite(dayOffset)||dayOffset<0||dayOffset>=DAILY_STUDY_PLAN.length)return null;
+ return{...DAILY_STUDY_PLAN[dayOffset],dayOffset,dateKey};
+}
+function isStudyPlanEntryDone(entry){
+ if(!entry)return false;
+ const key=entry.dateKey;
+ const progress=state.studyPlanProgress?.[key]||{};
+ return entry.phase==="study"?!!progress.studyDone:!!progress.mcqDone&&!!progress.revisionDone;
+}
+function markStudyPlanPhaseComplete(entry){
+ if(!entry)return;
+ state.studyPlanProgress=state.studyPlanProgress||{};
+ const progress=state.studyPlanProgress[entry.dateKey]||{};
+ if(entry.phase==="study")progress.studyDone=true;
+ else{progress.mcqDone=true;progress.revisionDone=true;}
+ state.studyPlanProgress[entry.dateKey]=progress;
  state.studyPlanDone=state.studyPlanDone||{};
- state.studyPlanDone[dateKey]=true;
+ state.studyPlanDone[entry.dateKey]=entry.phase==="study"?!!progress.studyDone:!!(progress.mcqDone&&progress.revisionDone);
  persist();
  renderStats();renderSubjectOverview();renderTopics();renderRevision();renderCharts();renderRoadmap();renderOverviewSchedule();
 }
