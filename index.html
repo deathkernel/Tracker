@@ -13,6 +13,7 @@
 .cir-tabs{display:inline-flex;align-items:center;gap:4px;margin:18px 0 16px;padding:6px;background:var(--surface);border:1px solid var(--line);border-radius:999px;box-shadow:0 1px 1px rgba(14,17,22,.04),0 20px 40px -24px rgba(14,17,22,.18);font-family:Inter,system-ui,-apple-system,sans-serif;max-width:100%;overflow-x:auto;scrollbar-width:none}.cir-tabs::-webkit-scrollbar{display:none}.cir-tabs__r{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}.cir-tabs__t{display:inline-flex;align-items:center;justify-content:center;height:36px;padding:0 18px;border-radius:999px;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap;transition:background-color 220ms cubic-bezier(.22,1,.36,1),color 220ms cubic-bezier(.22,1,.36,1),box-shadow 220ms cubic-bezier(.22,1,.36,1)}.cir-tabs__t:hover{color:var(--ink)}.cir-tabs__r:checked+.cir-tabs__t{background:var(--ink);color:var(--surface);box-shadow:0 1px 1px rgba(14,17,22,.06),0 8px 18px -10px rgba(14,17,22,.5)}.cir-tabs__r:focus-visible+.cir-tabs__t{box-shadow:0 0 0 3px rgba(46,125,239,.32)}.nav-caption{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:800;margin:0 2px 7px}.main-grid.nav-mode{display:block}.main-grid.nav-mode main,.main-grid.nav-mode aside{display:contents}.main-grid.nav-mode .card[hidden]{display:none!important}.main-grid.nav-mode .card{max-width:none}.page-hint{font-size:12px;color:var(--muted);margin:-5px 0 14px}@media(max-width:700px){.nav-table{grid-template-columns:repeat(2,minmax(0,1fr))}.nav-item{justify-content:flex-start}.nav-item:last-child{grid-column:1/-1}}
 @media(max-width:900px){.main-grid{grid-template-columns:1fr}.grid-stats{grid-template-columns:repeat(2,1fr)}}@media(max-width:560px){.shell{padding:17px 12px 35px}.header{align-items:flex-start;flex-direction:column}.header-right{width:100%;justify-content:space-between}.subject-grid{grid-template-columns:1fr}.topic-rows{grid-template-columns:1fr}.inline-form{grid-template-columns:1fr}.field.full{grid-column:auto}.stat{padding:13px}.stat-value{font-size:24px}}
 
+.nav-count{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:3px;border-radius:999px;background:var(--blue-soft);color:var(--blue);font-size:10px;font-weight:800}
 /* Customization and refreshed visual system */
 :root{--bg:#f3f5f9;--surface:#fff;--ink:#172033;--muted:#667085;--line:#e4e8ef;--blue:#3457d5;--blue-soft:#edf1ff;--green:#17845d;--shadow:0 3px 14px rgba(18,32,56,.035)}
 body{background:var(--bg);font-size:14px}.shell{max-width:1440px;padding-top:30px}.header{padding:8px 2px 20px;border-bottom:1px solid var(--line)}.mark{border-radius:12px;background:#172033}.eyebrow{color:var(--muted);letter-spacing:.11em}.stat,.card{border-radius:12px;box-shadow:none}.stat{border-top:3px solid #d8e0fa}.stat-value{font-size:30px}.card{padding:22px}.card h2{font-size:17px;letter-spacing:-.02em}.customize-card{border-color:#d9e1f6;background:linear-gradient(180deg,#fff,#fbfcff)}.customize-card .card-head{align-items:flex-start}.settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px;max-width:760px}.customize-divider{height:1px;background:var(--line);margin:18px 0}.customize-card h3{font-size:13px;margin:0}.customize-card .subtitle{max-width:680px}.btn{border-radius:8px}.btn.primary{background:#263f9f;border-color:#263f9f}.topic-subject{border-radius:9px}.topic-subject summary{background:#f8f9fc}.week-list{border-radius:9px}.task{border-radius:9px}.today-focus{background:#f4f6fc;border-color:#e1e6f3}.focus-label{color:#53617e}.badge{background:#e8edff;color:#263f9f}
@@ -255,6 +256,7 @@ body.dark .checkbox-wrapper-12 input[type="checkbox"]{border-color:#788397}
 <nav class="cir-tabs" id="workspaceNav" aria-label="Tracker sections">
  <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-overview" value="overview" checked><label class="cir-tabs__t" for="nav-overview" data-view="overview">Overview</label>
  <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-syllabus" value="syllabus"><label class="cir-tabs__t" for="nav-syllabus" data-view="syllabus">Syllabus</label>
+ <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-missing" value="missing"><label class="cir-tabs__t" for="nav-missing" data-view="missing">Missing Topics <span id="missingNavCount" class="nav-count">0</span></label>
  <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-logs" value="logs"><label class="cir-tabs__t" for="nav-logs" data-view="logs">Study Log</label>
  <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-plan" value="plan"><label class="cir-tabs__t" for="nav-plan" data-view="plan">Study Plan</label>
  <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-settings" value="settings"><label class="cir-tabs__t" for="nav-settings" data-view="settings">Settings</label>
@@ -282,6 +284,11 @@ body.dark .checkbox-wrapper-12 input[type="checkbox"]{border-color:#788397}
  <section class="card" data-page="overview">
   <div class="card-head"><h2>Subject progress</h2><span class="chip" id="subjectCount">9 subjects</span></div>
   <div class="subject-grid" id="subjectOverview"></div>
+ </section>
+ <section class="card" data-page="missing">
+  <div class="card-head"><div><h2>Missing Topics</h2><p class="small-note">Topics not yet marked complete in your syllabus tracker.</p></div><span class="chip" id="missingTopicCount">0 remaining</span></div>
+  <div class="toolbar"><input id="missingTopicSearch" type="search" placeholder="Search missing topics…"><select id="missingSubjectFilter"><option value="all">All subjects</option></select><select id="missingPriorityFilter"><option value="all">All priorities</option><option value="P1">P1 · Top 50</option><option value="P2">P2 · Curated</option></select></div>
+  <div id="missingTopicList"></div>
  </section>
  <section class="card" data-page="syllabus">
   <div class="card-head"><h2>PYQ topic checklist</h2><span class="chip" id="topicCompletion">0 of 65</span></div>
@@ -455,6 +462,38 @@ function renderTopics(){
  table.append(body);host.append(table);
  if(!shown)host.innerHTML='<div class="empty">No topics match your filters.</div>';
 }
+function renderMissingTopics(){
+ const host=$("missingTopicList");if(!host)return;
+ const query=$("missingTopicSearch").value.trim().toLowerCase(),subjectFilter=$("missingSubjectFilter").value,priorityFilter=$("missingPriorityFilter").value;
+ host.innerHTML="";let total=0,shown=0;
+ const table=document.createElement("table");table.className="data-table topic-table";
+ table.innerHTML="<thead><tr><th>Priority</th><th>Subject</th><th>Missing topic</th><th>PYQ count</th><th>Action</th></tr></thead>";
+ const body=document.createElement("tbody");
+ allSubjects().forEach(subject=>{
+  if(subjectFilter!=="all"&&subjectFilter!==subject.name)return;
+  subject.topics.forEach(([name,count,priority])=>{
+   const key=subject.name+"::"+name;if(state.topics[key])return;
+   total++;
+   if(!name.toLowerCase().includes(query)||(priorityFilter!=="all"&&priorityFilter!==priority))return;
+   shown++;
+   const row=document.createElement("tr");
+   const priorityCell=document.createElement("td");priorityCell.textContent=priority==="P1"?"P1 · Top 50":"P2 · Curated";
+   const subjectCell=document.createElement("td");subjectCell.textContent=subject.name;
+   const topicCell=document.createElement("td");topicCell.textContent=name;
+   const countCell=document.createElement("td");countCell.textContent=count==null?"Not verified":String(count);
+   const actionCell=document.createElement("td"),button=document.createElement("button");button.type="button";button.className="btn";button.textContent="Open in Syllabus";
+   button.addEventListener("click",()=>{setWorkspaceView("syllabus");$("topicSearch").value=name;$("subjectFilter").value=subject.name;$("topicStatus").value="all";renderTopics();});
+   actionCell.append(button);row.append(priorityCell,subjectCell,topicCell,countCell,actionCell);body.append(row);
+  });
+ });
+ table.append(body);const wrap=document.createElement("div");wrap.className="data-table-wrap";wrap.append(table);host.append(wrap);
+ if(!shown)host.innerHTML='<div class="empty">No missing topics match your filters.</div>';
+ const remaining=allSubjects().reduce((n,subject)=>n+subject.topics.filter(([name])=>!state.topics[subject.name+"::"+name]).length,0);
+ $("missingTopicCount").textContent=remaining+" remaining";$("missingNavCount").textContent=remaining;
+ const filter=$("missingSubjectFilter"),selected=filter.value;filter.innerHTML='<option value="all">All subjects</option>';
+ allSubjects().forEach(subject=>{const option=document.createElement("option");option.value=subject.name;option.textContent=subject.name;filter.append(option)});
+ filter.value=allSubjects().some(subject=>subject.name===selected)?selected:"all";
+}
 function renderRevision(){
  const host=$("revisionChecklist");if(!host)return;host.innerHTML="";
  const query=($("revisionSearch")?.value||"").trim().toLowerCase();
@@ -542,7 +581,7 @@ function markStudyPlanPhaseComplete(entry){
  state.studyPlanDone=state.studyPlanDone||{};
  state.studyPlanDone[entry.dateKey]=entry.phase==="study"?!!progress.studyDone:!!(progress.mcqDone&&progress.revisionDone);
  persist();
- renderStats();renderSubjectOverview();renderTopics();renderRevision();renderCharts();renderRoadmap();renderOverviewSchedule();
+ renderStats();renderSubjectOverview();renderTopics();renderMissingTopics();renderRevision();renderCharts();renderRoadmap();renderOverviewSchedule();
 }
 function renderOverviewSchedule(){
  const host=$("overviewDailySchedule");if(!host)return;host.innerHTML="";
@@ -709,7 +748,7 @@ function renderCharts(){
  }
  $("chartsUpdated").textContent="Updated "+new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
 }
-function setWorkspaceView(view){const names={overview:"Your daily preparation at a glance.",syllabus:"Track 256 PYQ-focused topics: Top 50 priority plus 206 curated micro-topics.",logs:"Record focused hours, MCQs and daily study notes.",plan:"Follow your weekly targets and full preparation roadmap.",settings:"Personalize your target date, study hours and workspace.",revision:"Revisit every topic you have already completed.",charts:"Visualize your syllabus, revision, study plan and study-time progress."};document.querySelectorAll("[data-page]").forEach(card=>{card.hidden=card.dataset.page!==view});document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input=>{input.checked=input.value===view});$("pageHint").textContent=names[view]||names.overview}
+function setWorkspaceView(view){const names={overview:"Your daily preparation at a glance.",syllabus:"Track 256 PYQ-focused topics: Top 50 priority plus 206 curated micro-topics.",logs:"Record focused hours, MCQs and daily study notes.",plan:"Follow your weekly targets and full preparation roadmap.",settings:"Personalize your target date, study hours and workspace.",revision:"Revisit every topic you have already completed.",charts:"Visualize your syllabus, revision, study plan and study-time progress.",missing:"Review every syllabus topic that is still pending."};document.querySelectorAll("[data-page]").forEach(card=>{card.hidden=card.dataset.page!==view});document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input=>{input.checked=input.value===view});$("pageHint").textContent=names[view]||names.overview}
 function activeDevice(){return window.matchMedia("(max-width: 760px)").matches?"mobile":"desktop"}
 function applyDeviceTheme(){state.settings=state.settings||{};state.settings.deviceThemes=state.settings.deviceThemes||{};const device=activeDevice();const theme=state.settings.deviceThemes[device]||(state.settings.theme||"light");document.body.classList.toggle("dark",theme==="dark");$("themeToggle").checked=theme==="dark"}
 function renderAll(){syncSubjectFilter();applyDeviceTheme();renderStats();renderDaily();renderOverviewSchedule();renderSubjectOverview();renderTopics();renderRevision();renderCharts();renderWeekly();renderRoadmap();renderLogs();setWorkspaceView(window.trackerView||"overview")}
@@ -721,6 +760,9 @@ async function showPhoneAccess(){
  try{const response=await fetch("/api/network-info");if(!response.ok)throw new Error("Network info unavailable");const info=await response.json();if(!info.network_access_enabled){label.textContent="Phone access is disabled by default. Set TRACKER_HOST=0.0.0.0 before running run.bat to enable trusted-LAN access.";return}label.textContent=info.url;image.src="/api/qr-code?url="+encodeURIComponent(info.url)+"&t="+Date.now()}
  catch(error){label.textContent="Could not generate QR. Check that the app is running."}
 }
+$("missingTopicSearch")?.addEventListener("input",renderMissingTopics);
+$("missingSubjectFilter")?.addEventListener("change",renderMissingTopics);
+$("missingPriorityFilter")?.addEventListener("change",renderMissingTopics);
 $("phoneAccessBtn")?.addEventListener("click",showPhoneAccess);
 $("closePhoneAccess")?.addEventListener("click",()=>{$("phoneAccessPanel").hidden=true;$("phoneAccessBtn")?.setAttribute("aria-expanded","false")});
 function initFilters(){allSubjects().forEach(s=>{const opt=document.createElement("option");opt.value=s.name;opt.textContent=s.name;$("subjectFilter").append(opt)});$("topicSearch").addEventListener("input",renderTopics);$("subjectFilter").addEventListener("change",renderTopics);$("topicStatus").addEventListener("change",renderTopics);$("revisionSearch").addEventListener("input",renderRevision);$("revisionSubject").addEventListener("change",renderRevision);$("revisionStatus").addEventListener("change",renderRevision)}
