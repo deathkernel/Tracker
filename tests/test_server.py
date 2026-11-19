@@ -178,3 +178,133 @@ def test_ollama_chat_rejects_uninstalled_model(client, monkeypatch):
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "That model is not installed in Ollama."
+
+
+def test_ollama_planner_returns_valid_schedule_from_pending_tracker_topics(client, monkeypatch):
+    schedule = {
+        "schedule": [
+            {
+                "date": f"2026-11-{day:02d}",
+                "blocks": [
+                    {
+                        "start": "07:00",
+                        "end": "08:30",
+                        "subject": "Polity",
+                        "topic": "Fundamental Rights",
+                        "task": "Read and make concise notes.",
+                        "type": "study",
+                    },
+                    {
+                        "start": "08:30",
+                        "end": "08:45",
+                        "subject": "",
+                        "topic": "",
+                        "task": "Take a short break.",
+                        "type": "break",
+                    },
+                ],
+            }
+            for day in (20, 21, 22)
+        ]
+    }
+    calls = []
+
+    def fake_ollama(path, payload=None, timeout=5.0):
+        calls.append((path, payload))
+        if path == "/api/tags":
+            return {"models": [{"name": "qwen3.5:9b"}]}
+        return {"message": {"content": json.dumps(schedule)}}
+
+    monkeypatch.setattr(server, "ollama_request", fake_ollama)
+    response = client.post(
+        "/api/ollama/plan",
+        json={
+            "model": "qwen3.5:9b",
+            "days": 3,
+            "context": {
+                "today": "2026-11-20",
+                "daily_goal_hours": 4,
+                "subjects": [
+                    {"subject": "Polity", "pending": ["Fundamental Rights"]}
+                ],
+            },
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["schedule"] == schedule["schedule"]
+    assert calls[1][1]["format"] == "json"
+    assert calls[1][1]["stream"] is False
+
+
+def test_ollama_planner_rejects_topics_outside_tracker_pending_syllabus(client, monkeypatch):
+    schedule = {
+        "schedule": [
+            {
+                "date": f"2026-11-{day:02d}",
+                "blocks": [
+                    {
+                        "start": "07:00",
+                        "end": "08:00",
+                        "subject": "Polity",
+                        "topic": "Invented Topic",
+                        "task": "Study this.",
+                        "type": "study",
+                    }
+                ],
+            }
+            for day in (20, 21, 22)
+        ]
+    }
+
+    def fake_ollama(path, payload=None, timeout=5.0):
+        if path == "/api/tags":
+            return {"models": [{"name": "qwen3.5:9b"}]}
+        return {"message": {"content": json.dumps(schedule)}}
+
+    monkeypatch.setattr(server, "ollama_request", fake_ollama)
+    response = client.post(
+        "/api/ollama/plan",
+        json={
+            "model": "qwen3.5:9b",
+            "days": 3,
+            "context": {
+                "subjects": [
+                    {"subject": "Polity", "pending": ["Fundamental Rights"]}
+                ]
+            },
+        },
+    )
+    assert response.status_code == 503
+    assert "valid schedule" in response.json()["detail"]
+
+
+def test_ollama_planner_rejects_overlapping_schedule_blocks(client, monkeypatch):
+    schedule = {
+        "schedule": [
+            {
+                "date": f"2026-11-{day:02d}",
+                "blocks": [
+                    {"start": "07:00", "end": "09:00", "subject": "Polity", "topic": "Fundamental Rights", "task": "Study.", "type": "study"},
+                    {"start": "08:30", "end": "09:30", "subject": "Polity", "topic": "Fundamental Rights", "task": "Continue.", "type": "study"},
+                ],
+            }
+            for day in (20, 21, 22)
+        ]
+    }
+
+    def fake_ollama(path, payload=None, timeout=5.0):
+        if path == "/api/tags":
+            return {"models": [{"name": "qwen3.5:9b"}]}
+        return {"message": {"content": json.dumps(schedule)}}
+
+    monkeypatch.setattr(server, "ollama_request", fake_ollama)
+    response = client.post(
+        "/api/ollama/plan",
+        json={
+            "model": "qwen3.5:9b",
+            "days": 3,
+            "context": {"subjects": [{"subject": "Polity", "pending": ["Fundamental Rights"]}]},
+        },
+    )
+    assert response.status_code == 503
+    assert "valid schedule" in response.json()["detail"]
