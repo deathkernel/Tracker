@@ -364,9 +364,9 @@ body.dark .checkbox-wrapper-12 input[type="checkbox"]{border-color:#788397}
 <div class="footer">UPSC Prelims 2027 · Personal checklist dashboard · Works offline after the page is loaded</div>
 </div>
 
-<div class="ai-planner-launcher"><button type="button" id="aiPlannerToggle" aria-expanded="false" aria-controls="aiPlannerPanel">AI Planner</button></div>
+<div class="ai-planner-launcher"><button type="button" id="aiPlannerToggle" aria-expanded="false" aria-controls="aiPlannerPanel">AI Teacher</button></div>
 <aside class="ai-planner-panel" id="aiPlannerPanel" hidden aria-label="Floating AI schedule planner">
- <div class="ai-planner-head"><div><strong>AI Study Planner</strong><small id="aiPlannerStatus">Ollama · local planning</small></div><button type="button" id="aiPlannerClose" aria-label="Close planner">×</button></div>
+ <div class="ai-planner-head"><div><strong>Strict AI Teacher</strong><small id="aiPlannerStatus">Ollama · local planning</small></div><button type="button" id="aiPlannerClose" aria-label="Close planner">×</button></div>
  <p class="small-note">Your local teacher checks in proactively, tests recall and follows up on assigned work. Timetable planning remains available below.</p>
  <section class="teacher-card" aria-label="Strict AI Teacher">
   <div class="ai-planner-head"><h3>Strict AI Teacher</h3><button type="button" class="btn" id="teacherNotifications">Enable notifications</button></div>
@@ -1041,7 +1041,7 @@ async function pollTeacherEvents(){
    if(teacherBootstrapped){
     const fresh=events[events.length-1];
     if("Notification" in window&&Notification.permission==="granted"){
-     new Notification("Your Strict AI Teacher",{body:fresh.prompt,tag:"tracker-teacher-"+fresh.id});
+     const notification=new Notification("Your Strict AI Teacher",{body:fresh.prompt,tag:"tracker-teacher-"+fresh.id});notification.onclick=()=>{window.focus();$("aiPlannerPanel").hidden=false;$("aiPlannerToggle").setAttribute("aria-expanded","true")};
     }
     notify("Your teacher has a question. Open the AI Teacher panel.");
    }
@@ -1124,6 +1124,7 @@ $("aiPlannerGenerate")?.addEventListener("click",generateAiSchedule);
 $("aiPlannerApply")?.addEventListener("click",applyAiSchedule);
 $("aiPlannerChat")?.addEventListener("click",()=>{window.trackerView="assistant";setWorkspaceView("assistant");loadOllamaStatus();$("aiPlannerPanel").hidden=true});
 $("teacherNotifications")?.addEventListener("click",enableTeacherNotifications);
+$("aiPlannerModel")?.addEventListener("change",()=>{if(teacherSettingsLoaded)saveTeacherSettings()});
 $("teacherRespond")?.addEventListener("click",submitTeacherAnswer);
 ["teacherEnabled","teacherInterval","teacherQuietStart","teacherQuietEnd"].forEach(id=>$(id)?.addEventListener("change",()=>{if(teacherSettingsLoaded)saveTeacherSettings()}));
 
