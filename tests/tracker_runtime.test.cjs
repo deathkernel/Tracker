@@ -136,3 +136,10 @@ test("Strict Teacher receives completed topics and persisted spaced-revision dat
   assert.match(script, /last_reviewed_at:localDate\(\)/);
   assert.match(script, /syncTeacherContext\(\)/);
 });
+
+
+test("revision analytics count due dates rather than permanent historical checkmarks", () => {
+  assert.match(script, /revisionToday=localDate\(\)/);
+  assert.match(script, /revisionSchedule\?\.\[key\]\?\.due_date/);
+  assert.match(script, /dueDate<=revisionToday/);
+});
