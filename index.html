@@ -650,25 +650,31 @@ function renderRevision(){
  const query=($("revisionSearch")?.value||"").trim().toLowerCase();
  const subjectFilter=$("revisionSubject")?.value||"all";
  const statusFilter=$("revisionStatus")?.value||"all";
- const completed=[];
+ const today=localDate(),completed=[];
  allSubjects().forEach(subject=>subject.topics.forEach(([topic])=>{
   const key=subject.name+"::"+topic;
-  if(state.topics[key])completed.push({subject:subject.name,topic,key});
+  if(state.topics[key]){
+   const schedule=state.revisionSchedule?.[key]||{};
+   const dueDate=typeof schedule.due_date==="string"?schedule.due_date:today;
+   completed.push({subject:subject.name,topic,key,dueDate,due:dueDate<=today});
+  }
  }));
- $("revisionCount").textContent=completed.length+" completed topics";
+ const dueCount=completed.filter(item=>item.due).length;
+ $("revisionCount").textContent=completed.length+" completed topics · "+dueCount+" due";
  const subjectSelect=$("revisionSubject"),selected=subjectSelect.value;
  subjectSelect.innerHTML='<option value="all">All subjects</option>';
  [...new Set(completed.map(item=>item.subject))].forEach(name=>{const option=document.createElement("option");option.value=name;option.textContent=name;subjectSelect.append(option)});
  subjectSelect.value=[...subjectSelect.options].some(option=>option.value===selected)?selected:"all";
  const table=document.createElement("table");table.className="data-table";
- table.innerHTML="<thead><tr><th>Subject</th><th>Completed topic</th><th>Revision status</th></tr></thead>";
+ table.innerHTML="<thead><tr><th>Subject</th><th>Completed topic</th><th>Next revision</th><th>Status</th></tr></thead>";
  const body=document.createElement("tbody");let shown=0;
- completed.filter(item=>(subjectFilter==="all"||item.subject===subjectFilter)&&((item.subject+" "+item.topic).toLowerCase().includes(query))).filter(item=>statusFilter==="all"||(statusFilter==="done"&&state.revisionDone?.[item.key])||(statusFilter==="pending"&&!state.revisionDone?.[item.key])).forEach(item=>{
-  shown++;const row=document.createElement("tr"),subject=document.createElement("td"),topic=document.createElement("td"),status=document.createElement("td"),label=document.createElement("label");
-  subject.textContent=item.subject;topic.textContent=item.topic;label.className="table-status"+(state.revisionDone?.[item.key]?" done":"");
-  const check=createAnimatedCheckbox(!!state.revisionDone?.[item.key],"Mark "+item.topic+" revised"),checkbox=check.input;
-  checkbox.addEventListener("change",()=>{if(checkbox.checked){completeScheduledRevision(item.subject,item.topic)}else{notify("Completed revision records cannot be unchecked. Use the revision history to correct a mistake.") ;checkbox.checked=true}});
-  const text=document.createElement("span");text.textContent=checkbox.checked?"Revised":"Needs revision";label.append(check.wrapper,text);status.append(label);row.append(subject,topic,status);body.append(row);
+ completed.filter(item=>(subjectFilter==="all"||item.subject===subjectFilter)&&((item.subject+" "+item.topic).toLowerCase().includes(query))).filter(item=>statusFilter==="all"||(statusFilter==="done"&&!item.due)||(statusFilter==="pending"&&item.due)).forEach(item=>{
+  shown++;const row=document.createElement("tr"),subject=document.createElement("td"),topic=document.createElement("td"),next=document.createElement("td"),status=document.createElement("td"),label=document.createElement("label");
+  subject.textContent=item.subject;topic.textContent=item.topic;next.textContent=item.dueDate<=today?(item.dueDate<today?"Overdue · "+item.dueDate:"Due today"):"Due "+item.dueDate;
+  label.className="table-status"+(!item.due?" done":"");
+  const check=createAnimatedCheckbox(!item.due,"Mark "+item.topic+" revised"),checkbox=check.input;
+  checkbox.addEventListener("change",()=>{if(checkbox.checked&&item.due){completeScheduledRevision(item.subject,item.topic)}else{notify("This revision is not due yet.");checkbox.checked=true}});
+  const text=document.createElement("span");text.textContent=item.due?"Needs revision":"Scheduled";label.append(check.wrapper,text);status.append(label);row.append(subject,topic,next,status);body.append(row);
  });
  table.append(body);const wrap=document.createElement("div");wrap.className="data-table-wrap";wrap.append(table);host.append(wrap);
  if(!shown)host.innerHTML='<div class="empty">No completed topics match this filter yet. Complete a topic in Syllabus to add it here.</div>';
