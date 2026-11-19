@@ -69,6 +69,7 @@ class TrackerState(BaseModel):
     weekly: dict[str, Any] = Field(default_factory=dict)
     logs: dict[str, Any] = Field(default_factory=dict)
     studyPlanDone: dict[str, Any] = Field(default_factory=dict)
+    studyPlanProgress: dict[str, Any] = Field(default_factory=dict)
     revisionDone: dict[str, Any] = Field(default_factory=dict)
     settings: dict[str, Any] = Field(default_factory=dict)
     customSubjects: list[dict[str, Any]] = Field(default_factory=list)
