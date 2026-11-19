@@ -72,6 +72,7 @@ class TrackerState(BaseModel):
     logs: dict[str, Any] = Field(default_factory=dict)
     studyPlanDone: dict[str, Any] = Field(default_factory=dict)
     studyPlanProgress: dict[str, Any] = Field(default_factory=dict)
+    aiSchedule: list[dict[str, Any]] = Field(default_factory=list)
     revisionDone: dict[str, Any] = Field(default_factory=dict)
     settings: dict[str, Any] = Field(default_factory=dict)
     customSubjects: list[dict[str, Any]] = Field(default_factory=list)
