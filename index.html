@@ -518,21 +518,22 @@ function completeTopicWithMastery(subject,topic){
  persist();
  renderAll();
 }
-function completeScheduledRevision(subject,topic){
+async function completeScheduledRevision(subject,topic){
  const key=subject+"::"+topic;
  if(!state.topics?.[key]){notify("Complete the topic before marking its revision done.");renderRevision();return;}
- state.revisionDone=state.revisionDone||{};
- state.revisionDone[key]=true;
  state.revisionSchedule=state.revisionSchedule||{};
  const previous=state.revisionSchedule[key]||{interval_days:1,repetitions:0,ease_factor:2.5};
- const repetitions=Math.max(0,Number(previous.repetitions)||0)+1;
- const intervals=[1,6,14,30,60];
- const intervalDays=intervals[Math.min(repetitions-1,intervals.length-1)];
- state.revisionSchedule[key]={due_date:revisionDateAfter(intervalDays),interval_days:intervalDays,repetitions,ease_factor:Number(previous.ease_factor)||2.5,last_reviewed_at:localDate(),last_quality:3};
- persist();
- renderRevision();
- renderCharts();
- 
+ try{
+  const response=await fetch("/api/revision/next",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({today:localDate(),previous,quality:3})});
+  if(!response.ok)throw new Error("Revision schedule could not be updated.");
+  const schedule=await response.json();
+  state.revisionSchedule[key]=schedule;
+  state.revisionDone=state.revisionDone||{};
+  state.revisionDone[key]=true;
+  persist();
+  renderRevision();
+  renderCharts();
+ }catch(error){notify(error.message||"Could not update the revision schedule.");}
 }
 function renderTopics(){
  const host=$("topicChecklist"),q=$("topicSearch").value.trim().toLowerCase(),filter=$("subjectFilter").value,status=$("topicStatus").value;host.innerHTML="";
