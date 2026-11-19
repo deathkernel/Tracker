@@ -938,6 +938,13 @@ $("addCustomTopic").addEventListener("click",()=>{
 });
 $("addDailyTask").addEventListener("click",()=>{const name=$("newTaskName").value.trim(),time=$("newTaskTime").value.trim();if(!name){notify("Enter a task name.");return}state.customDaily=state.customDaily||[];state.customDaily.push(["custom-"+Date.now(),name,time,"Personal task"]);persist();$("newTaskName").value="";$("newTaskTime").value="";renderDaily();notify("Daily task added.")});
 
+document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input => {
+ input.addEventListener("change", () => {
+  if (!input.checked) return;
+  window.trackerView = input.value;
+  setWorkspaceView(window.trackerView);
+ });
+});
 initFilters();renderAll();(async()=>{try{const response=await fetch("/api/state");if(!response.ok)throw new Error("API unavailable");const remote=normalizeProgressState(await response.json());if(localMutationVersion!==0){const local=normalizeProgressState(state);localStorage.setItem(STORE+"-recovery",JSON.stringify({savedAt:new Date().toISOString(),reason:"A change was made before SQLite startup synchronization completed. Both copies were preserved for recovery.",data:local,remote}));state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll();notify("SQLite state loaded. Early browser changes were preserved in the recovery backup.");return}const rawLocal=localStorage.getItem(STORE),local=readState(),localVersion=Number(local.version)||0,remoteVersion=Number(remote.version)||0;const sameContent=JSON.stringify({...local,version:0})===JSON.stringify({...remote,version:0});if(!rawLocal){state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll();return}if(remoteVersion>localVersion&&!sameContent){localStorage.setItem(STORE+"-recovery",JSON.stringify({savedAt:new Date().toISOString(),reason:"Server state was newer than this browser copy.",data:local}));state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll();notify("Newer SQLite data loaded. Your previous browser copy was preserved as a recovery backup.");return}if(localVersion>remoteVersion||!sameContent){state=local;state.version=remoteVersion;persist();renderAll();return}state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll()}catch(error){notify("Using browser backup. Start Tracker with run.bat for SQLite sync.")}})();
 </script>
 </body>
