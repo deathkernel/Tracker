@@ -547,10 +547,15 @@ function syncStudyPlanRevisionToSyllabus(entry){
  state.revisionDone=state.revisionDone||{};
  state.revisionDone[key]=true;
 }
+function revisionDateAfter(days){
+ const date=new Date();date.setHours(12,0,0,0);date.setDate(date.getDate()+days);return localDateKey(date);
+}
 function completeTopicWithMastery(subject,topic){
  const key=subject+"::"+topic;
  state.topics=state.topics||{};
  state.topics[key]=true;
+ state.revisionSchedule=state.revisionSchedule||{};
+ if(!state.revisionSchedule[key])state.revisionSchedule[key]={due_date:revisionDateAfter(1),interval_days:1,repetitions:0,ease_factor:2.5,last_reviewed_at:null,last_quality:null};
  syncSyllabusCompletionToStudyPlan(subject,topic);
  state.revisionDone=state.revisionDone||{};
  if(!state.revisionDone[key])delete state.revisionDone[key];
@@ -562,9 +567,16 @@ function completeScheduledRevision(subject,topic){
  if(!state.topics?.[key]){notify("Complete the topic before marking its revision done.");renderRevision();return;}
  state.revisionDone=state.revisionDone||{};
  state.revisionDone[key]=true;
+ state.revisionSchedule=state.revisionSchedule||{};
+ const previous=state.revisionSchedule[key]||{interval_days:1,repetitions:0,ease_factor:2.5};
+ const repetitions=Math.max(0,Number(previous.repetitions)||0)+1;
+ const intervals=[1,6,14,30,60];
+ const intervalDays=intervals[Math.min(repetitions-1,intervals.length-1)];
+ state.revisionSchedule[key]={due_date:revisionDateAfter(intervalDays),interval_days:intervalDays,repetitions,ease_factor:Number(previous.ease_factor)||2.5,last_reviewed_at:localDate(),last_quality:3};
  persist();
  renderRevision();
  renderCharts();
+ syncTeacherContext();
 }
 function renderTopics(){
  const host=$("topicChecklist"),q=$("topicSearch").value.trim().toLowerCase(),filter=$("subjectFilter").value,status=$("topicStatus").value;host.innerHTML="";
@@ -638,25 +650,31 @@ function renderRevision(){
  const query=($("revisionSearch")?.value||"").trim().toLowerCase();
  const subjectFilter=$("revisionSubject")?.value||"all";
  const statusFilter=$("revisionStatus")?.value||"all";
- const completed=[];
+ const today=localDate(),completed=[];
  allSubjects().forEach(subject=>subject.topics.forEach(([topic])=>{
   const key=subject.name+"::"+topic;
-  if(state.topics[key])completed.push({subject:subject.name,topic,key});
+  if(state.topics[key]){
+   const schedule=state.revisionSchedule?.[key]||{};
+   const dueDate=typeof schedule.due_date==="string"?schedule.due_date:today;
+   completed.push({subject:subject.name,topic,key,dueDate,due:dueDate<=today});
+  }
  }));
- $("revisionCount").textContent=completed.length+" completed topics";
+ const dueCount=completed.filter(item=>item.due).length;
+ $("revisionCount").textContent=completed.length+" completed topics · "+dueCount+" due";
  const subjectSelect=$("revisionSubject"),selected=subjectSelect.value;
  subjectSelect.innerHTML='<option value="all">All subjects</option>';
  [...new Set(completed.map(item=>item.subject))].forEach(name=>{const option=document.createElement("option");option.value=name;option.textContent=name;subjectSelect.append(option)});
  subjectSelect.value=[...subjectSelect.options].some(option=>option.value===selected)?selected:"all";
  const table=document.createElement("table");table.className="data-table";
- table.innerHTML="<thead><tr><th>Subject</th><th>Completed topic</th><th>Revision status</th></tr></thead>";
+ table.innerHTML="<thead><tr><th>Subject</th><th>Completed topic</th><th>Next revision</th><th>Status</th></tr></thead>";
  const body=document.createElement("tbody");let shown=0;
- completed.filter(item=>(subjectFilter==="all"||item.subject===subjectFilter)&&((item.subject+" "+item.topic).toLowerCase().includes(query))).filter(item=>statusFilter==="all"||(statusFilter==="done"&&state.revisionDone?.[item.key])||(statusFilter==="pending"&&!state.revisionDone?.[item.key])).forEach(item=>{
-  shown++;const row=document.createElement("tr"),subject=document.createElement("td"),topic=document.createElement("td"),status=document.createElement("td"),label=document.createElement("label");
-  subject.textContent=item.subject;topic.textContent=item.topic;label.className="table-status"+(state.revisionDone?.[item.key]?" done":"");
-  const check=createAnimatedCheckbox(!!state.revisionDone?.[item.key],"Mark "+item.topic+" revised"),checkbox=check.input;
-  checkbox.addEventListener("change",()=>{if(checkbox.checked){completeScheduledRevision(item.subject,item.topic)}else{notify("Completed revision records cannot be unchecked. Use the revision history to correct a mistake.") ;checkbox.checked=true}});
-  const text=document.createElement("span");text.textContent=checkbox.checked?"Revised":"Needs revision";label.append(check.wrapper,text);status.append(label);row.append(subject,topic,status);body.append(row);
+ completed.filter(item=>(subjectFilter==="all"||item.subject===subjectFilter)&&((item.subject+" "+item.topic).toLowerCase().includes(query))).filter(item=>statusFilter==="all"||(statusFilter==="done"&&!item.due)||(statusFilter==="pending"&&item.due)).forEach(item=>{
+  shown++;const row=document.createElement("tr"),subject=document.createElement("td"),topic=document.createElement("td"),next=document.createElement("td"),status=document.createElement("td"),label=document.createElement("label");
+  subject.textContent=item.subject;topic.textContent=item.topic;next.textContent=item.dueDate<=today?(item.dueDate<today?"Overdue · "+item.dueDate:"Due today"):"Due "+item.dueDate;
+  label.className="table-status"+(!item.due?" done":"");
+  const check=createAnimatedCheckbox(!item.due,"Mark "+item.topic+" revised"),checkbox=check.input;
+  checkbox.addEventListener("change",()=>{if(checkbox.checked&&item.due){completeScheduledRevision(item.subject,item.topic)}else{notify("This revision is not due yet.");checkbox.checked=true}});
+  const text=document.createElement("span");text.textContent=item.due?"Needs revision":"Scheduled";label.append(check.wrapper,text);status.append(label);row.append(subject,topic,next,status);body.append(row);
  });
  table.append(body);const wrap=document.createElement("div");wrap.className="data-table-wrap";wrap.append(table);host.append(wrap);
  if(!shown)host.innerHTML='<div class="empty">No completed topics match this filter yet. Complete a topic in Syllabus to add it here.</div>';
@@ -829,7 +847,7 @@ function renderCharts(){
  const examHost=$("examCountdownCharts");if(examHost){examHost.innerHTML="";[{name:"UPSC CSE PRELIMS 2027",date:new Date(((state.settings||{}).targetDate||"2027-05-23")+"T00:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}),dateKey:(state.settings||{}).targetDate||"2027-05-23",note:"Configured target date"},{name:"UPSC CSE MAINS 2027",date:"20 August 2027",dateKey:"2027-08-20",note:"Friday · 5-day examination"}].forEach(exam=>{const card=document.createElement("div");card.className="exam-chart-card";const details=document.createElement("div"),name=document.createElement("div"),date=document.createElement("div"),note=document.createElement("div"),days=document.createElement("div"),number=document.createElement("div"),unit=document.createElement("div");name.className="exam-chart-name";name.textContent=exam.name;date.className="exam-chart-date";date.textContent=exam.date;note.className="exam-chart-note";note.textContent=exam.note;details.append(name,date,note);days.className="exam-chart-days";number.className="exam-chart-number";number.textContent=daysUntilExam(exam.dateKey);unit.className="exam-chart-unit";unit.textContent="days remaining";days.append(number,unit);card.append(details,days);examHost.append(card)})}
  const host=$("progressCharts");if(!host)return;host.innerHTML="";
  const total=totalTopics(),completed=doneTopics(),pending=Math.max(0,total-completed);
- const revisionTotal=completed,validKeys=validTopicKeys(),revisionDone=Object.keys(state.revisionDone||{}).filter(key=>validKeys.has(key)&&!!state.topics[key]&&!!state.revisionDone[key]).length,revisionPending=Math.max(0,revisionTotal-revisionDone);
+ const revisionTotal=completed,validKeys=validTopicKeys(),revisionToday=localDate(),revisionPending=Object.keys(state.topics||{}).filter(key=>validKeys.has(key)&&!!state.topics[key]).filter(key=>{const dueDate=state.revisionSchedule?.[key]?.due_date;return typeof dueDate!=="string"||dueDate<=revisionToday}).length,revisionDone=Math.max(0,revisionTotal-revisionPending);
  const validPlanDates=new Set();DAILY_STUDY_PLAN.forEach((entry,index)=>{const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);validPlanDates.add(localDateKey(date));});
  const planTotal=validPlanDates.size,planDone=Object.entries(state.studyPlanDone||{}).filter(([key,value])=>validPlanDates.has(key)&&!!value).length,planPending=Math.max(0,planTotal-planDone);
  const today=localDate(),dailyState=state.daily[today]||{},dailyTotal=dailyItems().length,dailyDone=dailyItems().filter(item=>dailyState[item[0]]).length,dailyPending=Math.max(0,dailyTotal-dailyDone);
@@ -1000,6 +1018,8 @@ async function syncTeacherContext(){
  try{
   const context=getTrackerAiContext();
   context.subjects=allSubjects().map(subject=>({subject:subject.name,total:subject.topics.length,completed:subject.topics.filter(topic=>state.topics[subject.name+"::"+topic[0]]).length,pending:subject.topics.filter(topic=>!state.topics[subject.name+"::"+topic[0]]).map(topic=>topic[0])}));
+  context.completed_topics=allSubjects().flatMap(subject=>subject.topics.filter(topic=>state.topics[subject.name+"::"+topic[0]]).map(topic=>({subject:subject.name,topic:topic[0]})));
+  context.revision_schedule=state.revisionSchedule||{};
   await fetch("/api/teacher/context",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({context})});
  }catch(error){}
 }

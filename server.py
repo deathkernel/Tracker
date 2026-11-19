@@ -17,7 +17,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field, field_validator
 
-from teacher_engine import prompt_is_due, validate_teacher_event
+from teacher_engine import build_due_revision_queue, prompt_is_due, validate_teacher_event
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "tracker.db"
@@ -456,12 +456,23 @@ def save_teacher_config(config: dict[str, Any]) -> None:
 
 
 def teacher_allowed_topics(context: dict[str, Any]) -> set[tuple[str, str]]:
-    return {
+    allowed = {
         (str(item.get("subject", "")), str(topic))
         for item in context.get("subjects", [])
         if isinstance(item, dict)
+        and isinstance(item.get("pending", []), list)
         for topic in item.get("pending", [])
     }
+    due_topics = context.get("due_revision_topics", [])
+    if isinstance(due_topics, list):
+        allowed.update(
+            (item["subject"], item["topic"])
+            for item in due_topics
+            if isinstance(item, dict)
+            and isinstance(item.get("subject"), str)
+            and isinstance(item.get("topic"), str)
+        )
+    return allowed
 
 
 def run_teacher_cycle() -> None:
@@ -502,7 +513,12 @@ def run_teacher_cycle() -> None:
     context = config.get("context", {})
     if not isinstance(context, dict):
         context = {}
-    compact_context = json.dumps(context, ensure_ascii=False)[:16000]
+    context["due_revision_topics"] = build_due_revision_queue(
+        context.get("completed_topics", []),
+        context.get("revision_schedule", {}),
+        now.date().isoformat(),
+    )
+    compact_context = json.dumps(context, ensure_ascii=False)[:18000]
     result = ollama_request(
         "/api/chat",
         {
@@ -517,7 +533,9 @@ def run_teacher_cycle() -> None:
                         "Ask exactly ONE clear question that makes the student accountable or tests "
                         "understanding. Be firm, direct and supportive; never insult, shame, threaten "
                         "or guilt the student. Use only supplied Tracker facts. Do not invent completed "
-                        "work. Use only pending syllabus topics. Never generate MCQ questions or a "
+                        "work. Use only pending syllabus topics or the explicitly supplied due_revision_topics. "
+                        "If a due revision exists, prefer testing one of those completed topics before introducing "
+                        "a new pending topic. Never claim a revision is complete. Never generate MCQ questions or a "
                         "question bank; MCQ attempt counts only are tracked. Return JSON only with "
                         "kind, prompt, subject, topic, reason. kind must be daily_check_in, "
                         "completion_follow_up, recall_question, concept_check or revision_check."

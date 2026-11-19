@@ -62,3 +62,87 @@ def test_teacher_event_rejects_out_of_syllabus_topic():
 def test_teacher_event_rejects_invalid_payload(payload):
     with pytest.raises(ValueError):
         validate_teacher_event(payload, set())
+
+
+
+def test_next_revision_schedule_uses_spaced_intervals_for_successful_recall():
+    from teacher_engine import next_revision_schedule
+
+    first = next_revision_schedule("2026-11-19", None, 4)
+    assert first["due_date"] == "2026-11-20"
+    assert first["interval_days"] == 1
+    second = next_revision_schedule("2026-11-20", first, 4)
+    assert second["due_date"] == "2026-11-26"
+    assert second["interval_days"] == 6
+    third = next_revision_schedule("2026-11-26", second, 4)
+    assert third["interval_days"] >= 6
+
+
+def test_next_revision_schedule_resets_after_weak_recall():
+    from teacher_engine import next_revision_schedule
+
+    previous = {"interval_days": 14, "repetitions": 4, "ease_factor": 2.5}
+    result = next_revision_schedule("2026-11-19", previous, 1)
+    assert result["interval_days"] == 1
+    assert result["repetitions"] == 0
+    assert result["due_date"] == "2026-11-20"
+
+
+def test_next_revision_schedule_rejects_invalid_quality():
+    from teacher_engine import next_revision_schedule
+
+    with pytest.raises(ValueError, match="between 0 and 5"):
+        next_revision_schedule("2026-11-19", None, 6)
+
+
+def test_due_revision_queue_includes_only_completed_topics_due_today_or_earlier():
+    from teacher_engine import build_due_revision_queue
+
+    completed = [
+        {"subject": "Polity", "topic": "Fundamental Rights"},
+        {"subject": "History", "topic": "Modern India"},
+        {"subject": "Economy", "topic": "Inflation"},
+        {"subject": "Polity", "topic": "Fundamental Rights"},
+    ]
+    schedule = {
+        "Polity::Fundamental Rights": {"due_date": "2026-11-19"},
+        "History::Modern India": {"due_date": "2026-11-20"},
+        "Economy::Inflation": {"due_date": "invalid"},
+    }
+    result = build_due_revision_queue(completed, schedule, "2026-11-19")
+    assert result == [{
+        "subject": "Polity",
+        "topic": "Fundamental Rights",
+        "due_date": "2026-11-19",
+    }]
+
+
+def test_teacher_can_test_due_completed_topics_without_opening_pending_topics():
+    from teacher_engine import build_due_revision_queue
+
+    context = {
+        "completed_topics": [{"subject": "Polity", "topic": "Basic Structure"}],
+        "revision_schedule": {"Polity::Basic Structure": {"due_date": "2026-11-18"}},
+    }
+    context["due_revision_topics"] = build_due_revision_queue(
+        context["completed_topics"], context["revision_schedule"], "2026-11-19"
+    )
+    from server import teacher_allowed_topics
+
+    assert ("Polity", "Basic Structure") in teacher_allowed_topics(context)
+
+
+
+def test_due_revision_queue_treats_legacy_completed_topics_as_due():
+    from teacher_engine import build_due_revision_queue
+
+    result = build_due_revision_queue(
+        [{"subject": "Polity", "topic": "Fundamental Rights"}],
+        {},
+        "2026-11-19",
+    )
+    assert result == [{
+        "subject": "Polity",
+        "topic": "Fundamental Rights",
+        "due_date": "2026-11-19",
+    }]
