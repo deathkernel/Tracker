@@ -10,7 +10,9 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, Response
-from pydantic import BaseModel, Field, field_validator
+
+from revision_engine import next_revision_schedule
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -65,6 +67,8 @@ def initialize_database() -> None:
 
 
 class TrackerState(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
     version: int = Field(default=0, ge=0)
     topics: dict[str, Any] = Field(default_factory=dict)
     daily: dict[str, Any] = Field(default_factory=dict)
@@ -123,7 +127,26 @@ def qr_code(url: str) -> Response:
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
+    try:
+        with database_session() as connection:
+            connection.execute("SELECT 1 FROM app_state WHERE id = 1").fetchone()
+    except sqlite3.Error as exc:
+        raise HTTPException(status_code=503, detail="Tracker database is unavailable.") from exc
     return {"status": "ok", "database": "sqlite"}
+
+
+class RevisionScheduleRequest(BaseModel):
+    today: str
+    previous: dict[str, Any] | None = None
+    quality: int = Field(ge=0, le=5)
+
+
+@app.post("/api/revision/next")
+def calculate_revision_schedule(request: RevisionScheduleRequest) -> dict[str, Any]:
+    try:
+        return next_revision_schedule(request.today, request.previous, request.quality)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @app.get("/api/state")
