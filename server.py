@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date as date_type, timedelta
 import os
 import socket
 import urllib.error
@@ -297,6 +298,7 @@ def ollama_plan(request: OllamaPlannerRequest) -> dict[str, Any]:
             raise ValueError("Ollama returned an incomplete schedule.")
         normalized = []
         seen_dates = set()
+        start_date = date_type.fromisoformat(str(request.context.get("today", "")))
         allowed_topics = {
             (str(subject), str(topic))
             for item in request.context.get("subjects", [])
@@ -308,14 +310,16 @@ def ollama_plan(request: OllamaPlannerRequest) -> dict[str, Any]:
             if not isinstance(day, dict) or not isinstance(day.get("date"), str):
                 raise ValueError("Ollama returned an invalid schedule date.")
             date = day["date"]
-            if len(date) != 10 or date in seen_dates:
-                raise ValueError("Ollama returned duplicate or invalid dates.")
+            expected_date = (start_date + timedelta(days=len(normalized))).isoformat()
+            if date != expected_date or date in seen_dates:
+                raise ValueError("Ollama dates must cover the requested days in order.")
             seen_dates.add(date)
             blocks = day.get("blocks")
             if not isinstance(blocks, list) or not 1 <= len(blocks) <= 12:
                 raise ValueError("Ollama returned an invalid number of daily blocks.")
             clean_blocks = []
             previous_end = ""
+            planned_minutes = 0
             for block in blocks:
                 if not isinstance(block, dict):
                     raise ValueError("Ollama returned an invalid schedule block.")
@@ -329,6 +333,8 @@ def ollama_plan(request: OllamaPlannerRequest) -> dict[str, Any]:
                 if previous_end and start < previous_end:
                     raise ValueError("Schedule blocks cannot overlap.")
                 previous_end = end
+                if kind != "break":
+                    planned_minutes += (int(end[:2]) * 60 + int(end[3:])) - (int(start[:2]) * 60 + int(start[3:]))
                 subject = str(block.get("subject", ""))[:100]
                 topic = str(block.get("topic", ""))[:200]
                 kind = block.get("type", "study")
@@ -341,6 +347,13 @@ def ollama_plan(request: OllamaPlannerRequest) -> dict[str, Any]:
                     "topic": topic, "task": str(block.get("task", ""))[:300],
                     "type": kind,
                 })
+            daily_goal = request.context.get("daily_goal_hours", 4)
+            try:
+                daily_goal_minutes = int(float(daily_goal) * 60)
+            except (TypeError, ValueError):
+                daily_goal_minutes = 240
+            if planned_minutes > daily_goal_minutes:
+                raise ValueError("Ollama scheduled more study time than the daily goal.")
             normalized.append({"date": date, "blocks": clean_blocks})
         normalized.sort(key=lambda item: item["date"])
         return {"schedule": normalized, "model": request.model}
