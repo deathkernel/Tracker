@@ -44,3 +44,18 @@ test("missing-topic action opens and highlights the exact overdue roadmap date",
   assert.match(script, /getElementById\("plan-"\+dueDate\)/);
   assert.match(script, /missing-target-row/);
 });
+
+test("Day 2 uses the previous day's Day 1 progress record", () => {
+  assert.match(script, /function getStudyPlanProgressDateKey\(entry\)/);
+  assert.match(script, /previousDate\.setDate\(previousDate\.getDate\(\)-1\)/);
+  assert.match(script, /locked:entry\.phase==="mcq_revision"&&!progress\.studyDone/);
+  assert.match(script, /state\.studyPlanProgress\[entry\.progressDateKey\]=progress/);
+  assert.match(script, /const progress=getStudyPlanProgress\(entry\)/);
+});
+
+test("Day 2 MCQ attempt count is saved before revision confirmation", () => {
+  const mcqSave = script.indexOf('progress.mcqDone=true;progress.mcqCount=amount;');
+  const persistAfterMcq = script.indexOf('state.studyPlanProgress[entry.progressDateKey]=progress;', mcqSave);
+  const revisionConfirm = script.indexOf('confirm("Have you revised this same topic?")', mcqSave);
+  assert.ok(mcqSave >= 0 && persistAfterMcq > mcqSave && revisionConfirm > persistAfterMcq);
+});
