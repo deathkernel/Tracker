@@ -138,7 +138,8 @@ test("subject progress mapping supports explicit multi-topic aliases and safe ex
 test("subject uncompletion invalidates linked Day 1 records without deleting Day 2 attempt history", () => {
   assert.match(script, /function syncSyllabusUncompletionToStudyPlan\(subject,topic\)/);
   assert.match(script, /syncSyllabusUncompletionToStudyPlan\(s\.name,name\)/);
-  assert.match(script, /studyPlanDone\[dateKey\]=false/);
+  assert.match(script, /studyPlanDone\[studyDateKey\]=false/);
+  assert.match(script, /studyPlanDone\[revisionDateKey\]=false/);
   assert.match(script, /return entry\.phase==="study"\?!!progress\.studyDone:!!progress\.studyDone&&!!progress\.mcqDone&&!!progress\.revisionDone/);
 });
 
