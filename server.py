@@ -192,6 +192,16 @@ def save_state(state: TrackerState) -> dict[str, Any]:
 
 
 
+@app.get("/strict_engine.js")
+def strict_engine_asset() -> Response:
+    raise HTTPException(status_code=404, detail="Strict engine asset is not included in this build.")
+
+
+@app.get("/strict_rules.js")
+def strict_rules_asset() -> Response:
+    raise HTTPException(status_code=404, detail="Strict rules asset is not included in this build.")
+
+
 @app.get("/")
 def dashboard() -> FileResponse:
     if not INDEX_PATH.exists():
