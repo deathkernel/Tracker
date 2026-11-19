@@ -126,3 +126,13 @@ test("Strict AI Teacher uses browser notifications only after explicit permissio
   assert.match(script, /Notification\.permission==="granted"/);
   assert.match(script, /setInterval\(\(\)=>\{syncTeacherContext\(\);pollTeacherEvents\(\)\},30000\)/);
 });
+
+
+test("Strict Teacher receives completed topics and persisted spaced-revision dates", () => {
+  assert.match(script, /context\.completed_topics=allSubjects\(\)\.flatMap/);
+  assert.match(script, /context\.revision_schedule=state\.revisionSchedule\|\|\{\}/);
+  assert.match(script, /function revisionDateAfter\(days\)/);
+  assert.match(script, /due_date:revisionDateAfter\(1\)/);
+  assert.match(script, /last_reviewed_at:localDate\(\)/);
+  assert.match(script, /syncTeacherContext\(\)/);
+});
