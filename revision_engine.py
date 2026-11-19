@@ -28,6 +28,12 @@ def next_revision_schedule(
         ease_factor = 2.5
     ease_factor = max(1.3, min(3.0, ease_factor))
 
+    difficulty = 5 - quality
+    ease_factor = max(
+        1.3,
+        ease_factor + (0.1 - difficulty * (0.08 + difficulty * 0.02)),
+    )
+
     if quality < 3:
         repetitions = 0
         interval_days = 1
@@ -39,11 +45,6 @@ def next_revision_schedule(
             interval_days = 6
         else:
             interval_days = max(1, round(interval_days * ease_factor))
-        difficulty = 5 - quality
-        ease_factor = max(
-            1.3,
-            ease_factor + (0.1 - difficulty * (0.08 + difficulty * 0.02)),
-        )
 
     due_date = review_date + timedelta(days=interval_days)
     return {
