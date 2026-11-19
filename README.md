@@ -15,7 +15,7 @@ Keep the command window open while using the tracker. Press Ctrl+C to stop the l
 
 - Daily checklist and completion progress.
 - Two-day topic cycle: Day 1 study, Day 2 MCQ attempt count + revision for the same topic.
-- 9 base subjects and 65 approximate PYQ topic mappings.
+- 9 base subjects and 256 curated syllabus topics.
 - Subject-wise progress, topic search and completion filters.
 - Weekly roadmap with date, subject and study focus.
 - Study log for focused hours, MCQs, CSAT and notes.
@@ -38,7 +38,7 @@ For optional phone access, set the `TRACKER_HOST` environment variable to `0.0.0
 
 ## Topic data note
 
-The 65 topic entries and their mapped question counts are approximate editorial mappings for this personal plan, not official UPSC topic-wise statistics.
+The topic list and mapped PYQ counts are curated editorial references for this personal plan, not official UPSC topic-wise statistics.
 
 ## Exam date
 
