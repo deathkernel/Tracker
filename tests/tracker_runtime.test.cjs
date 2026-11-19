@@ -113,7 +113,7 @@ test("Strict AI Teacher panel supports proactive questions, settings and answer 
   assert.match(html, /id="teacherEnabled"/);
   assert.match(html, /id="teacherInterval"/);
   assert.match(script, /function syncTeacherContext\(\)/);
-  assert.match(script, /function pollTeacherEvents\(\)/);
+  assert.match(script, /function pollTeacherEvents\(initial=false\)/);
   assert.match(script, /function submitTeacherAnswer\(\)/);
   assert.match(script, /fetch\("\/api\/teacher\/respond"/);
   assert.match(script, /fetch\("\/api\/teacher\/events\?after_id="/);
