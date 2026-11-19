@@ -156,8 +156,9 @@ test("empty custom subjects render zero progress instead of NaN", () => {
 
 test("legacy Day 2 records cannot override an explicit Day 1 uncompletion", () => {
   const progress = script.slice(script.indexOf("function getStudyPlanProgress(entry)"), script.indexOf("function getStudyPlanEntry("));
-  assert.match(progress, /has\(progress,"studyDone"\)\?!!progress\.studyDone:!!legacy\.studyDone/);
-  assert.match(script, /state\.studyPlanProgress\[revisionDateKey\]=\{\.\.\.getStudyPlanProgress\(\{\.\.\.revisionEntry,dateKey:revisionDateKey\}\),studyDone:false\}/);
+  assert.match(progress, /studyDone:!!progress\.studyReset\?false:!!\(progress\.studyDone\|\|legacy\.studyDone\)/);
+  assert.match(script, /studyReset:!!item\.studyReset/);
+  assert.match(script, /state\.studyPlanProgress\[revisionDateKey\]=\{\.\.\.getStudyPlanProgress\(\{\.\.\.revisionEntry,dateKey:revisionDateKey\}\),studyDone:false,studyReset:true\}/);
   assert.match(script, /state\.studyPlanDone\[revisionDateKey\]=false/);
 });
 
@@ -165,4 +166,23 @@ test("remaining subject-labelled lessons are either mapped or explicitly classif
   assert.match(script, /"systems government full polity":\["Polity::Systems of Government"\]/);
   assert.match(script, /"indices hdi cpi wpi other indicators":\["Economy::Economic Indicators and Indices","Economy::CPI and WPI"\]/);
   assert.match(script, /"scientific developments in current affairs":\["Science & Technology::Emerging Tech"\]/);
+});
+
+
+test("subject progress mapping executes exact multi-topic aliases", () => {
+  const subjectData = JSON.parse(script.match(/const SUBJECTS=(\[[\s\S]*?\]);\nconst ROADMAP/)[1]);
+  const start = script.indexOf("function normalizePlanTopic(value){");
+  const end = script.indexOf("function syncSyllabusCompletionToStudyPlan(subject,topic)", start);
+  assert.ok(start >= 0 && end > start);
+  const sandbox = { allSubjects: () => subjectData };
+  require("node:vm").runInNewContext(script.slice(start, end) + "\nthis.resolve=findMatchingSyllabusTopics;", sandbox);
+  assert.deepEqual(Array.from(sandbox.resolve("Art & Culture", "Indian temple architecture: Nagara, Dravida, Vesara")), [
+    "Art & Culture::Nagara Temples",
+    "Art & Culture::Dravida Temples",
+    "Art & Culture::Vesara Temples"
+  ]);
+  assert.deepEqual(Array.from(sandbox.resolve("Modern History", "Rise of British power and expansion")), [
+    "History::Rise of British Power and Expansion"
+  ]);
+  assert.deepEqual(Array.from(sandbox.resolve("Mock Tests", "Full GS mock test 2 + analysis")), []);
 });
