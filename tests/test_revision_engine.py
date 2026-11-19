@@ -22,6 +22,7 @@ def test_next_revision_schedule_resets_after_weak_recall():
     assert result["interval_days"] == 1
     assert result["repetitions"] == 0
     assert result["due_date"] == "2026-11-20"
+    assert result["ease_factor"] < 2.5
 
 
 def test_next_revision_schedule_rejects_invalid_quality():
