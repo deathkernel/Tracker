@@ -454,7 +454,7 @@ function renderSubjectOverview(){
  table.append(body);host.append(table);$("subjectCount").textContent=allSubjects().length+" subjects";
 }
 function normalizePlanTopic(value){
- return String(value||"").toLowerCase().replace(/directive principles of state policy/g,"dpsp").replace(/union and its territory/g,"union and territory").replace(/goods and services tax/g,"gst").replace(/reserve bank of india/g,"rbi").replace(/[^a-z0-9 ]/g," ").replace(/\\b(the|and|of|its|for|with|from|overview|key|important|major|core|basics|introduction|revision|test|pyqs|pyq|practice|analysis)\\b/g," ").replace(/\\s+/g," ").trim();
+ return String(value||"").toLowerCase().replace(/directive principles of state policy/g,"dpsp").replace(/union and its territory/g,"union and territory").replace(/goods and services tax/g,"gst").replace(/reserve bank of india/g,"rbi").replace(/[^a-z0-9 ]/g," ").replace(/\b(the|and|of|its|for|with|from|overview|key|important|major|core|basics|introduction|revision|test|pyqs|pyq|practice|analysis)\b/g," ").replace(/\s+/g," ").trim();
 }
 function syllabusSubjectForPlan(subject){
  const name=String(subject||"").toLowerCase();
