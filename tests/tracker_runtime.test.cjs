@@ -152,3 +152,17 @@ test("Day 2 mapped revision advances the shared next-review schedule", () => {
 test("empty custom subjects render zero progress instead of NaN", () => {
   assert.match(script, /s\.topics\.length\?Math\.round\(done\/s\.topics\.length\*100\):0/);
 });
+
+
+test("legacy Day 2 records cannot override an explicit Day 1 uncompletion", () => {
+  const progress = script.slice(script.indexOf("function getStudyPlanProgress(entry)"), script.indexOf("function getStudyPlanEntry("));
+  assert.match(progress, /has\(progress,"studyDone"\)\?!!progress\.studyDone:!!legacy\.studyDone/);
+  assert.match(script, /state\.studyPlanProgress\[revisionDateKey\]=\{\.\.\.getStudyPlanProgress\(\{\.\.\.revisionEntry,dateKey:revisionDateKey\}\),studyDone:false\}/);
+  assert.match(script, /state\.studyPlanDone\[revisionDateKey\]=false/);
+});
+
+test("remaining subject-labelled lessons are either mapped or explicitly classified as activities", () => {
+  assert.match(script, /"systems government full polity":\["Polity::Systems of Government"\]/);
+  assert.match(script, /"indices hdi cpi wpi other indicators":\["Economy::Economic Indicators and Indices","Economy::CPI and WPI"\]/);
+  assert.match(script, /"scientific developments in current affairs":\["Science & Technology::Emerging Tech"\]/);
+});
