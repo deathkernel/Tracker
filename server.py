@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import os
 import socket
+import urllib.error
+import urllib.request
 from contextlib import asynccontextmanager, contextmanager
 import sqlite3
 from pathlib import Path
@@ -10,7 +12,7 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "tracker.db"
@@ -87,6 +89,44 @@ class TrackerState(BaseModel):
     pendingTopicEvidence: dict[str, Any] = Field(default_factory=dict)
 
 
+class OllamaChatRequest(BaseModel):
+    model: str = Field(min_length=1, max_length=200)
+    message: str = Field(min_length=1, max_length=4000)
+    context: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("model")
+    @classmethod
+    def validate_model_name(cls, value: str) -> str:
+        if not value.strip() or any(char in value for char in "\r\n"):
+            raise ValueError("Choose a valid local Ollama model.")
+        return value.strip()
+
+    @field_validator("message")
+    @classmethod
+    def validate_message(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Enter a message for the study assistant.")
+        return value.strip()
+
+
+OLLAMA_URL = "http://127.0.0.1:11434"
+
+
+def ollama_request(path: str, payload: dict[str, Any] | None = None, timeout: float = 5.0) -> dict[str, Any]:
+    data = json.dumps(payload).encode("utf-8") if payload is not None else None
+    request = urllib.request.Request(
+        f"{OLLAMA_URL}{path}",
+        data=data,
+        headers={"Content-Type": "application/json"} if data is not None else {},
+        method="POST" if data is not None else "GET",
+    )
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        result = json.loads(response.read().decode("utf-8"))
+    if not isinstance(result, dict):
+        raise ValueError("Ollama returned an invalid response.")
+    return result
+
+
 def get_lan_ip() -> str:
     probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -117,6 +157,79 @@ def qr_code(url: str) -> Response:
     output = BytesIO()
     image.save(output)
     return Response(content=output.getvalue(), media_type="image/svg+xml")
+
+
+@app.get("/api/ollama/status")
+def ollama_status() -> dict[str, Any]:
+    try:
+        result = ollama_request("/api/tags", timeout=3.0)
+        models = result.get("models", [])
+        if not isinstance(models, list):
+            models = []
+        names = [
+            item.get("name")
+            for item in models
+            if isinstance(item, dict) and isinstance(item.get("name"), str)
+        ]
+        preferred = os.environ.get("TRACKER_OLLAMA_MODEL", "").strip()
+        selected = preferred if preferred in names else (names[0] if names else "")
+        return {"available": True, "models": names, "selected_model": selected}
+    except (OSError, ValueError, urllib.error.URLError, json.JSONDecodeError):
+        return {"available": False, "models": [], "selected_model": "", "message": "Ollama is not running on this PC."}
+
+
+@app.post("/api/ollama/chat")
+def ollama_chat(request: OllamaChatRequest) -> dict[str, str]:
+    try:
+        available = ollama_request("/api/tags", timeout=3.0)
+        models = available.get("models", [])
+        names = {
+            item.get("name")
+            for item in models
+            if isinstance(item, dict) and isinstance(item.get("name"), str)
+        }
+        if request.model not in names:
+            raise HTTPException(status_code=400, detail="That model is not installed in Ollama.")
+        context = json.dumps(request.context, ensure_ascii=False)[:12000]
+        result = ollama_request(
+            "/api/chat",
+            {
+                "model": request.model,
+                "stream": False,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are the local UPSC study assistant inside Tracker. "
+                            "Help the student reduce manual planning and review work. "
+                            "Use only the supplied tracker context; never invent completed work, "
+                            "dates, scores or official facts. Suggest actions, but never claim that "
+                            "you changed Tracker records. The student must confirm any progress update. "
+                            "Do not generate or store MCQ question banks; MCQ attempt counts only are tracked. "
+                            "Keep responses practical, concise and organized."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Tracker context (JSON): {context}\\n\\nUser request: {request.message}",
+                    },
+                ],
+                "options": {"temperature": 0.2},
+            },
+            timeout=120.0,
+        )
+        message = result.get("message", {})
+        response_text = message.get("content", "") if isinstance(message, dict) else ""
+        if not isinstance(response_text, str) or not response_text.strip():
+            raise ValueError("Ollama returned an empty response.")
+        return {"response": response_text.strip(), "model": request.model}
+    except HTTPException:
+        raise
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:500]
+        raise HTTPException(status_code=502, detail=f"Ollama request failed: {detail}") from exc
+    except (OSError, TimeoutError, ValueError, urllib.error.URLError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=503, detail="Ollama is unavailable or did not respond in time.") from exc
 
 
 @app.get("/api/health")

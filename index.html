@@ -262,6 +262,7 @@ body.dark .checkbox-wrapper-12 input[type="checkbox"]{border-color:#788397}
  <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-settings" value="settings"><label class="cir-tabs__t" for="nav-settings" data-view="settings">Settings</label>
  <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-revision" value="revision"><label class="cir-tabs__t" for="nav-revision" data-view="revision">Revision</label>
  <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-charts" value="charts"><label class="cir-tabs__t" for="nav-charts" data-view="charts">Charts</label>
+ <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-assistant" value="assistant"><label class="cir-tabs__t" for="nav-assistant" data-view="assistant">AI Assistant</label>
 </nav>
 <div class="page-hint" id="pageHint">Your daily preparation at a glance.</div>
 <div class="main-grid nav-mode">
@@ -310,6 +311,15 @@ body.dark .checkbox-wrapper-12 input[type="checkbox"]{border-color:#788397}
   <div class="chart-card analytics-graph-card" style="margin-top:14px"><div class="chart-heading-row"><h3 class="chart-title">Subject-wise syllabus progress</h3><span class="analytics-subtitle">Completion percentage</span></div><div id="subjectProgressChart"></div></div>
   <div class="chart-card analytics-graph-card" style="margin-top:14px"><div class="chart-heading-row"><h3 class="chart-title">Study hours — last 7 days</h3><span class="analytics-subtitle" id="studyHoursTotal"></span></div><div id="studyHoursChart"></div></div>
   <div class="analytics-extra-grid" id="extraAnalyticsCharts"></div>
+ </section>
+ <section class="card" data-page="assistant">
+  <div class="card-head"><div><h2>Local AI Study Assistant</h2><p class="subtitle">Runs through Ollama on this PC. Your Tracker data stays local.</p></div><span class="chip" id="ollamaStatus">Checking Ollama…</span></div>
+  <div class="field"><label for="ollamaModel">Installed local model</label><select id="ollamaModel"><option value="">Detecting models…</option></select></div>
+  <div class="form-actions"><button class="btn" id="ollamaReview">Generate my study review</button><button class="btn" id="ollamaRefresh">Refresh model list</button></div>
+  <div id="ollamaMessages" class="log-list" aria-live="polite"><div class="empty">Ask for a study plan, backlog review, revision priorities or a summary of your progress.</div></div>
+  <div class="field" style="margin-top:12px"><label for="ollamaPrompt">Ask your study assistant</label><textarea id="ollamaPrompt" rows="3" maxlength="4000" placeholder="Example: Based on my pending topics, make a realistic plan for today."></textarea></div>
+  <div class="form-actions"><button class="btn primary" id="ollamaSend">Ask Ollama</button></div>
+  <p class="small-note">AI suggestions never mark topics complete or change your progress automatically. Confirm and update Tracker yourself. No MCQ questions or question bank are generated or stored by Tracker.</p>
  </section>
 </main>
 <aside>
@@ -443,10 +453,67 @@ function renderSubjectOverview(){
  allSubjects().forEach(s=>{const done=s.topics.filter(t=>state.topics[s.name+"::"+t[0]]).length,p=Math.round(done/s.topics.length*100);const row=document.createElement("tr");const name=document.createElement("td");name.textContent=s.name;const count=document.createElement("td");count.textContent=done+" / "+s.topics.length;const progress=document.createElement("td");const wrap=document.createElement("div");wrap.className="table-progress";const bar=document.createElement("span");bar.style.width=p+"%";wrap.append(bar);const pct=document.createElement("small");pct.textContent=p+"%";progress.append(wrap,pct);row.append(name,count,progress);body.append(row)});
  table.append(body);host.append(table);$("subjectCount").textContent=allSubjects().length+" subjects";
 }
+function normalizePlanTopic(value){
+ return String(value||"").toLowerCase().replace(/directive principles of state policy/g,"dpsp").replace(/union and its territory/g,"union and territory").replace(/goods and services tax/g,"gst").replace(/reserve bank of india/g,"rbi").replace(/[^a-z0-9 ]/g," ").replace(/\b(the|and|of|its|for|with|from|overview|key|important|major|core|basics|introduction|revision|test|pyqs|pyq|practice|analysis)\b/g," ").replace(/\s+/g," ").trim();
+}
+function syllabusSubjectForPlan(subject){
+ const name=String(subject||"").toLowerCase();
+ if(name.includes("history"))return "History";
+ if(name==="polity")return "Polity";
+ if(name==="economy")return "Economy";
+ if(name==="environment")return "Environment";
+ if(name==="geography")return "Geography";
+ if(name==="science & technology")return "Science & Technology";
+ if(name==="art & culture")return "Art & Culture";
+ return "";
+}
+function findMatchingSyllabusTopic(subject,topic){
+ const syllabusSubject=syllabusSubjectForPlan(subject);
+ if(!syllabusSubject)return null;
+ const group=allSubjects().find(item=>item.name===syllabusSubject);
+ if(!group)return null;
+ const planName=normalizePlanTopic(topic);
+ if(!planName)return null;
+ const matches=group.topics.filter(([name])=>{
+  const syllabusName=normalizePlanTopic(name);
+  if(syllabusName.length<5||planName.length<5)return false;
+  return planName===syllabusName||planName.includes(syllabusName)||syllabusName.includes(planName);
+ });
+ return matches.length===1?syllabusSubject+"::"+matches[0][0]:null;
+}
+function syncSyllabusCompletionToStudyPlan(subject,topic){
+ const key=findMatchingSyllabusTopic(subject,topic);
+ if(!key)return;
+ const canonicalSubject=key.split("::")[0],canonicalTopic=key.slice(canonicalSubject.length+2);
+ if(canonicalSubject!==subject||canonicalTopic!==topic)return;
+ DAILY_STUDY_PLAN.forEach((entry,index)=>{
+  if(entry.phase!=="study"||findMatchingSyllabusTopic(entry.subject,entry.topic)!==key)return;
+  const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);
+  const dateKey=localDateKey(date),progressKey=getStudyPlanProgressDateKey({...entry,dateKey});
+  state.studyPlanProgress=state.studyPlanProgress||{};
+  state.studyPlanProgress[progressKey]={...getStudyPlanProgress({...entry,dateKey}),studyDone:true};
+  state.studyPlanDone=state.studyPlanDone||{};
+  state.studyPlanDone[dateKey]=true;
+ });
+}
+function syncStudyPlanCompletionToSyllabus(entry){
+ if(!entry||entry.phase!=="study")return;
+ const key=findMatchingSyllabusTopic(entry.subject,entry.topic);
+ if(!key)return;
+ state.topics=state.topics||{};
+ state.topics[key]=true;
+}
+function syncStudyPlanRevisionToSyllabus(entry){
+ const key=findMatchingSyllabusTopic(entry.subject,entry.topic);
+ if(!key)return;
+ state.revisionDone=state.revisionDone||{};
+ state.revisionDone[key]=true;
+}
 function completeTopicWithMastery(subject,topic){
  const key=subject+"::"+topic;
  state.topics=state.topics||{};
  state.topics[key]=true;
+ syncSyllabusCompletionToStudyPlan(subject,topic);
  state.revisionDone=state.revisionDone||{};
  if(!state.revisionDone[key])delete state.revisionDone[key];
  persist();
@@ -632,7 +699,7 @@ function markStudyPlanPhaseComplete(entry){
  if(!entry)return;
  state.studyPlanProgress=state.studyPlanProgress||{};
  const progress=getStudyPlanProgress(entry);
- if(entry.phase==="study")progress.studyDone=true;
+ if(entry.phase==="study"){progress.studyDone=true;syncStudyPlanCompletionToSyllabus(entry);}
  state.studyPlanProgress[entry.progressDateKey||getStudyPlanProgressDateKey(entry)]=progress;
  state.studyPlanDone=state.studyPlanDone||{};
  state.studyPlanDone[entry.dateKey]=entry.phase==="study"?!!progress.studyDone:!!(progress.mcqDone&&progress.revisionDone);
@@ -669,7 +736,7 @@ function renderOverviewSchedule(){
    state.studyPlanProgress[entry.progressDateKey]=progress;
    persist();
   }
-  if(!isStudy&&!progress.revisionDone){if(!confirm("Have you revised this same topic?")){notify("MCQ count saved. Complete the revision before finishing Day 2.");return;}progress.revisionDone=true;}
+  if(!isStudy&&!progress.revisionDone){if(!confirm("Have you revised this same topic?")){notify("MCQ count saved. Complete the revision before finishing Day 2.");return;}progress.revisionDone=true;syncStudyPlanRevisionToSyllabus(entry);}
   state.studyPlanProgress=state.studyPlanProgress||{};state.studyPlanProgress[entry.progressDateKey]=progress;
   state.studyPlanDone=state.studyPlanDone||{};state.studyPlanDone[today]=!!(progress.mcqDone&&progress.revisionDone);
   state.logs[today]=state.logs[today]||{hours:0,mcqs:0,csat:0,notes:""};
@@ -811,7 +878,41 @@ function renderCharts(){
  }
  $("chartsUpdated").textContent="Updated "+new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
 }
-function setWorkspaceView(view){const names={overview:"Your daily preparation at a glance.",syllabus:"Track 256 PYQ-focused topics: Top 50 priority plus 206 curated micro-topics.",logs:"Record focused hours, MCQs and daily study notes.",plan:"Follow your weekly targets and full preparation roadmap.",settings:"Personalize your target date, study hours and workspace.",revision:"Revisit every topic you have already completed.",charts:"Visualize your syllabus, revision, study plan and study-time progress.",missing:"Review every syllabus topic that is still pending."};document.querySelectorAll("[data-page]").forEach(card=>{card.hidden=card.dataset.page!==view});document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input=>{input.checked=input.value===view});$("pageHint").textContent=names[view]||names.overview}
+function getTrackerAiContext(){
+ const subjects=allSubjects().map(subject=>({subject:subject.name,total:subject.topics.length,completed:subject.topics.filter(topic=>state.topics[subject.name+"::"+topic[0]]).length,pending:subject.topics.filter(topic=>!state.topics[subject.name+"::"+topic[0]]).slice(0,12).map(topic=>topic[0])}));
+ const logs=Object.entries(state.logs||{}).sort(([a],[b])=>b.localeCompare(a)).slice(0,7).map(([date,log])=>({date,hours:Number(log.hours)||0,mcqs:Number(log.mcqs)||0,csat:Number(log.csat)||0}));
+ return{today:localDate(),completed_topics:doneTopics(),total_topics:totalTopics(),revision_pending:Math.max(0,doneTopics()-Object.values(state.revisionDone||{}).filter(Boolean).length),study_plan:getStudyPlanCounts(),subjects,recent_logs:logs,target_date:state.settings?.targetDate||"2027-05-23",daily_goal_hours:state.settings?.studyGoal||4};
+}
+function addOllamaMessage(role,message){
+ const host=$("ollamaMessages"),item=document.createElement("div");item.className="log-item";
+ const head=document.createElement("div");head.className="log-head";head.textContent=role==="assistant"?"Local AI assistant":"You";
+ const body=document.createElement("div");body.className="log-note";body.style.whiteSpace="pre-wrap";body.textContent=message;
+ item.append(head,body);host.append(item);item.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+async function loadOllamaStatus(){
+ const status=$("ollamaStatus"),select=$("ollamaModel");
+ status.textContent="Checking Ollama…";
+ try{
+  const response=await fetch("/api/ollama/status"),result=await response.json();
+  select.innerHTML="";
+  if(!result.available||!result.models?.length){status.textContent="Ollama not detected";const option=document.createElement("option");option.value="";option.textContent="Start Ollama and refresh";select.append(option);return false;}
+  result.models.forEach(model=>{const option=document.createElement("option");option.value=model;option.textContent=model;select.append(option)});
+  select.value=result.selected_model||result.models[0];status.textContent=result.models.length+" local model"+(result.models.length===1?"":"s")+" ready";return true;
+ }catch(error){status.textContent="Ollama unavailable";select.innerHTML='<option value="">Start Ollama and refresh</option>';return false;}
+}
+async function sendOllamaMessage(prompt){
+ const message=String(prompt??$("ollamaPrompt").value).trim(),model=$("ollamaModel").value;
+ if(!message){notify("Write a question for your local study assistant.");return}
+ if(!model){notify("Start Ollama and select an installed model first.");return}
+ addOllamaMessage("user",message);$("ollamaPrompt").value="";$("ollamaSend").disabled=true;$("ollamaSend").textContent="Thinking…";
+ try{
+  const response=await fetch("/api/ollama/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model,message,context:getTrackerAiContext()})});
+  const result=await response.json();if(!response.ok)throw new Error(result.detail||"Ollama request failed.");
+  addOllamaMessage("assistant",result.response);
+ }catch(error){addOllamaMessage("assistant",error.message||"Ollama could not answer. Check that the local runtime is running.");}
+ finally{$("ollamaSend").disabled=false;$("ollamaSend").textContent="Ask Ollama";}
+}
+function setWorkspaceView(view){const names={overview:"Your daily preparation at a glance.",syllabus:"Track 256 PYQ-focused topics: Top 50 priority plus 206 curated micro-topics.",logs:"Record focused hours, MCQs and daily study notes.",plan:"Follow your weekly targets and full preparation roadmap.",settings:"Personalize your target date, study hours and workspace.",revision:"Revisit every topic you have already completed.",charts:"Visualize your syllabus, revision, study plan and study-time progress.",assistant:"Get local AI help with study planning, backlog and revision.",missing:"Review every syllabus topic that is still pending."};document.querySelectorAll("[data-page]").forEach(card=>{card.hidden=card.dataset.page!==view});document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input=>{input.checked=input.value===view});$("pageHint").textContent=names[view]||names.overview}
 function activeDevice(){return window.matchMedia("(max-width: 760px)").matches?"mobile":"desktop"}
 function applyDeviceTheme(){state.settings=state.settings||{};state.settings.deviceThemes=state.settings.deviceThemes||{};const device=activeDevice();const theme=state.settings.deviceThemes[device]||(state.settings.theme||"light");document.body.classList.toggle("dark",theme==="dark");$("themeToggle").checked=theme==="dark"}
 function renderAll(){syncSubjectFilter();applyDeviceTheme();renderStats();renderDaily();renderOverviewSchedule();renderSubjectOverview();renderTopics();renderMissingTopics();renderRevision();renderCharts();renderWeekly();renderRoadmap();renderLogs();setWorkspaceView(window.trackerView||"overview")}
@@ -859,7 +960,11 @@ $("addCustomTopic").addEventListener("click",()=>{
 });
 $("addDailyTask").addEventListener("click",()=>{const name=$("newTaskName").value.trim(),time=$("newTaskTime").value.trim();if(!name){notify("Enter a task name.");return}state.customDaily=state.customDaily||[];state.customDaily.push(["custom-"+Date.now(),name,time,"Personal task"]);persist();$("newTaskName").value="";$("newTaskTime").value="";renderDaily();notify("Daily task added.")});
 
-document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input=>input.addEventListener("change",()=>{if(!input.checked)return;window.trackerView=input.value;setWorkspaceView(window.trackerView)}));
+document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input=>input.addEventListener("change",()=>{if(!input.checked)return;window.trackerView=input.value;setWorkspaceView(window.trackerView);if(window.trackerView==="assistant")loadOllamaStatus()}));
+$("ollamaRefresh")?.addEventListener("click",loadOllamaStatus);
+$("ollamaSend")?.addEventListener("click",()=>sendOllamaMessage());
+$("ollamaPrompt")?.addEventListener("keydown",event=>{if(event.key==="Enter"&&(event.ctrlKey||event.metaKey)){event.preventDefault();sendOllamaMessage()}});
+$("ollamaReview")?.addEventListener("click",()=>sendOllamaMessage("Review my current Tracker progress and give me a realistic plan for today. Identify the biggest backlog risks, suggest the next 3 actions and a short revision priority list. Do not mark anything complete."));
 initFilters();renderAll();(async()=>{try{const response=await fetch("/api/state");if(!response.ok)throw new Error("API unavailable");const remote=normalizeProgressState(await response.json());if(localMutationVersion!==0){const local=normalizeProgressState(state);localStorage.setItem(STORE+"-recovery",JSON.stringify({savedAt:new Date().toISOString(),reason:"A change was made before SQLite startup synchronization completed. Both copies were preserved for recovery.",data:local,remote}));state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll();notify("SQLite state loaded. Early browser changes were preserved in the recovery backup.");return}const rawLocal=localStorage.getItem(STORE),local=readState(),localVersion=Number(local.version)||0,remoteVersion=Number(remote.version)||0;const sameContent=JSON.stringify({...local,version:0})===JSON.stringify({...remote,version:0});if(!rawLocal){state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll();return}if(remoteVersion>localVersion&&!sameContent){localStorage.setItem(STORE+"-recovery",JSON.stringify({savedAt:new Date().toISOString(),reason:"Server state was newer than this browser copy.",data:local}));state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll();notify("Newer SQLite data loaded. Your previous browser copy was preserved as a recovery backup.");return}if(localVersion>remoteVersion||!sameContent){state=local;state.version=remoteVersion;persist();renderAll();return}state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll()}catch(error){notify("Using browser backup. Start Tracker with run.bat for SQLite sync.")}})();
 </script>
 </body>

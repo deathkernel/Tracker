@@ -59,3 +59,23 @@ test("Day 2 MCQ attempt count is saved before revision confirmation", () => {
   const revisionConfirm = script.indexOf('confirm("Have you revised this same topic?")', mcqSave);
   assert.ok(mcqSave >= 0 && persistAfterMcq > mcqSave && revisionConfirm > persistAfterMcq);
 });
+
+
+test("topic completion is synchronized with exact matching study-plan entries", () => {
+  assert.match(script, /function findMatchingSyllabusTopic\(subject,topic\)/);
+  assert.match(script, /function syncSyllabusCompletionToStudyPlan\(subject,topic\)/);
+  assert.match(script, /syncSyllabusCompletionToStudyPlan\(subject,topic\)/);
+  assert.match(script, /function syncStudyPlanCompletionToSyllabus\(entry\)/);
+  assert.match(script, /syncStudyPlanCompletionToSyllabus\(entry\)/);
+  assert.match(script, /function syncStudyPlanRevisionToSyllabus\(entry\)/);
+});
+
+test("local Ollama assistant is optional and never writes progress automatically", () => {
+  assert.match(html, /id="nav-assistant"/);
+  assert.match(html, /id="ollamaMessages"/);
+  assert.match(script, /fetch\("\/api\/ollama\/status"\)/);
+  assert.match(script, /fetch\("\/api\/ollama\/chat"/);
+  assert.match(script, /getTrackerAiContext\(\)/);
+  assert.match(html, /AI suggestions never mark topics complete or change your progress automatically/);
+  assert.doesNotMatch(script, /ollama.*state\.topics\[[^\]]+\]\s*=\s*true/i);
+});

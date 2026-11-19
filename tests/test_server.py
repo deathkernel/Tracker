@@ -111,3 +111,70 @@ def test_state_rejects_invalid_saved_version_types(client, invalid_version):
     response = client.put("/api/state", json={"version": 0})
     assert response.status_code == 500
     assert response.json()["detail"] == "Saved tracker data is invalid."
+
+
+
+def test_ollama_status_lists_installed_local_models(client, monkeypatch):
+    monkeypatch.setattr(
+        server,
+        "ollama_request",
+        lambda path, payload=None, timeout=5.0: {
+            "models": [{"name": "qwen3.5:9b"}, {"name": "llama3.2:3b"}]
+        },
+    )
+    response = client.get("/api/ollama/status")
+    assert response.status_code == 200
+    assert response.json() == {
+        "available": True,
+        "models": ["qwen3.5:9b", "llama3.2:3b"],
+        "selected_model": "qwen3.5:9b",
+    }
+
+
+def test_ollama_status_reports_missing_local_runtime(client, monkeypatch):
+    def unavailable(*args, **kwargs):
+        raise OSError("connection refused")
+    monkeypatch.setattr(server, "ollama_request", unavailable)
+    response = client.get("/api/ollama/status")
+    assert response.status_code == 200
+    assert response.json()["available"] is False
+    assert response.json()["models"] == []
+
+
+def test_ollama_chat_uses_only_an_installed_model_and_returns_local_reply(client, monkeypatch):
+    calls = []
+
+    def fake_ollama(path, payload=None, timeout=5.0):
+        calls.append((path, payload, timeout))
+        if path == "/api/tags":
+            return {"models": [{"name": "qwen3.5:9b"}]}
+        return {"message": {"content": "Revise Fundamental Rights and solve your pending PYQs."}}
+
+    monkeypatch.setattr(server, "ollama_request", fake_ollama)
+    response = client.post(
+        "/api/ollama/chat",
+        json={
+            "model": "qwen3.5:9b",
+            "message": "What should I study next?",
+            "context": {"completed_topics": 12, "pending_topics": 20},
+        },
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        "response": "Revise Fundamental Rights and solve your pending PYQs.",
+        "model": "qwen3.5:9b",
+    }
+    assert calls[0][0] == "/api/tags"
+    assert calls[1][0] == "/api/chat"
+    assert calls[1][1]["stream"] is False
+    assert calls[1][1]["messages"][1]["content"].find('"pending_topics": 20') >= 0
+
+
+def test_ollama_chat_rejects_uninstalled_model(client, monkeypatch):
+    monkeypatch.setattr(server, "ollama_request", lambda *args, **kwargs: {"models": []})
+    response = client.post(
+        "/api/ollama/chat",
+        json={"model": "missing:model", "message": "Help me plan."},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "That model is not installed in Ollama."
