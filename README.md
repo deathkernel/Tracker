@@ -4,10 +4,13 @@ A login-free Windows study dashboard with a Python FastAPI backend and local SQL
 
 ## Run on Windows
 
-1. Install Python 3.10 or newer.
+1. Install Python 3.10 or newer and Ollama for Windows.
 2. Download and extract this repository.
-3. Double-click `run.bat`.
-4. Open http://127.0.0.1:8000 if the browser does not open automatically.
+3. Install the local model once with `ollama pull qwen3.5:9b`.
+4. Double-click `run.bat`. It reuses an available Ollama server or starts one, checks that `qwen3.5:9b` is installed, loads it into memory for 30 minutes, and then starts Tracker.
+5. Open http://127.0.0.1:8000 if the browser does not open automatically.
+
+`run.bat` does not silently download the multi-gigabyte model. If the model is missing, it prints the exact pull command and stops before starting Tracker. It does not terminate Ollama when Tracker is closed.
 
 Keep the command window open while using the tracker. Press Ctrl+C to stop the local server.
 
