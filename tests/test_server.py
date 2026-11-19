@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 import sys
 from pathlib import Path
@@ -98,3 +99,15 @@ def test_database_sessions_close_connections(client, monkeypatch):
     for connection in connections:
         with pytest.raises(sqlite3.ProgrammingError):
             connection.execute("SELECT 1")
+
+
+@pytest.mark.parametrize("invalid_version", [True, 1.5, "1", -1])
+def test_state_rejects_invalid_saved_version_types(client, invalid_version):
+    with sqlite3.connect(server.DB_PATH) as db:
+        db.execute(
+            "UPDATE app_state SET payload = ? WHERE id = 1",
+            (json.dumps({"version": invalid_version}),),
+        )
+    response = client.put("/api/state", json={"version": 0})
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Saved tracker data is invalid."
