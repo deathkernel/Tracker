@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -47,9 +47,7 @@ def prompt_is_due(
             previous = datetime.fromisoformat(last_prompt_at)
             if previous.tzinfo is None and now.tzinfo is not None:
                 previous = previous.replace(tzinfo=now.tzinfo)
-            if now - previous < __import__("datetime").timedelta(
-                minutes=max(15, min(interval_minutes, 1440))
-            ):
+            if now - previous < timedelta(minutes=max(15, min(interval_minutes, 1440))):
                 return False
         except (TypeError, ValueError):
             pass
