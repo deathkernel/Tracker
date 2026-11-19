@@ -96,7 +96,7 @@ test("AI schedule is saved only after explicit approval and shown on overview", 
   assert.match(script, /state\.aiSchedule=aiPlannerDraft\.map/);
   assert.match(script, /renderAiTodaySchedule\(\)/);
   assert.match(script, /AI-generated timetable · Today/);
-  assert.match(script, /AI suggestions do not mark topics complete/);
+  assert.match(html, /AI suggestions do not mark topics complete/);
 });
 
 test("AI planner receives full pending syllabus and daily study goal", () => {
