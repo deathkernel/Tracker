@@ -536,7 +536,6 @@ function markStudyPlanPhaseComplete(entry){
  state.studyPlanProgress=state.studyPlanProgress||{};
  const progress=state.studyPlanProgress[entry.dateKey]||{};
  if(entry.phase==="study")progress.studyDone=true;
- else{progress.mcqDone=true;progress.revisionDone=true;}
  state.studyPlanProgress[entry.dateKey]=progress;
  state.studyPlanDone=state.studyPlanDone||{};
  state.studyPlanDone[entry.dateKey]=entry.phase==="study"?!!progress.studyDone:!!(progress.mcqDone&&progress.revisionDone);
