@@ -286,8 +286,8 @@ body.dark .checkbox-wrapper-12 input[type="checkbox"]{border-color:#788397}
   <div class="subject-grid" id="subjectOverview"></div>
  </section>
  <section class="card" data-page="missing">
-  <div class="card-head"><div><h2>Missing Topics</h2><p class="small-note">Topics not yet marked complete in your syllabus tracker.</p></div><span class="chip" id="missingTopicCount">0 remaining</span></div>
-  <div class="toolbar"><input id="missingTopicSearch" type="search" placeholder="Search missing topics…"><select id="missingSubjectFilter"><option value="all">All subjects</option></select><select id="missingPriorityFilter"><option value="all">All priorities</option><option value="P1">P1 · Top 50</option><option value="P2">P2 · Curated</option></select></div>
+  <div class="card-head"><div><h2>Missing Topics</h2><p class="small-note">Only past scheduled topics with incomplete study or MCQ + revision are shown. Today’s and future topics stay out of this list.</p></div><span class="chip" id="missingTopicCount">0 remaining</span></div>
+  <div class="toolbar"><input id="missingTopicSearch" type="search" placeholder="Search missing topics…"><select id="missingSubjectFilter"><option value="all">All subjects</option></select><select id="missingPriorityFilter"><option value="all">All overdue phases</option><option value="study">Study pending</option><option value="mcq_revision">MCQ + Revision pending</option></select></div>
   <div id="missingTopicList"></div>
  </section>
  <section class="card" data-page="syllabus">
@@ -464,35 +464,48 @@ function renderTopics(){
 }
 function renderMissingTopics(){
  const host=$("missingTopicList");if(!host)return;
- const query=$("missingTopicSearch").value.trim().toLowerCase(),subjectFilter=$("missingSubjectFilter").value,priorityFilter=$("missingPriorityFilter").value;
- host.innerHTML="";let total=0,shown=0;
+ const query=$("missingTopicSearch").value.trim().toLowerCase(),subjectFilter=$("missingSubjectFilter").value,phaseFilter=$("missingPriorityFilter").value,today=localDate();
+ host.innerHTML="";let shown=0;
+ const overdue=[];
+ for(let index=0;index<DAILY_STUDY_PLAN.length;index+=2){
+  const studyEntry=DAILY_STUDY_PLAN[index],revisionEntry=DAILY_STUDY_PLAN[index+1];
+  if(!studyEntry||!revisionEntry)continue;
+  const studyDate=new Date(CYCLE_START_DATE+"T00:00:00");studyDate.setDate(studyDate.getDate()+index);
+  const revisionDate=new Date(CYCLE_START_DATE+"T00:00:00");revisionDate.setDate(revisionDate.getDate()+index+1);
+  const studyDateKey=localDateKey(studyDate),revisionDateKey=localDateKey(revisionDate);
+  const studyPast=studyDateKey<today,revisionPast=revisionDateKey<today;
+  const studyDone=isStudyPlanEntryDone({...studyEntry,dateKey:studyDateKey});
+  const revisionDone=isStudyPlanEntryDone({...revisionEntry,dateKey:revisionDateKey});
+  const phases=[];
+  if(studyPast&&!studyDone)phases.push("study");
+  if(revisionPast&&!revisionDone)phases.push("mcq_revision");
+  if(!phases.length)continue;
+  overdue.push({subject:studyEntry.subject,topic:studyEntry.topic,phases,dueDate:phases.includes("study")?studyDateKey:revisionDateKey});
+ }
  const table=document.createElement("table");table.className="data-table topic-table";
- table.innerHTML="<thead><tr><th>Priority</th><th>Subject</th><th>Missing topic</th><th>PYQ count</th><th>Action</th></tr></thead>";
+ table.innerHTML="<thead><tr><th>Overdue phase</th><th>Subject</th><th>Missing topic</th><th>Due date</th><th>Action</th></tr></thead>";
  const body=document.createElement("tbody");
- allSubjects().forEach(subject=>{
-  if(subjectFilter!=="all"&&subjectFilter!==subject.name)return;
-  subject.topics.forEach(([name,count,priority])=>{
-   const key=subject.name+"::"+name;if(state.topics[key])return;
-   total++;
-   if(!name.toLowerCase().includes(query)||(priorityFilter!=="all"&&priorityFilter!==priority))return;
-   shown++;
-   const row=document.createElement("tr");
-   const priorityCell=document.createElement("td");priorityCell.textContent=priority==="P1"?"P1 · Top 50":"P2 · Curated";
-   const subjectCell=document.createElement("td");subjectCell.textContent=subject.name;
-   const topicCell=document.createElement("td");topicCell.textContent=name;
-   const countCell=document.createElement("td");countCell.textContent=count==null?"Not verified":String(count);
-   const actionCell=document.createElement("td"),button=document.createElement("button");button.type="button";button.className="btn";button.textContent="Open in Syllabus";
-   button.addEventListener("click",()=>{setWorkspaceView("syllabus");$("topicSearch").value=name;$("subjectFilter").value=subject.name;$("topicStatus").value="all";renderTopics();});
-   actionCell.append(button);row.append(priorityCell,subjectCell,topicCell,countCell,actionCell);body.append(row);
-  });
+ overdue.forEach(item=>{
+  if(subjectFilter!=="all"&&subjectFilter!==item.subject)return;
+  if(!item.topic.toLowerCase().includes(query))return;
+  const matchingPhase=phaseFilter==="all"||item.phases.includes(phaseFilter);
+  if(!matchingPhase)return;
+  shown++;
+  const row=document.createElement("tr");
+  const phaseCell=document.createElement("td");phaseCell.textContent=item.phases.map(phase=>phase==="study"?"Study pending":"MCQ + Revision pending").join(" · ");
+  const subjectCell=document.createElement("td");subjectCell.textContent=item.subject;
+  const topicCell=document.createElement("td");topicCell.textContent=item.topic;
+  const dateCell=document.createElement("td");dateCell.textContent=new Date(item.dueDate+"T00:00:00").toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
+  const actionCell=document.createElement("td"),button=document.createElement("button");button.type="button";button.className="btn";button.textContent="Open in Roadmap";
+  button.addEventListener("click",()=>{setWorkspaceView("roadmap");});
+  actionCell.append(button);row.append(phaseCell,subjectCell,topicCell,dateCell,actionCell);body.append(row);
  });
  table.append(body);const wrap=document.createElement("div");wrap.className="data-table-wrap";wrap.append(table);host.append(wrap);
- if(!shown)host.innerHTML='<div class="empty">No missing topics match your filters.</div>';
- const remaining=allSubjects().reduce((n,subject)=>n+subject.topics.filter(([name])=>!state.topics[subject.name+"::"+name]).length,0);
- $("missingTopicCount").textContent=subjectFilter==="all"&&priorityFilter==="all"&&!query?remaining+" remaining":shown+" shown · "+remaining+" total missing";$("missingNavCount").textContent=remaining;
+ if(!shown)host.innerHTML='<div class="empty">No overdue missing topics. Today’s and future topics are not included.</div>';
+ $("missingTopicCount").textContent=shown+" overdue";$("missingNavCount").textContent=overdue.length;
  const filter=$("missingSubjectFilter"),selected=filter.value;filter.innerHTML='<option value="all">All subjects</option>';
- allSubjects().forEach(subject=>{const option=document.createElement("option");option.value=subject.name;option.textContent=subject.name;filter.append(option)});
- filter.value=allSubjects().some(subject=>subject.name===selected)?selected:"all";
+ [...new Set(DAILY_STUDY_PLAN.map(entry=>entry.subject))].forEach(subject=>{const option=document.createElement("option");option.value=subject;option.textContent=subject;filter.append(option)});
+ filter.value=[...new Set(DAILY_STUDY_PLAN.map(entry=>entry.subject))].includes(selected)?selected:"all";
 }
 function renderRevision(){
  const host=$("revisionChecklist");if(!host)return;host.innerHTML="";
