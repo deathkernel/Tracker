@@ -73,7 +73,7 @@ CSV_COLUMNS = {
     "TopicProgress": ["TopicKey", "Subject", "Topic", "Priority", "IsCompleted", "IsRevised"],
     "StudyLogs": ["Date", "StudyHours", "MCQs", "CSAT", "Notes"],
     "DailyChecklist": ["Date", "TaskID", "Task", "IsCompleted"],
-    "StudyPlan": ["Date", "Week", "Subject", "PlannedTopic", "IsCompleted"],
+    "StudyPlan": ["Date", "Week", "Subject", "PlannedTopic", "Phase", "MCQAttempts", "IsCompleted"],
     "Calendar": ["Date", "Year", "MonthNumber", "Month", "Weekday", "WeekdayNumber"],
 }
 
@@ -111,6 +111,58 @@ def safe_number(value: Any, *, integer: bool = False) -> int | float | str:
         return ""
 
 
+def build_study_plan_rows(html: str, state: dict[str, Any]) -> list[dict[str, Any]]:
+    plan_start = html.find("const BASE_STUDY_PLAN=")
+    if plan_start < 0:
+        raise RuntimeError("Could not locate BASE_STUDY_PLAN")
+    plan_end = html.find("];", plan_start)
+    if plan_end < 0:
+        raise RuntimeError("Could not locate the end of BASE_STUDY_PLAN")
+    plan_source = html[plan_start:plan_end + 1]
+    groups = re.findall(r'\{subject:"([^"]+)",days:\[(.*?)\]\}', plan_source, re.S)
+    if not groups:
+        raise RuntimeError("Could not parse BASE_STUDY_PLAN topics")
+
+    progress_state = state.get("studyPlanProgress", {})
+    if not isinstance(progress_state, dict):
+        progress_state = {}
+    legacy_done = state.get("studyPlanDone", {})
+    if not isinstance(legacy_done, dict):
+        legacy_done = {}
+
+    rows: list[dict[str, Any]] = []
+    start = date(2026, 11, 17)
+    entry_index = 0
+    for subject, raw_topics in groups:
+        topics = re.findall(r'"((?:\\.|[^"\\])*)"', raw_topics)
+        if not topics:
+            continue
+        for topic in topics:
+            for phase, label in (("study", "Day 1 · Study"), ("mcq_revision", "Day 2 · MCQ + Revision")):
+                planned_date = start + timedelta(days=entry_index)
+                date_key = planned_date.isoformat()
+                progress = progress_state.get(date_key, {})
+                if not isinstance(progress, dict):
+                    progress = {}
+                if phase == "study":
+                    completed = bool(progress.get("studyDone")) or (not progress and bool(legacy_done.get(date_key)))
+                    attempts = ""
+                else:
+                    completed = bool(progress.get("mcqDone") and progress.get("revisionDone")) or (not progress and bool(legacy_done.get(date_key)))
+                    attempts = safe_number(progress.get("mcqCount"), integer=True)
+                rows.append({
+                    "Date": date_key,
+                    "Week": entry_index // 14 + 1,
+                    "Subject": subject,
+                    "PlannedTopic": topic,
+                    "Phase": label,
+                    "MCQAttempts": attempts,
+                    "IsCompleted": completed,
+                })
+                entry_index += 1
+    return rows
+
+
 def main() -> None:
     if not DB_PATH.exists():
         raise FileNotFoundError("tracker.db not found")
@@ -134,16 +186,6 @@ def main() -> None:
         if isinstance(item, (list, tuple)) and len(item) >= 2
         and isinstance(item[0], str) and isinstance(item[1], str)
     ]
-
-    plan: list[dict[str, Any]] = []
-    plan_start = html.find("const DAILY_STUDY_PLAN=")
-    plan_end = html.find("];", plan_start) + 1
-    if plan_start < 0 or plan_end <= plan_start:
-        raise RuntimeError("Could not locate DAILY_STUDY_PLAN")
-    plan_source = html[plan_start:plan_end]
-    for match in re.finditer(r'\{subject:"([^"]+)",days:\[(.*?)\]\}', plan_source, re.S):
-        topics = json.loads("[" + match.group(2) + "]")
-        plan.append({"subject": match.group(1), "days": topics})
 
     topic_rows: list[dict[str, Any]] = []
     progress_rows: list[dict[str, Any]] = []
@@ -172,14 +214,7 @@ def main() -> None:
         for item in daily_items:
             checklist.append({"Date": day, "TaskID": item[0], "Task": item[1], "IsCompleted": bool(checks.get(item[0], False))})
 
-    plan_rows = []
-    plan_state = state.get("studyPlanDone", {}) if isinstance(state.get("studyPlanDone", {}), dict) else {}
-    first = date(2026, 11, 17)
-    for wi, week in enumerate(plan):
-        for di, topic in enumerate(week["days"]):
-            day = first + timedelta(days=wi * 7 + di)
-            day_key = day.isoformat()
-            plan_rows.append({"Date": day_key, "Week": wi + 1, "Subject": week.get("subject", ""), "PlannedTopic": topic, "IsCompleted": bool(plan_state.get(day_key, False))})
+    plan_rows = build_study_plan_rows(html, state)
 
     dates = sorted({row["Date"] for row in logs + checklist + plan_rows if valid_iso_date(row.get("Date"))})
     calendar = []
