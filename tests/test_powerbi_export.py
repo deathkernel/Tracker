@@ -102,3 +102,21 @@ const BASE_STUDY_PLAN=[
     rows = exporter.build_study_plan_rows(html, state)
     assert rows[1]["MCQAttempts"] == 7
     assert rows[1]["IsCompleted"] is True
+
+
+def test_day_two_export_merges_split_legacy_and_linked_progress():
+    html = '''
+const BASE_STUDY_PLAN=[
+{subject:"Polity",days:["Constitution"]}
+];
+'''
+    state = {
+        "studyPlanProgress": {
+            "2026-11-17": {"studyDone": True},
+            "2026-11-18": {"mcqDone": True, "revisionDone": True, "mcqCount": 13},
+        }
+    }
+    rows = exporter.build_study_plan_rows(html, state)
+    assert rows[0]["IsCompleted"] is True
+    assert rows[1]["MCQAttempts"] == 13
+    assert rows[1]["IsCompleted"] is True
