@@ -412,7 +412,8 @@ const validTopicKeys=()=>new Set(allSubjects().flatMap(subject=>subject.topics.m
 const doneTopics=()=>{const valid=validTopicKeys();return Object.keys(state.topics||{}).filter(key=>valid.has(key)&&!!state.topics[key]).length};
 const totalDays=()=>Math.max(0,Math.ceil((new Date(((state.settings||{}).targetDate||"2027-05-23")+"T00:00:00")-new Date(localDate()+"T00:00:00"))/86400000));
 const weekIndex=()=>{const start=new Date("2026-11-17T00:00:00"),now=new Date(localDate()+"T00:00:00");return Math.max(0,Math.min(26,Math.floor((now-start)/604800000)))};
-function getStudyPlanCounts(){const start=new Date(2026,10,17),today=localDate(),todayDate=new Date(today+"T00:00:00");let completed=0,missed=0,upcoming=0;DAILY_STUDY_PLAN.forEach((week,weekIndex)=>week.days.forEach((topic,dayIndex)=>{const date=new Date(start);date.setDate(start.getDate()+weekIndex*7+dayIndex);const key=[date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-");if(state.studyPlanDone&&state.studyPlanDone[key])completed++;else if(date<=todayDate)missed++;else upcoming++;}));return{completed,missed,upcoming}}
+function getStudyPlanCounts(){const today=localDate(),todayDate=new Date(today+"T00:00:00");let completed=0,missed=0,upcoming=0;DAILY_STUDY_PLAN.forEach((entry,index)=>{const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);const key=localDateKey(date);if(isStudyPlanEntryDone({...entry,dateKey:key}))completed++;else if(date<=todayDate)missed++;else upcoming++;});return{completed,missed,upcoming}}
+function localDateKey(date){return [date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-")}
 function daysUntilExam(dateString){const today=new Date(localDate()+"T00:00:00"),exam=new Date(dateString+"T00:00:00");return Math.max(0,Math.ceil((exam-today)/86400000))}
 function renderStats(){const logs=Object.values(state.logs),planCounts=getStudyPlanCounts(),targetDate=(state.settings||{}).targetDate||"2027-05-23";$("daysLeft").textContent=totalDays();$("targetDate").value=targetDate;$("studyGoal").value=(state.settings||{}).studyGoal||4;$("topicsDone").textContent=doneTopics()+"/"+totalTopics();$("topicSub").textContent=(totalTopics()?Math.round(doneTopics()/totalTopics()*100):0)+"% of mapped topics";$("hoursDone").textContent=logs.reduce((n,x)=>n+(Number(x.hours)||0),0).toFixed(1)+"h";$("daysDone").textContent=logs.length;$("missedDays").textContent=planCounts.missed;$("topicCompletion").textContent=doneTopics()+" of "+totalTopics();$("prelimsRemaining").textContent=daysUntilExam(targetDate);const prelimsDate=document.querySelector(".prelims-countdown .exam-countdown-date");if(prelimsDate)prelimsDate.textContent=new Date(targetDate+"T00:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});$("mainsRemaining").textContent=daysUntilExam("2027-08-20");$("todayLabel").textContent=new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short",year:"numeric"})}
 function createAnimatedCheckbox(checked=false,ariaLabel="Toggle checkbox"){
@@ -544,50 +545,60 @@ function markStudyPlanPhaseComplete(entry){
 }
 function renderOverviewSchedule(){
  const host=$("overviewDailySchedule");if(!host)return;host.innerHTML="";
- const today=localDate(),startDate=new Date(2026,10,17),target=new Date(today+"T00:00:00");
- const dayOffset=Math.round((target-startDate)/86400000),weekIndex=Math.floor(dayOffset/7),dayIndex=dayOffset%7;
- if(dayOffset<0||weekIndex>=DAILY_STUDY_PLAN.length){host.textContent="No study topic is scheduled for today.";return;}
- const week=DAILY_STUDY_PLAN[weekIndex],topic=week.days[dayIndex],date=new Date(target),isDone=!!(state.studyPlanDone&&state.studyPlanDone[today]);
- const card=document.createElement("div");card.className="today-topic-card"+(isDone?" is-complete":"");
+ const entry=getStudyPlanEntry(),today=localDate();
+ if(!entry){host.textContent="No study topic is scheduled for today.";return;}
+ const progress=state.studyPlanProgress?.[today]||{};
+ const isStudy=entry.phase==="study",done=isStudy?!!progress.studyDone:!!(progress.mcqDone&&progress.revisionDone);
+ const date=new Date(today+"T00:00:00");
+ const card=document.createElement("div");card.className="today-topic-card"+(done?" is-complete":"");
  const meta=document.createElement("div");meta.className="today-topic-meta";
  const dateLabel=document.createElement("span");dateLabel.textContent=date.toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short",year:"numeric"});
- const dayLabel=document.createElement("span");dayLabel.textContent="Day "+(dayOffset+1);
+ const dayLabel=document.createElement("span");dayLabel.textContent="Day "+(entry.dayOffset+1)+" · "+(isStudy?"Day 1 of 2":"Day 2 of 2");
  meta.append(dateLabel,dayLabel);
- const subject=document.createElement("div");subject.className="today-topic-subject";subject.textContent=week.subject;
- const topicLabel=document.createElement("div");topicLabel.className="today-topic-label";topicLabel.textContent="TODAY'S FOCUS";
- const topicName=document.createElement("div");topicName.className="today-topic-name";topicName.textContent=topic;
+ const subject=document.createElement("div");subject.className="today-topic-subject";subject.textContent=entry.subject;
+ const topicLabel=document.createElement("div");topicLabel.className="today-topic-label";topicLabel.textContent=isStudy?"TODAY'S STUDY TOPIC":"TODAY'S MCQ + REVISION";
+ const topicName=document.createElement("div");topicName.className="today-topic-name";topicName.textContent=entry.topic;
+ const phaseDescription=document.createElement("div");phaseDescription.className="focus-desc";phaseDescription.textContent=isStudy?"Study the topic and complete your notes. MCQ practice is scheduled for tomorrow.":"Attempt and record your MCQ count, then revise the same topic studied yesterday.";
  const footer=document.createElement("div");footer.className="today-topic-footer";
- const status=document.createElement("span");status.className="today-topic-status";status.textContent=isDone?"Completed":"Pending";
- const completeButton=document.createElement("button");completeButton.type="button";completeButton.className="btn primary study-complete-btn";completeButton.textContent=isDone?"Completed":"Mark complete";completeButton.disabled=isDone;
- completeButton.addEventListener("click",()=>{if(state.studyPlanDone&&state.studyPlanDone[today])return;completeButton.disabled=true;completeButton.textContent="Completed";markStudyDayComplete(today,week.subject,topic);});
- footer.append(status,completeButton);card.append(meta,subject,topicLabel,topicName,footer);host.append(card);
+ const status=document.createElement("span");status.className="today-topic-status";status.textContent=done?"Completed":(isStudy?"Study pending":"MCQ + revision pending");
+ const completeButton=document.createElement("button");completeButton.type="button";completeButton.className="btn primary study-complete-btn";completeButton.textContent=done?"Completed":(isStudy?"Mark study complete":"Mark MCQ + revision complete");completeButton.disabled=done;
+ completeButton.addEventListener("click",()=>{
+  if(isStudy&&!progress.studyDone){markStudyPlanPhaseComplete(entry);return;}
+  if(!isStudy&&!progress.studyDone){notify("Complete Day 1 study before recording Day 2.");return;}
+  if(!isStudy&&!progress.mcqDone){const amount=Number(prompt("How many MCQs did you attempt for this topic?","0"));if(!Number.isInteger(amount)||amount<0||amount>500){notify("Enter a valid MCQ count from 0 to 500.");return;}state.logs[today]=state.logs[today]||{hours:0,mcqs:0,csat:0,notes:""};state.logs[today].mcqs=(Number(state.logs[today].mcqs)||0)+amount;progress.mcqDone=true;progress.mcqCount=amount;}
+  if(!isStudy)progress.revisionDone=true;
+  state.studyPlanProgress=state.studyPlanProgress||{};state.studyPlanProgress[today]=progress;
+  state.studyPlanDone=state.studyPlanDone||{};state.studyPlanDone[today]=!!(progress.mcqDone&&progress.revisionDone);
+  persist();renderAll();
+ });
+ footer.append(status,completeButton);card.append(meta,subject,topicLabel,topicName,phaseDescription,footer);host.append(card);
 }
+
 function renderRoadmap(){
  const host=$("roadmap");host.innerHTML="";
  const table=document.createElement("table");table.className="data-table daily-plan-table";
- table.innerHTML="<thead><tr><th>Date</th><th>Day</th><th>Subject</th><th>One topic for today</th><th>Notion Notes</th><th>Status</th><th>Done</th></tr></thead>";
- const body=document.createElement("tbody");
- const start=new Date(2026,10,17);const today=localDate();
- DAILY_STUDY_PLAN.forEach((week,weekIndex)=>week.days.forEach((topic,dayIndex)=>{
-  const date=new Date(start);date.setDate(start.getDate()+weekIndex*7+dayIndex);
-  const dateKey=[date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-");
-  const row=document.createElement("tr");const isDone=!!(state.studyPlanDone&&state.studyPlanDone[dateKey]),isPast=dateKey<today;if(dateKey===today)row.className="current-row";else if(isPast&&!isDone)row.className="missed-plan-row";
+ table.innerHTML="<thead><tr><th>Date</th><th>Day</th><th>Subject</th><th>Topic</th><th>Plan</th><th>Status</th><th>Done</th></tr></thead>";
+ const body=document.createElement("tbody"),today=localDate();
+ DAILY_STUDY_PLAN.forEach((entry,index)=>{
+  const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);
+  const dateKey=localDateKey(date),progress=state.studyPlanProgress?.[dateKey]||{};
+  const done=isStudyPlanEntryDone({...entry,dateKey}),isToday=dateKey===today,isPast=dateKey<today;
+  const row=document.createElement("tr");if(isToday)row.className="current-row";else if(isPast&&!done)row.className="missed-plan-row";
   const dateCell=document.createElement("td");dateCell.textContent=date.toLocaleDateString("en-IN",{day:"2-digit",month:"short"});
   const dayCell=document.createElement("td");dayCell.textContent=date.toLocaleDateString("en-IN",{weekday:"long"});
-  const subjectCell=document.createElement("td");subjectCell.textContent=week.subject;
-  const topicCell=document.createElement("td");topicCell.textContent=topic;topicCell.className="single-daily-topic";
-  const notesCell=document.createElement("td");
-  if(week.subject==="Polity"&&topic.toLowerCase()==="constitutional development and historical background"){
-   const notesLink=document.createElement("a");notesLink.href="https://app.notion.com/p/41b49f5bc65481ebb2d0ed8421a2df63?pvs=204";notesLink.textContent="Open notes";notesLink.target="_blank";notesLink.rel="noopener noreferrer";notesCell.append(notesLink);
-  }else{notesCell.textContent="—";}
-  const statusCell=document.createElement("td");const status=document.createElement("span");status.className="table-status"+(isDone?" done":"");status.textContent=isDone?"Completed":(dateKey<=today?"Missed": "Upcoming");statusCell.append(status);const doneCell=document.createElement("td");const check=document.createElement("input");check.type="checkbox";check.checked=isDone;check.disabled=check.checked;check.title=check.checked?"Completed — permanently locked":"Tick once to complete; cannot be unticked";check.setAttribute("aria-label","Mark "+dateKey+" study task complete; completion is permanent");
-  check.addEventListener("change",()=>{if(!check.checked){check.checked=true;return;}check.disabled=true;check.title="Completed — permanently locked";markStudyDayComplete(dateKey,week.subject,topic);});
-  doneCell.append(check);row.append(dateCell,dayCell,subjectCell,topicCell,notesCell,statusCell,doneCell);body.append(row);
- }));
+  const subjectCell=document.createElement("td");subjectCell.textContent=entry.subject;
+  const topicCell=document.createElement("td");topicCell.textContent=entry.topic;topicCell.className="single-daily-topic";
+  const planCell=document.createElement("td");planCell.textContent=entry.phase==="study"?"Day 1 · Study":"Day 2 · MCQ + Revision";
+  const statusCell=document.createElement("td");const status=document.createElement("span");status.className="table-status"+(done?" done":"");status.textContent=done?"Completed":(isPast?"Missed":(entry.phase==="study"?"Study pending":"MCQ + revision pending"));statusCell.append(status);
+  const doneCell=document.createElement("td"),check=document.createElement("input");check.type="checkbox";check.checked=done;check.disabled=done||!isToday;check.title=done?"Completed":(isToday?"Complete today's phase from the overview card":"Only today's phase can be completed");check.setAttribute("aria-label","Completion status for "+dateKey);
+  if(isToday)check.addEventListener("change",()=>{if(!check.checked){check.checked=true;return;}if(entry.phase==="study"){markStudyPlanPhaseComplete({...entry,dateKey});}else{notify("Use today's overview card to record MCQ count and revision.");check.checked=false;}});
+  doneCell.append(check);row.append(dateCell,dayCell,subjectCell,topicCell,planCell,statusCell,doneCell);body.append(row);
+ });
  table.append(body);const wrap=document.createElement("div");wrap.className="data-table-wrap";wrap.append(table);host.append(wrap);
  const todayRow=Array.from(body.rows).find(row=>row.classList.contains("current-row"));
  if(todayRow)setTimeout(()=>todayRow.scrollIntoView({block:"nearest",behavior:"smooth"}),0);
 }
+
 function renderLogs(){
  const host=$("recentLogs"),allLogs=Object.entries(state.logs||{}).sort((a,b)=>b[0].localeCompare(a[0])),logs=allLogs.slice(0,7);
  $("logTotalHours").textContent=allLogs.reduce((n,[,x])=>n+(Number(x.hours)||0),0).toFixed(1)+"h";
@@ -609,7 +620,7 @@ function renderCharts(){
  const host=$("progressCharts");if(!host)return;host.innerHTML="";
  const total=totalTopics(),completed=doneTopics(),pending=Math.max(0,total-completed);
  const revisionTotal=completed,validKeys=validTopicKeys(),revisionDone=Object.keys(state.revisionDone||{}).filter(key=>validKeys.has(key)&&!!state.topics[key]&&!!state.revisionDone[key]).length,revisionPending=Math.max(0,revisionTotal-revisionDone);
- const validPlanDates=new Set();const planStartForMetrics=new Date(2026,10,17);DAILY_STUDY_PLAN.forEach((week,wi)=>week.days.forEach((topic,di)=>{const date=new Date(planStartForMetrics);date.setDate(date.getDate()+wi*7+di);validPlanDates.add([date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-"))}));
+ const validPlanDates=new Set();DAILY_STUDY_PLAN.forEach((entry,index)=>{const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);validPlanDates.add(localDateKey(date));});
  const planTotal=validPlanDates.size,planDone=Object.entries(state.studyPlanDone||{}).filter(([key,value])=>validPlanDates.has(key)&&!!value).length,planPending=Math.max(0,planTotal-planDone);
  const today=localDate(),dailyState=state.daily[today]||{},dailyTotal=dailyItems().length,dailyDone=dailyItems().filter(item=>dailyState[item[0]]).length,dailyPending=Math.max(0,dailyTotal-dailyDone);
  const todayDate=new Date(today+"T00:00:00"),planStart=new Date(2026,10,17);let pastCompleted=0,missed=0;
