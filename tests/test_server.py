@@ -46,6 +46,7 @@ def test_state_round_trip_preserves_strict_exam_data(client):
         "masteryProgress": {"Polity::Fundamental Rights": {"streak": 2}},
         "examSession": {"id": "exam-1", "answers": {"q-1": 2}},
         "pendingTopicEvidence": {"Polity::Fundamental Rights": {"pyqs": 15}},
+        "aiSchedule": [{"date": "2026-11-20", "topic": "Legacy timetable"}],
     }
     saved = client.put("/api/state", json=payload)
     assert saved.status_code == 200
@@ -59,6 +60,29 @@ def test_state_round_trip_preserves_strict_exam_data(client):
     assert restored["masteryProgress"] == payload["masteryProgress"]
     assert restored["examSession"] == payload["examSession"]
     assert restored["pendingTopicEvidence"] == payload["pendingTopicEvidence"]
+    assert restored["aiSchedule"] == payload["aiSchedule"]
+
+
+def test_revision_schedule_endpoint_uses_shared_sm2_policy(client):
+    response = client.post("/api/revision/next", json={
+        "today": "2026-11-19",
+        "previous": {"interval_days": 14, "repetitions": 4, "ease_factor": 2.5},
+        "quality": 1,
+    })
+    assert response.status_code == 200
+    assert response.json()["interval_days"] == 1
+    assert response.json()["repetitions"] == 0
+    assert response.json()["ease_factor"] < 2.5
+    invalid = client.post("/api/revision/next", json={"today": "2026-11-19", "quality": 6})
+    assert invalid.status_code == 422
+
+
+def test_health_reports_database_query_failure(client, monkeypatch):
+    def broken_connect():
+        raise sqlite3.OperationalError("database unavailable")
+    monkeypatch.setattr(server, "connect_database", broken_connect)
+    response = client.get("/api/health")
+    assert response.status_code == 503
 
 
 def test_state_rejects_stale_writes_without_overwriting_newer_data(client):
