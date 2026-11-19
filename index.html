@@ -591,28 +591,49 @@ const DAILY_STUDY_PLAN=BASE_STUDY_PLAN.flatMap(week=>week.days.flatMap(topic=>[
  {subject:week.subject,topic,phase:"study",label:"Study"},
  {subject:week.subject,topic,phase:"mcq_revision",label:"MCQ + Revision"}
 ]));
+function getStudyPlanProgressDateKey(entry){
+ if(entry.phase!=="mcq_revision")return entry.dateKey;
+ const previousDate=new Date(entry.dateKey+"T00:00:00");
+ previousDate.setDate(previousDate.getDate()-1);
+ return localDateKey(previousDate);
+}
+function getStudyPlanProgress(entry){
+ const progressDateKey=getStudyPlanProgressDateKey(entry);
+ const progress=state.studyPlanProgress?.[progressDateKey]||{};
+ if(entry.phase!=="mcq_revision"||progressDateKey===entry.dateKey)return progress;
+ const legacy=state.studyPlanProgress?.[entry.dateKey]||{};
+ return{
+  ...legacy,
+  ...progress,
+  studyDone:!!(progress.studyDone||legacy.studyDone),
+  mcqDone:!!(progress.mcqDone||legacy.mcqDone),
+  revisionDone:!!(progress.revisionDone||legacy.revisionDone),
+  mcqCount:progress.mcqDone?progress.mcqCount:(legacy.mcqCount??progress.mcqCount??0),
+  mcqLogged:!!(progress.mcqLogged||legacy.mcqLogged)
+ };
+}
 function getStudyPlanEntry(dateKey=localDate()){
  const start=new Date(CYCLE_START_DATE+"T00:00:00");
  const target=new Date(dateKey+"T00:00:00");
  const dayOffset=Math.round((target-start)/86400000);
  if(!Number.isFinite(dayOffset)||dayOffset<0||dayOffset>=DAILY_STUDY_PLAN.length)return null;
  const entry=DAILY_STUDY_PLAN[dayOffset];
- const progress=state.studyPlanProgress?.[dateKey]||{};
- return{...entry,dayOffset,dateKey,locked:entry.phase==="mcq_revision"&&!progress.studyDone};
+ const progressDateKey=getStudyPlanProgressDateKey({...entry,dateKey});
+ const progress=getStudyPlanProgress({...entry,dateKey});
+ return{...entry,dayOffset,dateKey,progressDateKey,locked:entry.phase==="mcq_revision"&&!progress.studyDone};
 }
 function isStudyPlanEntryDone(entry){
  if(!entry)return false;
- const key=entry.dateKey;
- const progress=state.studyPlanProgress?.[key]||{};
- if(!Object.keys(progress).length)return !!state.studyPlanDone?.[key];
+ const progress=getStudyPlanProgress(entry);
+ if(!Object.keys(progress).length)return !!state.studyPlanDone?.[entry.dateKey];
  return entry.phase==="study"?!!progress.studyDone:!!progress.mcqDone&&!!progress.revisionDone;
 }
 function markStudyPlanPhaseComplete(entry){
  if(!entry)return;
  state.studyPlanProgress=state.studyPlanProgress||{};
- const progress=state.studyPlanProgress[entry.dateKey]||{};
+ const progress=getStudyPlanProgress(entry);
  if(entry.phase==="study")progress.studyDone=true;
- state.studyPlanProgress[entry.dateKey]=progress;
+ state.studyPlanProgress[entry.progressDateKey||getStudyPlanProgressDateKey(entry)]=progress;
  state.studyPlanDone=state.studyPlanDone||{};
  state.studyPlanDone[entry.dateKey]=entry.phase==="study"?!!progress.studyDone:!!(progress.mcqDone&&progress.revisionDone);
  persist();
@@ -622,7 +643,7 @@ function renderOverviewSchedule(){
  const host=$("overviewDailySchedule");if(!host)return;host.innerHTML="";
  const entry=getStudyPlanEntry(),today=localDate();
  if(!entry){host.textContent="No study topic is scheduled for today.";return;}
- const progress=state.studyPlanProgress?.[today]||{};
+ const progress=getStudyPlanProgress(entry);
  const isStudy=entry.phase==="study",done=isStudy?!!progress.studyDone:!!(progress.mcqDone&&progress.revisionDone);
  const date=new Date(today+"T00:00:00");
  const card=document.createElement("div");card.className="today-topic-card"+(done?" is-complete":"");
@@ -640,9 +661,16 @@ function renderOverviewSchedule(){
  completeButton.addEventListener("click",()=>{
   if(isStudy&&!progress.studyDone){markStudyPlanPhaseComplete(entry);return;}
   if(!isStudy&&!progress.studyDone){notify("Complete Day 1 study before recording Day 2.");return;}
-  if(!isStudy&&!progress.mcqDone){const amount=Number(prompt("How many MCQs did you attempt for this topic?","0"));if(!Number.isInteger(amount)||amount<0||amount>500){notify("Enter a valid MCQ count from 0 to 500.");return;}progress.mcqDone=true;progress.mcqCount=amount;}
-  if(!isStudy&&!progress.revisionDone){if(!confirm("Have you revised this same topic?")){notify("Complete the revision before finishing Day 2.");return;}progress.revisionDone=true;}
-  state.studyPlanProgress=state.studyPlanProgress||{};state.studyPlanProgress[today]=progress;
+  if(!isStudy&&!progress.mcqDone){
+   const amount=Number(prompt("How many MCQs did you attempt for this topic?","0"));
+   if(!Number.isInteger(amount)||amount<0||amount>500){notify("Enter a valid MCQ count from 0 to 500.");return;}
+   progress.mcqDone=true;progress.mcqCount=amount;
+   state.studyPlanProgress=state.studyPlanProgress||{};
+   state.studyPlanProgress[entry.progressDateKey]=progress;
+   persist();
+  }
+  if(!isStudy&&!progress.revisionDone){if(!confirm("Have you revised this same topic?")){notify("MCQ count saved. Complete the revision before finishing Day 2.");return;}progress.revisionDone=true;}
+  state.studyPlanProgress=state.studyPlanProgress||{};state.studyPlanProgress[entry.progressDateKey]=progress;
   state.studyPlanDone=state.studyPlanDone||{};state.studyPlanDone[today]=!!(progress.mcqDone&&progress.revisionDone);
   state.logs[today]=state.logs[today]||{hours:0,mcqs:0,csat:0,notes:""};
   if(!progress.mcqLogged){state.logs[today].mcqs=(Number(state.logs[today].mcqs)||0)+(Number(progress.mcqCount)||0);progress.mcqLogged=true;}
@@ -658,7 +686,7 @@ function renderRoadmap(){
  const body=document.createElement("tbody"),today=localDate();
  DAILY_STUDY_PLAN.forEach((entry,index)=>{
   const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);
-  const dateKey=localDateKey(date),progress=state.studyPlanProgress?.[dateKey]||{};
+  const dateKey=localDateKey(date);
   const done=isStudyPlanEntryDone({...entry,dateKey}),isToday=dateKey===today,isPast=dateKey<today;
   const row=document.createElement("tr");row.id="plan-"+dateKey;if(isToday)row.className="current-row";else if(isPast&&!done)row.className="missed-plan-row";
   const dateCell=document.createElement("td");dateCell.textContent=date.toLocaleDateString("en-IN",{day:"2-digit",month:"short"});
