@@ -29,3 +29,31 @@ def test_power_bi_numeric_conversion_handles_malformed_values():
     assert exporter.safe_number("not-a-number") == ""
     assert exporter.safe_number(float("nan")) == ""
     assert exporter.safe_number(-1) == ""
+
+
+
+def test_study_plan_export_contains_both_phases_and_attempt_counts():
+    html = '''
+const BASE_STUDY_PLAN=[
+{subject:"Polity",days:["Constitution","Parliament"]},
+{subject:"History",days:["Modern India"]}
+];
+'''
+    state = {
+        "studyPlanProgress": {
+            "2026-11-17": {"studyDone": True},
+            "2026-11-18": {"mcqDone": True, "revisionDone": True, "mcqCount": 18},
+        }
+    }
+    rows = exporter.build_study_plan_rows(html, state)
+    assert len(rows) == 6
+    assert rows[0]["Date"] == "2026-11-17"
+    assert rows[0]["Phase"] == "Day 1 · Study"
+    assert rows[0]["IsCompleted"] is True
+    assert rows[1]["Date"] == "2026-11-18"
+    assert rows[1]["Phase"] == "Day 2 · MCQ + Revision"
+    assert rows[1]["MCQAttempts"] == 18
+    assert rows[1]["IsCompleted"] is True
+    assert rows[2]["Date"] == "2026-11-19"
+    assert rows[2]["Subject"] == "Polity"
+    assert rows[4]["Subject"] == "History"
