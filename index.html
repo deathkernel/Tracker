@@ -220,6 +220,8 @@ body.dark .checkbox-wrapper-12 input[type="checkbox"]{border-color:#788397}
 .ai-planner-panel{position:fixed;z-index:121;right:22px;bottom:82px;width:min(430px,calc(100vw - 28px));max-height:min(78vh,760px);overflow:auto;padding:18px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:15px;box-shadow:0 18px 60px rgba(15,23,42,.24)}
 .ai-planner-panel[hidden]{display:none}.ai-planner-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.ai-planner-head strong{display:block;font-size:16px}.ai-planner-head small{color:var(--muted);font-size:11px}.ai-planner-head button{border:0;background:transparent;color:var(--muted);font-size:24px}.ai-planner-controls{display:grid;gap:7px;margin:14px 0}.ai-planner-controls label{font-size:11px;color:var(--muted);font-weight:700}.ai-planner-controls .btn{margin-top:5px}.ai-planner-preview{display:grid;gap:10px;max-height:36vh;overflow:auto;margin:12px 0}.ai-planner-day{border:1px solid var(--line);border-radius:10px;padding:10px}.ai-planner-day h4{font-size:12px;margin:0 0 8px}.ai-planner-block{padding:7px 0;border-top:1px solid var(--line);font-size:11px}.ai-planner-block strong{display:block;font-size:11px}.ai-planner-panel>.btn{width:100%;margin-top:7px}
 .ai-today-schedule{width:100%;margin-top:12px;padding:13px;border:1px solid var(--line);border-radius:11px;background:var(--surface)}.ai-today-schedule h3{margin:0 0 8px;font-size:13px}.ai-today-block{display:grid;grid-template-columns:82px 1fr;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:11px}.ai-today-block time{color:var(--muted);font-variant-numeric:tabular-nums}
+.teacher-card{margin:14px 0;padding:12px;border:1px solid var(--line);border-radius:11px;background:var(--surface-2,var(--surface))}
+.teacher-card h3{margin:0 0 7px;font-size:13px}.teacher-card p{font-size:12px;line-height:1.5;margin:7px 0}.teacher-card textarea{width:100%;min-height:76px;margin:8px 0;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:12px}.teacher-settings{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.teacher-settings label{display:grid;gap:4px;font-size:10px;color:var(--muted)}.teacher-settings input,.teacher-settings select{min-width:0;padding:7px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink)}.teacher-prompt{padding:10px;border-radius:8px;background:var(--surface);border:1px solid var(--line);font-size:12px;line-height:1.55;white-space:pre-wrap}.teacher-feedback{font-size:12px;line-height:1.5;margin-top:8px;white-space:pre-wrap;color:var(--ink)}
 @media(max-width:560px){.ai-planner-launcher{right:14px;bottom:calc(82px + env(safe-area-inset-bottom))}.ai-planner-panel{right:10px;bottom:calc(138px + env(safe-area-inset-bottom));width:calc(100vw - 20px);max-height:70vh}}
 </style>
 </head>
@@ -365,7 +367,21 @@ body.dark .checkbox-wrapper-12 input[type="checkbox"]{border-color:#788397}
 <div class="ai-planner-launcher"><button type="button" id="aiPlannerToggle" aria-expanded="false" aria-controls="aiPlannerPanel">AI Planner</button></div>
 <aside class="ai-planner-panel" id="aiPlannerPanel" hidden aria-label="Floating AI schedule planner">
  <div class="ai-planner-head"><div><strong>AI Study Planner</strong><small id="aiPlannerStatus">Ollama · local planning</small></div><button type="button" id="aiPlannerClose" aria-label="Close planner">×</button></div>
- <p class="small-note">Let Ollama build a realistic timetable from your pending syllabus, study goal and recent activity.</p>
+ <p class="small-note">Your local teacher checks in proactively, tests recall and follows up on assigned work. Timetable planning remains available below.</p>
+ <section class="teacher-card" aria-label="Strict AI Teacher">
+  <div class="ai-planner-head"><h3>Strict AI Teacher</h3><button type="button" class="btn" id="teacherNotifications">Enable notifications</button></div>
+  <div class="teacher-settings">
+   <label><span>Teacher monitoring</span><select id="teacherEnabled"><option value="true">Enabled</option><option value="false">Paused</option></select></label>
+   <label><span>Question interval</span><select id="teacherInterval"><option value="60">Every 1 hour</option><option value="120">Every 2 hours</option><option value="180">Every 3 hours</option><option value="240">Every 4 hours</option></select></label>
+   <label><span>Quiet hours start</span><input type="time" id="teacherQuietStart" value="22:00"></label>
+   <label><span>Quiet hours end</span><input type="time" id="teacherQuietEnd" value="07:00"></label>
+  </div>
+  <div id="teacherPrompt" class="teacher-prompt">Teacher is preparing your first check-in. Keep the Tracker server and Ollama running.</div>
+  <textarea id="teacherAnswer" placeholder="Answer your teacher here…" aria-label="Answer the teacher"></textarea>
+  <button type="button" class="btn primary" id="teacherRespond" disabled>Submit answer</button>
+  <div id="teacherFeedback" class="teacher-feedback" aria-live="polite"></div>
+  <p class="small-note">Firm and accountable, never insulting. Teacher pauses during quiet hours and cannot change completion records.</p>
+ </section>
  <div class="ai-planner-controls">
   <label for="aiPlannerModel">Local model</label><select id="aiPlannerModel"><option value="">Detecting Ollama models…</option></select>
   <label for="aiPlannerDays">Plan duration</label><select id="aiPlannerDays"><option value="7">Next 7 days</option><option value="14">Next 14 days</option></select>
@@ -975,6 +991,84 @@ async function sendOllamaMessage(prompt){
  }catch(error){addOllamaMessage("assistant",error.message||"Ollama could not answer. Check that the local runtime is running.");}
  finally{$("ollamaSend").disabled=false;$("ollamaSend").textContent="Ask Ollama";}
 }
+let teacherLastEventId=Number(localStorage.getItem("trackerTeacherLastEventId")||0);
+let teacherBootstrapped=false;
+let activeTeacherEvent=null;
+let teacherSettingsLoaded=false;
+
+async function syncTeacherContext(){
+ try{
+  const context=getTrackerAiContext();
+  context.subjects=allSubjects().map(subject=>({subject:subject.name,total:subject.topics.length,completed:subject.topics.filter(topic=>state.topics[subject.name+"::"+topic[0]]).length,pending:subject.topics.filter(topic=>!state.topics[subject.name+"::"+topic[0]]).map(topic=>topic[0])}));
+  await fetch("/api/teacher/context",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({context})});
+ }catch(error){}
+}
+async function saveTeacherSettings(){
+ try{
+  const settings={enabled:$("teacherEnabled").value==="true",interval_minutes:Number($("teacherInterval").value)||120,quiet_start:$("teacherQuietStart").value||"22:00",quiet_end:$("teacherQuietEnd").value||"07:00",model:$("aiPlannerModel").value||""};
+  const response=await fetch("/api/teacher/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(settings)});
+  if(!response.ok)throw new Error("Could not save teacher settings.");
+  notify(settings.enabled?"Strict Teacher monitoring enabled.":"Strict Teacher monitoring paused.");
+ }catch(error){notify(error.message||"Could not save teacher settings.");}
+}
+async function loadTeacherSettings(){
+ try{
+  const response=await fetch("/api/teacher/settings"),settings=await response.json();
+  $("teacherEnabled").value=String(settings.enabled!==false);
+  $("teacherInterval").value=String(settings.interval_minutes||120);
+  $("teacherQuietStart").value=settings.quiet_start||"22:00";
+  $("teacherQuietEnd").value=settings.quiet_end||"07:00";
+  teacherSettingsLoaded=true;
+ }catch(error){}
+}
+function renderTeacherEvent(event){
+ activeTeacherEvent=event;
+ $("teacherPrompt").textContent=event.prompt+(event.subject&&event.topic?"\n\n"+event.subject+" · "+event.topic:"");
+ $("teacherAnswer").value=event.answer||"";
+ $("teacherRespond").disabled=Boolean(event.answer);
+ $("teacherFeedback").textContent=event.feedback||"";
+}
+async function pollTeacherEvents(){
+ try{
+  const response=await fetch("/api/teacher/events?after_id="+teacherLastEventId);
+  if(!response.ok)return;
+  const result=await response.json(),events=result.events||[];
+  if(events.length){
+   const newest=events[events.length-1];
+   const unanswered=events.filter(event=>!event.answer);
+   if(unanswered.length)renderTeacherEvent(unanswered[unanswered.length-1]);
+   else if(!activeTeacherEvent)renderTeacherEvent(newest);
+   if(teacherBootstrapped){
+    const fresh=events[events.length-1];
+    if("Notification" in window&&Notification.permission==="granted"){
+     new Notification("Your Strict AI Teacher",{body:fresh.prompt,tag:"tracker-teacher-"+fresh.id});
+    }
+    notify("Your teacher has a question. Open the AI Teacher panel.");
+   }
+   teacherLastEventId=Math.max(teacherLastEventId,...events.map(event=>Number(event.id)||0));
+   localStorage.setItem("trackerTeacherLastEventId",String(teacherLastEventId));
+  }
+  teacherBootstrapped=true;
+ }catch(error){}
+}
+async function submitTeacherAnswer(){
+ if(!activeTeacherEvent||!$("teacherAnswer").value.trim())return;
+ const button=$("teacherRespond");button.disabled=true;button.textContent="Evaluating…";
+ try{
+  const response=await fetch("/api/teacher/respond",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event_id:activeTeacherEvent.id,answer:$("teacherAnswer").value.trim()})});
+  const result=await response.json();if(!response.ok)throw new Error(result.detail||"Could not submit your answer.");
+  $("teacherFeedback").textContent=result.feedback;
+  activeTeacherEvent.answer=$("teacherAnswer").value.trim();activeTeacherEvent.feedback=result.feedback;
+  notify("Answer evaluated. Read your teacher's feedback.");
+ }catch(error){notify(error.message||"Teacher could not evaluate your answer.");button.disabled=false;}
+ finally{button.textContent="Answer submitted";}
+}
+async function enableTeacherNotifications(){
+ if(!("Notification" in window)){notify("This browser does not support notifications.");return}
+ const permission=await Notification.requestPermission();
+ $("teacherNotifications").textContent=permission==="granted"?"Notifications enabled":"Enable notifications";
+ if(permission==="granted")notify("Teacher notifications enabled.");
+}
 function setWorkspaceView(view){const names={overview:"Your daily preparation at a glance.",syllabus:"Track 256 PYQ-focused topics: Top 50 priority plus 206 curated micro-topics.",logs:"Record focused hours, MCQs and daily study notes.",plan:"Follow your weekly targets and full preparation roadmap.",settings:"Personalize your target date, study hours and workspace.",revision:"Revisit every topic you have already completed.",charts:"Visualize your syllabus, revision, study plan and study-time progress.",assistant:"Get local AI help with study planning, backlog and revision.",missing:"Review every syllabus topic that is still pending."};document.querySelectorAll("[data-page]").forEach(card=>{card.hidden=card.dataset.page!==view});document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input=>{input.checked=input.value===view});$("pageHint").textContent=names[view]||names.overview}
 function activeDevice(){return window.matchMedia("(max-width: 760px)").matches?"mobile":"desktop"}
 function applyDeviceTheme(){state.settings=state.settings||{};state.settings.deviceThemes=state.settings.deviceThemes||{};const device=activeDevice();const theme=state.settings.deviceThemes[device]||(state.settings.theme||"light");document.body.classList.toggle("dark",theme==="dark");$("themeToggle").checked=theme==="dark"}
@@ -1029,11 +1123,17 @@ $("aiPlannerClose")?.addEventListener("click",()=>{$("aiPlannerPanel").hidden=tr
 $("aiPlannerGenerate")?.addEventListener("click",generateAiSchedule);
 $("aiPlannerApply")?.addEventListener("click",applyAiSchedule);
 $("aiPlannerChat")?.addEventListener("click",()=>{window.trackerView="assistant";setWorkspaceView("assistant");loadOllamaStatus();$("aiPlannerPanel").hidden=true});
+$("teacherNotifications")?.addEventListener("click",enableTeacherNotifications);
+$("teacherRespond")?.addEventListener("click",submitTeacherAnswer);
+["teacherEnabled","teacherInterval","teacherQuietStart","teacherQuietEnd"].forEach(id=>$(id)?.addEventListener("change",()=>{if(teacherSettingsLoaded)saveTeacherSettings()}));
+
 $("ollamaRefresh")?.addEventListener("click",loadOllamaStatus);
 $("ollamaSend")?.addEventListener("click",()=>sendOllamaMessage());
 $("ollamaPrompt")?.addEventListener("keydown",event=>{if(event.key==="Enter"&&(event.ctrlKey||event.metaKey)){event.preventDefault();sendOllamaMessage()}});
 $("ollamaReview")?.addEventListener("click",()=>sendOllamaMessage("Review my current Tracker progress and give me a realistic plan for today. Identify the biggest backlog risks, suggest the next 3 actions and a short revision priority list. Do not mark anything complete."));
 initFilters();renderAll();(async()=>{try{const response=await fetch("/api/state");if(!response.ok)throw new Error("API unavailable");const remote=normalizeProgressState(await response.json());if(localMutationVersion!==0){const local=normalizeProgressState(state);localStorage.setItem(STORE+"-recovery",JSON.stringify({savedAt:new Date().toISOString(),reason:"A change was made before SQLite startup synchronization completed. Both copies were preserved for recovery.",data:local,remote}));state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll();notify("SQLite state loaded. Early browser changes were preserved in the recovery backup.");return}const rawLocal=localStorage.getItem(STORE),local=readState(),localVersion=Number(local.version)||0,remoteVersion=Number(remote.version)||0;const sameContent=JSON.stringify({...local,version:0})===JSON.stringify({...remote,version:0});if(!rawLocal){state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll();return}if(remoteVersion>localVersion&&!sameContent){localStorage.setItem(STORE+"-recovery",JSON.stringify({savedAt:new Date().toISOString(),reason:"Server state was newer than this browser copy.",data:local}));state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll();notify("Newer SQLite data loaded. Your previous browser copy was preserved as a recovery backup.");return}if(localVersion>remoteVersion||!sameContent){state=local;state.version=remoteVersion;persist();renderAll();return}state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll()}catch(error){notify("Using browser backup. Start Tracker with run.bat for SQLite sync.")}})();
+setTimeout(async()=>{await loadTeacherSettings();await syncTeacherContext();await pollTeacherEvents()},2500);
+setInterval(()=>{syncTeacherContext();pollTeacherEvents()},30000);
 </script>
 </body>
 </html>
