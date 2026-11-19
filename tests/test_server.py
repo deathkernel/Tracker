@@ -412,3 +412,39 @@ def test_teacher_cycle_does_not_duplicate_an_unanswered_question(client, monkeyp
 
     monkeypatch.setattr(server, "ollama_request", should_not_call)
     server.run_teacher_cycle()
+
+
+
+def test_teacher_answer_is_evaluated_and_saved(client, monkeypatch):
+    with server.database_session() as connection:
+        cursor = connection.execute(
+            """
+            INSERT INTO teacher_events (created_at, kind, prompt, subject, topic)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                "2026-11-20T09:00:00+05:30",
+                "concept_check",
+                "Explain the basic structure doctrine.",
+                "Polity",
+                "Basic Structure",
+            ),
+        )
+        event_id = cursor.lastrowid
+
+    monkeypatch.setattr(
+        server,
+        "ollama_request",
+        lambda *args, **kwargs: {
+            "message": {"content": "Good start. Add the role of judicial review and constitutional identity."}
+        },
+    )
+    response = client.post(
+        "/api/teacher/respond",
+        json={"event_id": event_id, "answer": "It limits Parliament's amending power."},
+    )
+    assert response.status_code == 200
+    assert "judicial review" in response.json()["feedback"]
+    event = client.get("/api/teacher/events").json()["events"][0]
+    assert event["answer"] == "It limits Parliament's amending power."
+    assert event["feedback"] == response.json()["feedback"]
