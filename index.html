@@ -523,7 +523,9 @@ function getStudyPlanEntry(dateKey=localDate()){
  const target=new Date(dateKey+"T00:00:00");
  const dayOffset=Math.round((target-start)/86400000);
  if(!Number.isFinite(dayOffset)||dayOffset<0||dayOffset>=DAILY_STUDY_PLAN.length)return null;
- return{...DAILY_STUDY_PLAN[dayOffset],dayOffset,dateKey};
+ const entry=DAILY_STUDY_PLAN[dayOffset];
+ const progress=state.studyPlanProgress?.[dateKey]||{};
+ return{...entry,dayOffset,dateKey,locked:entry.phase==="mcq_revision"&&!progress.studyDone};
 }
 function isStudyPlanEntryDone(entry){
  if(!entry)return false;
@@ -560,7 +562,7 @@ function renderOverviewSchedule(){
  const phaseDescription=document.createElement("div");phaseDescription.className="focus-desc";phaseDescription.textContent=isStudy?"Study the topic and complete your notes. MCQ practice is scheduled for tomorrow.":"Attempt and record your MCQ count, then revise the same topic studied yesterday.";
  const footer=document.createElement("div");footer.className="today-topic-footer";
  const status=document.createElement("span");status.className="today-topic-status";status.textContent=done?"Completed":(isStudy?"Study pending":"MCQ + revision pending");
- const completeButton=document.createElement("button");completeButton.type="button";completeButton.className="btn primary study-complete-btn";completeButton.textContent=done?"Completed":(isStudy?"Mark study complete":"Mark MCQ + revision complete");completeButton.disabled=done;
+ const completeButton=document.createElement("button");completeButton.type="button";completeButton.className="btn primary study-complete-btn";completeButton.textContent=done?"Completed":(entry.locked?"Locked · finish Day 1 first":(isStudy?"Mark study complete":"Mark MCQ + revision complete"));completeButton.disabled=done||entry.locked;
  completeButton.addEventListener("click",()=>{
   if(isStudy&&!progress.studyDone){markStudyPlanPhaseComplete(entry);return;}
   if(!isStudy&&!progress.studyDone){notify("Complete Day 1 study before recording Day 2.");return;}
