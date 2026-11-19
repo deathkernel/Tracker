@@ -547,10 +547,15 @@ function syncStudyPlanRevisionToSyllabus(entry){
  state.revisionDone=state.revisionDone||{};
  state.revisionDone[key]=true;
 }
+function revisionDateAfter(days){
+ const date=new Date();date.setHours(12,0,0,0);date.setDate(date.getDate()+days);return localDateKey(date);
+}
 function completeTopicWithMastery(subject,topic){
  const key=subject+"::"+topic;
  state.topics=state.topics||{};
  state.topics[key]=true;
+ state.revisionSchedule=state.revisionSchedule||{};
+ if(!state.revisionSchedule[key])state.revisionSchedule[key]={due_date:revisionDateAfter(1),interval_days:1,repetitions:0,ease_factor:2.5,last_reviewed_at:null,last_quality:null};
  syncSyllabusCompletionToStudyPlan(subject,topic);
  state.revisionDone=state.revisionDone||{};
  if(!state.revisionDone[key])delete state.revisionDone[key];
@@ -562,9 +567,16 @@ function completeScheduledRevision(subject,topic){
  if(!state.topics?.[key]){notify("Complete the topic before marking its revision done.");renderRevision();return;}
  state.revisionDone=state.revisionDone||{};
  state.revisionDone[key]=true;
+ state.revisionSchedule=state.revisionSchedule||{};
+ const previous=state.revisionSchedule[key]||{interval_days:1,repetitions:0,ease_factor:2.5};
+ const repetitions=Math.max(0,Number(previous.repetitions)||0)+1;
+ const intervals=[1,6,14,30,60];
+ const intervalDays=intervals[Math.min(repetitions-1,intervals.length-1)];
+ state.revisionSchedule[key]={due_date:revisionDateAfter(intervalDays),interval_days:intervalDays,repetitions,ease_factor:Number(previous.ease_factor)||2.5,last_reviewed_at:localDate(),last_quality:3};
  persist();
  renderRevision();
  renderCharts();
+ syncTeacherContext();
 }
 function renderTopics(){
  const host=$("topicChecklist"),q=$("topicSearch").value.trim().toLowerCase(),filter=$("subjectFilter").value,status=$("topicStatus").value;host.innerHTML="";
@@ -1000,6 +1012,8 @@ async function syncTeacherContext(){
  try{
   const context=getTrackerAiContext();
   context.subjects=allSubjects().map(subject=>({subject:subject.name,total:subject.topics.length,completed:subject.topics.filter(topic=>state.topics[subject.name+"::"+topic[0]]).length,pending:subject.topics.filter(topic=>!state.topics[subject.name+"::"+topic[0]]).map(topic=>topic[0])}));
+  context.completed_topics=allSubjects().flatMap(subject=>subject.topics.filter(topic=>state.topics[subject.name+"::"+topic[0]]).map(topic=>({subject:subject.name,topic:topic[0]})));
+  context.revision_schedule=state.revisionSchedule||{};
   await fetch("/api/teacher/context",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({context})});
  }catch(error){}
 }
