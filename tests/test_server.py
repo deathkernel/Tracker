@@ -448,3 +448,34 @@ def test_teacher_answer_is_evaluated_and_saved(client, monkeypatch):
     event = client.get("/api/teacher/events").json()["events"][0]
     assert event["answer"] == "It limits Parliament's amending power."
     assert event["feedback"] == response.json()["feedback"]
+
+
+
+def test_teacher_question_cannot_be_answered_twice(client, monkeypatch):
+    with server.database_session() as connection:
+        cursor = connection.execute(
+            """
+            INSERT INTO teacher_events (created_at, kind, prompt)
+            VALUES (?, ?, ?)
+            """,
+            ("2026-11-20T09:00:00+05:30", "daily_check_in", "Did you complete yesterday's work?"),
+        )
+        event_id = cursor.lastrowid
+
+    calls = []
+    monkeypatch.setattr(
+        server,
+        "ollama_request",
+        lambda *args, **kwargs: calls.append(args) or {"message": {"content": "Answer reviewed."}},
+    )
+    first = client.post(
+        "/api/teacher/respond",
+        json={"event_id": event_id, "answer": "Yes, I completed the topic."},
+    )
+    second = client.post(
+        "/api/teacher/respond",
+        json={"event_id": event_id, "answer": "Changing my answer."},
+    )
+    assert first.status_code == 200
+    assert second.status_code == 409
+    assert len(calls) == 1
