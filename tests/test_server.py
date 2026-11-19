@@ -21,8 +21,8 @@ def client(tmp_path, monkeypatch):
 def test_health_and_dashboard_assets(client):
     assert client.get("/api/health").json() == {"status": "ok", "database": "sqlite"}
     assert client.get("/").status_code == 200
-    assert "TrackerStrictEngine" in client.get("/strict_engine.js").text
-    assert "renderStrictPreparation" in client.get("/strict_rules.js").text
+    assert client.get("/strict_engine.js").status_code == 404
+    assert client.get("/strict_rules.js").status_code == 404
 
 
 def test_state_round_trip_preserves_strict_exam_data(client):
