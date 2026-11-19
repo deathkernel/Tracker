@@ -17,7 +17,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field, field_validator
 
-from teacher_engine import is_quiet_time, prompt_is_due, validate_teacher_event
+from teacher_engine import prompt_is_due, validate_teacher_event
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "tracker.db"
