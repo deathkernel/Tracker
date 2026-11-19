@@ -489,7 +489,7 @@ function renderMissingTopics(){
  table.append(body);const wrap=document.createElement("div");wrap.className="data-table-wrap";wrap.append(table);host.append(wrap);
  if(!shown)host.innerHTML='<div class="empty">No missing topics match your filters.</div>';
  const remaining=allSubjects().reduce((n,subject)=>n+subject.topics.filter(([name])=>!state.topics[subject.name+"::"+name]).length,0);
- $("missingTopicCount").textContent=remaining+" remaining";$("missingNavCount").textContent=remaining;
+ $("missingTopicCount").textContent=subjectFilter==="all"&&priorityFilter==="all"&&!query?remaining+" remaining":shown+" shown · "+remaining+" total missing";$("missingNavCount").textContent=remaining;
  const filter=$("missingSubjectFilter"),selected=filter.value;filter.innerHTML='<option value="all">All subjects</option>';
  allSubjects().forEach(subject=>{const option=document.createElement("option");option.value=subject.name;option.textContent=subject.name;filter.append(option)});
  filter.value=allSubjects().some(subject=>subject.name===selected)?selected:"all";
