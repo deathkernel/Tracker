@@ -312,7 +312,6 @@ body.dark .checkbox-wrapper-12 input[type="checkbox"]{border-color:#788397}
   <div class="chart-card analytics-graph-card" style="margin-top:14px"><div class="chart-heading-row"><h3 class="chart-title">Study hours — last 7 days</h3><span class="analytics-subtitle" id="studyHoursTotal"></span></div><div id="studyHoursChart"></div></div>
   <div class="analytics-extra-grid" id="extraAnalyticsCharts"></div>
  </section>
-  <p class="small-note">AI suggestions never mark topics complete or change your progress automatically. Confirm and update Tracker yourself. No MCQ questions or question bank are generated or stored by Tracker.</p>
  </section>
 </main>
 <aside>
@@ -891,7 +890,54 @@ function renderCharts(){
  }
  $("chartsUpdated").textContent="Updated "+new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
 }
-function setWorkspaceView(view){const names={overview:"Your daily preparation at a glance.",syllabus:"Track 256 PYQ-focused topics: Top 50 priority plus 206 curated micro-topics.",logs:"Record focused hours, MCQs and daily study notes.",plan:"Follow your weekly targets and full preparation roadmap.",settings:"Personalize your target date, study hours and workspace.",revision:"Revisit every topic you have already completed.",charts:"Visualize your syllabus, revision, study plan and study-time progress.",missing:"Review every syllabus topic that is still pending."};document.querySelectorAll("[data-page]").forEach(card=>{card.hidden=card.dataset.page!==view});
+function setWorkspaceView(view){const names={overview:"Your daily preparation at a glance.",syllabus:"Track 256 PYQ-focused topics: Top 50 priority plus 206 curated micro-topics.",logs:"Record focused hours, MCQs and daily study notes.",plan:"Follow your weekly targets and full preparation roadmap.",settings:"Personalize your target date, study hours and workspace.",revision:"Revisit every topic you have already completed.",charts:"Visualize your syllabus, revision, study plan and study-time progress.",missing:"Review every syllabus topic that is still pending."};document.querySelectorAll("[data-page]").forEach(card=>{card.hidden=card.dataset.page!==view});document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input=>{input.checked=input.value===view});$("pageHint").textContent=names[view]||names.overview}
+function activeDevice(){return window.matchMedia("(max-width: 760px)").matches?"mobile":"desktop"}
+function applyDeviceTheme(){state.settings=state.settings||{};state.settings.deviceThemes=state.settings.deviceThemes||{};const device=activeDevice();const theme=state.settings.deviceThemes[device]||(state.settings.theme||"light");document.body.classList.toggle("dark",theme==="dark");$("themeToggle").checked=theme==="dark"}
+function renderAll(){syncSubjectFilter();applyDeviceTheme();renderStats();renderDaily();renderOverviewSchedule();renderSubjectOverview();renderTopics();renderMissingTopics();renderRevision();renderCharts();renderWeekly();renderRoadmap();renderLogs();setWorkspaceView(window.trackerView||"overview")}
+async function showPhoneAccess(){
+ const panel=$("phoneAccessPanel"),button=$("phoneAccessBtn");if(!panel)return;
+ panel.hidden=false;button?.setAttribute("aria-expanded","true");
+ const label=$("phoneAccessUrl"),image=$("phoneAccessQr");
+ label.textContent="Finding your local address…";image.removeAttribute("src");
+ try{const response=await fetch("/api/network-info");if(!response.ok)throw new Error("Network info unavailable");const info=await response.json();if(!info.network_access_enabled){label.textContent="Phone access is disabled by default. Set TRACKER_HOST=0.0.0.0 before running run.bat to enable trusted-LAN access.";return}label.textContent=info.url;image.src="/api/qr-code?url="+encodeURIComponent(info.url)+"&t="+Date.now()}
+ catch(error){label.textContent="Could not generate QR. Check that the app is running."}
+}
+$("missingTopicSearch")?.addEventListener("input",renderMissingTopics);
+$("missingSubjectFilter")?.addEventListener("change",renderMissingTopics);
+$("missingPriorityFilter")?.addEventListener("change",renderMissingTopics);
+$("phoneAccessBtn")?.addEventListener("click",showPhoneAccess);
+$("closePhoneAccess")?.addEventListener("click",()=>{$("phoneAccessPanel").hidden=true;$("phoneAccessBtn")?.setAttribute("aria-expanded","false")});
+function initFilters(){allSubjects().forEach(s=>{const opt=document.createElement("option");opt.value=s.name;opt.textContent=s.name;$("subjectFilter").append(opt)});$("topicSearch").addEventListener("input",renderTopics);$("subjectFilter").addEventListener("change",renderTopics);$("topicStatus").addEventListener("change",renderTopics);$("revisionSearch").addEventListener("input",renderRevision);$("revisionSubject").addEventListener("change",renderRevision);$("revisionStatus").addEventListener("change",renderRevision)}
+$("logDate").value=localDate();
+$("saveLog").addEventListener("click",()=>{const date=$("logDate").value;if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||Number.isNaN(new Date(date+"T00:00:00").getTime())){notify("Choose a valid study date.");return}const hours=Number($("logHours").value),mcqs=Number($("logMcq").value),csat=Number($("logCsat").value);if([hours,mcqs,csat].some(x=>!Number.isFinite(x)||x<0)||hours>16||mcqs>500||csat>300){notify("Use valid limits: hours 0–16, MCQs 0–500, CSAT 0–300.");return}state.logs[date]={hours,mcqs,csat,notes:$("logNotes").value.trim()};persist();renderStats();renderLogs();renderCharts();notify("Study log saved.")});
+$("clearLog").addEventListener("click",()=>{["logHours","logMcq","logCsat","logNotes"].forEach(id=>$(id).value="")});
+$("exportBtn").addEventListener("click",()=>{const blob=new Blob([JSON.stringify({version:2,exportedAt:new Date().toISOString(),data:state},null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="upsc-2027-progress-backup.json";a.click();URL.revokeObjectURL(url);notify("Backup exported.")});
+$("importBtn").addEventListener("click",()=>$("importFile").click());
+async function replaceProgressState(incoming){await saveQueue;let version=Number(state.version)||0;try{const response=await fetch("/api/state");if(response.ok){const remote=await response.json();if(Number.isInteger(Number(remote.version))&&Number(remote.version)>=0)version=Number(remote.version)}}catch{}state=normalizeProgressState({...incoming,version});await persist();renderAll();const response=await fetch("/api/state");if(!response.ok)throw new Error("Backup is saved in this browser, but SQLite could not confirm the import.");const saved=normalizeProgressState(await response.json());const expected={...state,version:0},actual={...saved,version:0};if(JSON.stringify(expected)!==JSON.stringify(actual))throw new Error("Backup is saved locally, but SQLite verification did not match. Keep the browser backup and retry.");state=saved;localStorage.setItem(STORE,JSON.stringify(state));renderAll()}
+$("importFile").addEventListener("change",async e=>{const file=e.target.files[0];if(!file)return;try{if(file.size>10*1024*1024)throw new Error("Backup files must be 10 MB or smaller.");const parsed=JSON.parse(await file.text()),incoming=parsed?.data??parsed;if(!incoming||typeof incoming!=="object"||Array.isArray(incoming)||!incoming.topics||typeof incoming.topics!=="object"||Array.isArray(incoming.topics)||!incoming.logs||typeof incoming.logs!=="object"||Array.isArray(incoming.logs))throw new Error("This file is not a valid UPSC tracker backup.");if(!confirm("Import backup and replace the progress currently saved in this browser?"))return;await replaceProgressState(incoming);notify("Backup imported successfully.")}catch(err){notify(err.message||"Could not import backup.")}finally{e.target.value=""}});
+$("resetBtn").addEventListener("click",async()=>{if(confirm("Reset study progress, logs and revision records? Your custom subjects, daily tasks and settings will be preserved. Export a backup first if you may need the progress.")){const current=state;const reset={...defaultState(),version:current.version,settings:current.settings,customSubjects:current.customSubjects,customDaily:current.customDaily};if(Array.isArray(current.questionBank))reset.questionBank=current.questionBank;await replaceProgressState(reset);$("logHours").value="";$("logMcq").value="";$("logCsat").value="";$("logNotes").value="";notify("Study progress reset. Your custom setup was preserved.")}});
+
+// Personal customization
+$("targetDate").addEventListener("change",()=>{const value=$("targetDate").value;if(!/^\d{4}-\d{2}-\d{2}$/.test(value)||Number.isNaN(new Date(value+"T00:00:00").getTime())){notify("Choose a valid target date.");renderStats();return}state.settings=state.settings||{};state.settings.targetDate=value;persist();renderStats();renderCharts()});
+$("studyGoal").addEventListener("change",()=>{state.settings=state.settings||{};state.settings.studyGoal=Math.max(1,Math.min(16,Number($("studyGoal").value)||4));$("studyGoal").value=state.settings.studyGoal;persist()});
+$("themeToggle").addEventListener("change",()=>{state.settings=state.settings||{};state.settings.deviceThemes=state.settings.deviceThemes||{};const device=activeDevice();state.settings.deviceThemes[device]=$("themeToggle").checked?"dark":"light";persist();renderAll()});
+window.matchMedia("(max-width: 760px)").addEventListener("change",applyDeviceTheme);
+$("addCustomTopic").addEventListener("click",()=>{
+ const subject=$("newSubject").value.trim(),topic=$("newTopic").value.trim();
+ if(!subject||!topic){notify("Enter both a subject and topic.");return}
+ const existing=allSubjects().find(item=>item.name.toLowerCase()===subject.toLowerCase());
+ if(existing&&existing.topics.some(item=>item[0].toLowerCase()===topic.toLowerCase())){notify("This topic already exists in that subject.");return}
+ state.customSubjects=state.customSubjects||[];
+ let group=state.customSubjects.find(item=>item.name.toLowerCase()===subject.toLowerCase());
+ if(!group){group={name:existing?existing.name:subject,topics:[]};state.customSubjects.push(group)}
+ if(group.topics.some(item=>item[0].toLowerCase()===topic.toLowerCase())){notify("This topic already exists.");return}
+ group.topics.push([topic,0]);persist();$("newSubject").value="";$("newTopic").value="";
+ const option=Array.from($("subjectFilter").options).find(item=>item.value.toLowerCase()===group.name.toLowerCase());
+ if(!option){const opt=document.createElement("option");opt.value=group.name;opt.textContent=group.name;$("subjectFilter").append(opt)}
+ renderAll();notify("Your topic was added.");
+});
+$("addDailyTask").addEventListener("click",()=>{const name=$("newTaskName").value.trim(),time=$("newTaskTime").value.trim();if(!name){notify("Enter a task name.");return}state.customDaily=state.customDaily||[];state.customDaily.push(["custom-"+Date.now(),name,time,"Personal task"]);persist();$("newTaskName").value="";$("newTaskTime").value="";renderDaily();notify("Daily task added.")});
+
 initFilters();renderAll();(async()=>{try{const response=await fetch("/api/state");if(!response.ok)throw new Error("API unavailable");const remote=normalizeProgressState(await response.json());if(localMutationVersion!==0){const local=normalizeProgressState(state);localStorage.setItem(STORE+"-recovery",JSON.stringify({savedAt:new Date().toISOString(),reason:"A change was made before SQLite startup synchronization completed. Both copies were preserved for recovery.",data:local,remote}));state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll();notify("SQLite state loaded. Early browser changes were preserved in the recovery backup.");return}const rawLocal=localStorage.getItem(STORE),local=readState(),localVersion=Number(local.version)||0,remoteVersion=Number(remote.version)||0;const sameContent=JSON.stringify({...local,version:0})===JSON.stringify({...remote,version:0});if(!rawLocal){state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll();return}if(remoteVersion>localVersion&&!sameContent){localStorage.setItem(STORE+"-recovery",JSON.stringify({savedAt:new Date().toISOString(),reason:"Server state was newer than this browser copy.",data:local}));state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll();notify("Newer SQLite data loaded. Your previous browser copy was preserved as a recovery backup.");return}if(localVersion>remoteVersion||!sameContent){state=local;state.version=remoteVersion;persist();renderAll();return}state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll()}catch(error){notify("Using browser backup. Start Tracker with run.bat for SQLite sync.")}})();
 </script>
 </body>
