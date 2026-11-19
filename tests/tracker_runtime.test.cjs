@@ -70,73 +70,33 @@ test("topic completion is synchronized with exact matching study-plan entries", 
   assert.match(script, /function syncStudyPlanRevisionToSyllabus\(entry\)/);
 });
 
-test("local Ollama assistant is optional and never writes progress automatically", () => {
-  assert.match(html, /id="nav-assistant"/);
-  assert.match(html, /id="ollamaMessages"/);
-  assert.match(script, /fetch\("\/api\/ollama\/status"\)/);
-  assert.match(script, /fetch\("\/api\/ollama\/chat"/);
-  assert.match(script, /getTrackerAiContext\(\)/);
-  assert.match(html, /AI suggestions never mark topics complete or change your progress automatically/);
-  assert.doesNotMatch(script, /ollama.*state\.topics\[[^\]]+\]\s*=\s*true/i);
+test("removed AI interfaces and endpoints stay absent", () => {
+  assert.doesNotMatch(html, /id="nav-assistant"|id="ollamaMessages"|id="aiPlannerToggle"|id="teacherPrompt"/);
+  assert.doesNotMatch(script, /\\/api\\/ollama\\/|\\/api\\/teacher\\/|function generateAiSchedule/);
+  assert.doesNotMatch(html, /AI suggestions never mark topics complete/);
 });
 
-
-test("AI planner is a floating tool with optional secondary chat", () => {
-  assert.match(html, /id="aiPlannerToggle"/);
-  assert.match(html, /id="aiPlannerPanel"/);
-  assert.match(html, /id="aiPlannerChat"/);
-  assert.match(script, /function generateAiSchedule\(\)/);
-  assert.match(script, /fetch\("\/api\/ollama\/plan"/);
-  assert.match(script, /async function applyAiSchedule\(\)/);
+test("MCQ prompt cancellation does not become a zero-attempt submission", () => {
+  assert.match(script, /const rawAmount=prompt\\(/);
+  assert.match(script, /if\\(rawAmount===null\\)return/);
+  assert.match(script, /rawAmount\\.trim\\(\\)==="" /);
 });
 
-test("AI schedule is saved only after explicit approval and shown on overview", () => {
-  assert.match(script, /aiSchedule:\[\]/);
-  assert.match(script, /next\.aiSchedule=Array\.isArray\(source\.aiSchedule\)/);
-  assert.match(script, /state\.aiSchedule=aiPlannerDraft\.map/);
-  assert.match(script, /renderAiTodaySchedule\(\)/);
-  assert.match(script, /AI-generated timetable · Today/);
-  assert.match(html, /AI suggestions never mark topics complete/);
+test("all study completion paths initialize a next-day revision schedule", () => {
+  assert.match(script, /function syncStudyPlanCompletionToSyllabus\\(entry\\)[\\s\\S]*?revisionSchedule\\[key\\]=\\{due_date:revisionDateAfter\\(1\\)/);
+  assert.match(script, /function completeTopicWithMastery\\(subject,topic\\)[\\s\\S]*?revisionSchedule\\[key\\]=\\{due_date:revisionDateAfter\\(1\\)/);
 });
 
-test("AI planner receives full pending syllabus and daily study goal", () => {
-  assert.match(script, /context\.subjects=allSubjects\(\)\.map/);
-  assert.match(script, /context\.daily_goal_hours=Number\(state\.settings\?\.studyGoal\)\|\|4/);
+test("workspace navigation and core tracking handlers remain wired", () => {
+  assert.match(script, /input\\.addEventListener\\("change"/);
+  assert.match(script, /function initFilters\\(\\)/);
+  assert.match(script, /function renderAll\\(\\)/);
+  assert.match(script, /\\$\\("saveLog"\\)\\.addEventListener\\("click"/);
 });
 
-
-
-test("Strict AI Teacher panel supports proactive questions, settings and answer evaluation", () => {
-  assert.match(html, /id="teacherPrompt"/);
-  assert.match(html, /id="teacherAnswer"/);
-  assert.match(html, /id="teacherRespond"/);
-  assert.match(html, /id="teacherEnabled"/);
-  assert.match(html, /id="teacherInterval"/);
-  assert.match(script, /function syncTeacherContext\(\)/);
-  assert.match(script, /function pollTeacherEvents\(initial=false\)/);
-  assert.match(script, /function submitTeacherAnswer\(\)/);
-  assert.match(script, /fetch\("\/api\/teacher\/respond"/);
-  assert.match(script, /fetch\("\/api\/teacher\/events\?after_id="/);
+test("revision completion delegates scheduling to the shared backend policy", () => {
+  assert.match(script, /fetch\\("\\/api\\/revision\\/next"/);
 });
-
-
-test("Strict AI Teacher uses browser notifications only after explicit permission", () => {
-  assert.match(html, /id="teacherNotifications"/);
-  assert.match(script, /Notification\.requestPermission\(\)/);
-  assert.match(script, /Notification\.permission==="granted"/);
-  assert.match(script, /setInterval\(\(\)=>\{syncTeacherContext\(\);pollTeacherEvents\(\)\},30000\)/);
-});
-
-
-test("Strict Teacher receives completed topics and persisted spaced-revision dates", () => {
-  assert.match(script, /context\.completed_topics=allSubjects\(\)\.flatMap/);
-  assert.match(script, /context\.revision_schedule=state\.revisionSchedule\|\|\{\}/);
-  assert.match(script, /function revisionDateAfter\(days\)/);
-  assert.match(script, /due_date:revisionDateAfter\(1\)/);
-  assert.match(script, /last_reviewed_at:localDate\(\)/);
-  assert.match(script, /syncTeacherContext\(\)/);
-});
-
 
 test("revision analytics count due dates rather than permanent historical checkmarks", () => {
   assert.match(script, /revisionToday=localDate\(\)/);
