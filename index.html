@@ -215,6 +215,14 @@ body.dark .checkbox-wrapper-12 input[type="checkbox"]{border-color:#788397}
 .cir-tabs__t{flex:1 1 0;min-width:0;height:42px;padding:0 14px;font-size:15px;font-weight:550}
 @media(max-width:760px){.cir-tabs{width:100%;gap:4px;padding:6px}.cir-tabs__t{flex:0 0 auto;height:40px;padding:0 16px;font-size:14px}}
 
+
+.ai-planner-launcher{position:fixed;right:24px;bottom:24px;z-index:120}.ai-planner-launcher button{border:0;border-radius:999px;padding:13px 19px;background:#263f9f;color:#fff;font-weight:750;box-shadow:0 8px 28px rgba(24,34,48,.2)}
+.ai-planner-panel{position:fixed;z-index:121;right:22px;bottom:82px;width:min(430px,calc(100vw - 28px));max-height:min(78vh,760px);overflow:auto;padding:18px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:15px;box-shadow:0 18px 60px rgba(15,23,42,.24)}
+.ai-planner-panel[hidden]{display:none}.ai-planner-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.ai-planner-head strong{display:block;font-size:16px}.ai-planner-head small{color:var(--muted);font-size:11px}.ai-planner-head button{border:0;background:transparent;color:var(--muted);font-size:24px}.ai-planner-controls{display:grid;gap:7px;margin:14px 0}.ai-planner-controls label{font-size:11px;color:var(--muted);font-weight:700}.ai-planner-controls .btn{margin-top:5px}.ai-planner-preview{display:grid;gap:10px;max-height:36vh;overflow:auto;margin:12px 0}.ai-planner-day{border:1px solid var(--line);border-radius:10px;padding:10px}.ai-planner-day h4{font-size:12px;margin:0 0 8px}.ai-planner-block{padding:7px 0;border-top:1px solid var(--line);font-size:11px}.ai-planner-block strong{display:block;font-size:11px}.ai-planner-panel>.btn{width:100%;margin-top:7px}
+.ai-today-schedule{width:100%;margin-top:12px;padding:13px;border:1px solid var(--line);border-radius:11px;background:var(--surface)}.ai-today-schedule h3{margin:0 0 8px;font-size:13px}.ai-today-block{display:grid;grid-template-columns:82px 1fr;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:11px}.ai-today-block time{color:var(--muted);font-variant-numeric:tabular-nums}
+.teacher-card{margin:14px 0;padding:12px;border:1px solid var(--line);border-radius:11px;background:var(--surface-2,var(--surface))}
+.teacher-card h3{margin:0 0 7px;font-size:13px}.teacher-card p{font-size:12px;line-height:1.5;margin:7px 0}.teacher-card textarea{width:100%;min-height:76px;margin:8px 0;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:12px}.teacher-settings{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.teacher-settings label{display:grid;gap:4px;font-size:10px;color:var(--muted)}.teacher-settings input,.teacher-settings select{min-width:0;padding:7px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink)}.teacher-prompt{padding:10px;border-radius:8px;background:var(--surface);border:1px solid var(--line);font-size:12px;line-height:1.55;white-space:pre-wrap}.teacher-feedback{font-size:12px;line-height:1.5;margin-top:8px;white-space:pre-wrap;color:var(--ink)}
+@media(max-width:560px){.ai-planner-launcher{right:14px;bottom:calc(82px + env(safe-area-inset-bottom))}.ai-planner-panel{right:10px;bottom:calc(138px + env(safe-area-inset-bottom));width:calc(100vw - 20px);max-height:70vh}}
 </style>
 </head>
 <body>
@@ -355,6 +363,35 @@ body.dark .checkbox-wrapper-12 input[type="checkbox"]{border-color:#788397}
 </div>
 <div class="footer">UPSC Prelims 2027 · Personal checklist dashboard · Works offline after the page is loaded</div>
 </div>
+
+<div class="ai-planner-launcher"><button type="button" id="aiPlannerToggle" aria-expanded="false" aria-controls="aiPlannerPanel">AI Teacher</button></div>
+<aside class="ai-planner-panel" id="aiPlannerPanel" hidden aria-label="Floating AI schedule planner">
+ <div class="ai-planner-head"><div><strong>Strict AI Teacher</strong><small id="aiPlannerStatus">Ollama · local planning</small></div><button type="button" id="aiPlannerClose" aria-label="Close planner">×</button></div>
+ <p class="small-note">Your local teacher checks in proactively, tests recall and follows up on assigned work. Timetable planning remains available below.</p>
+ <section class="teacher-card" aria-label="Strict AI Teacher">
+  <div class="ai-planner-head"><h3>Strict AI Teacher</h3><button type="button" class="btn" id="teacherNotifications">Enable notifications</button></div>
+  <div class="teacher-settings">
+   <label><span>Teacher monitoring</span><select id="teacherEnabled"><option value="true">Enabled</option><option value="false">Paused</option></select></label>
+   <label><span>Question interval</span><select id="teacherInterval"><option value="60">Every 1 hour</option><option value="120">Every 2 hours</option><option value="180">Every 3 hours</option><option value="240">Every 4 hours</option></select></label>
+   <label><span>Quiet hours start</span><input type="time" id="teacherQuietStart" value="22:00"></label>
+   <label><span>Quiet hours end</span><input type="time" id="teacherQuietEnd" value="07:00"></label>
+  </div>
+  <div id="teacherPrompt" class="teacher-prompt">Teacher is preparing your first check-in. Keep the Tracker server and Ollama running.</div>
+  <textarea id="teacherAnswer" placeholder="Answer your teacher here…" aria-label="Answer the teacher"></textarea>
+  <button type="button" class="btn primary" id="teacherRespond" disabled>Submit answer</button>
+  <div id="teacherFeedback" class="teacher-feedback" aria-live="polite"></div>
+  <p class="small-note">Firm and accountable, never insulting. Teacher pauses during quiet hours and cannot change completion records.</p>
+ </section>
+ <div class="ai-planner-controls">
+  <label for="aiPlannerModel">Local model</label><select id="aiPlannerModel"><option value="">Detecting Ollama models…</option></select>
+  <label for="aiPlannerDays">Plan duration</label><select id="aiPlannerDays"><option value="7">Next 7 days</option><option value="14">Next 14 days</option></select>
+  <button type="button" class="btn primary" id="aiPlannerGenerate">Generate my schedule</button>
+ </div>
+ <div id="aiPlannerPreview" class="ai-planner-preview"><div class="empty">Your generated timetable will appear here. Review it and apply it to Tracker.</div></div>
+ <button type="button" class="btn primary" id="aiPlannerApply" disabled>Apply schedule to Tracker</button>
+ <button type="button" class="btn" id="aiPlannerChat">Open chat option</button>
+ <p class="small-note">Schedule is saved only after you apply it. Existing completion records are preserved. Ollama suggestions do not mark topics complete.</p>
+</aside>
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
@@ -394,7 +431,7 @@ const STORE="upsc-dashboard-v2";
 const $=id=>document.getElementById(id);
 const localDate=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-")};
 const isPlanDateOverdue=(dateKey,today=localDate())=>dateKey<today;
-const defaultState=()=>({version:0,topics:{},daily:{},weekly:{},logs:{},studyPlanDone:{},studyPlanProgress:{},revisionDone:{},settings:{targetDate:"2027-05-23",studyGoal:4,theme:"light"},customSubjects:[],customDaily:[]});
+const defaultState=()=>({version:0,topics:{},daily:{},weekly:{},logs:{},studyPlanDone:{},studyPlanProgress:{},revisionDone:{},settings:{targetDate:"2027-05-23",studyGoal:4,theme:"light"},customSubjects:[],customDaily:[],aiSchedule:[]});
 function normalizeProgressState(value){
  const source=value&&typeof value==="object"&&!Array.isArray(value)?value:{};
  const next={...defaultState(),...source};
@@ -404,6 +441,7 @@ function normalizeProgressState(value){
  next.errorNotebook=Array.isArray(source.errorNotebook)?source.errorNotebook:[];
  next.pendingTopicEvidence=source.pendingTopicEvidence&&typeof source.pendingTopicEvidence==="object"&&!Array.isArray(source.pendingTopicEvidence)?source.pendingTopicEvidence:{};
  next.studyPlanProgress=Object.fromEntries(Object.entries(source.studyPlanProgress&&typeof source.studyPlanProgress==="object"&&!Array.isArray(source.studyPlanProgress)?source.studyPlanProgress:{}).filter(([key,item])=>/^\d{4}-\d{2}-\d{2}$/.test(key)&&item&&typeof item==="object"&&!Array.isArray(item)).map(([key,item])=>[key,{studyDone:!!item.studyDone,mcqDone:!!item.mcqDone,revisionDone:!!item.revisionDone,mcqCount:Number.isInteger(item.mcqCount)&&item.mcqCount>=0&&item.mcqCount<=500?item.mcqCount:0,mcqLogged:!!item.mcqLogged}]));
+ next.aiSchedule=Array.isArray(source.aiSchedule)?source.aiSchedule.filter(day=>day&&/^\\d{4}-\\d{2}-\\d{2}$/.test(day.date)&&Array.isArray(day.blocks)).slice(0,14):[];
  next.customSubjects=(Array.isArray(source.customSubjects)?source.customSubjects:[]).filter(item=>item&&typeof item.name==="string"&&item.name.trim()).map(item=>({name:item.name.trim(),topics:(Array.isArray(item.topics)?item.topics:[]).filter(topic=>Array.isArray(topic)&&typeof topic[0]==="string"&&topic[0].trim()).map(topic=>[topic[0].trim(),Number.isFinite(Number(topic[1]))?Number(topic[1]):null,typeof topic[2]==="string"?topic[2]:"P2"])}));
  next.customDaily=(Array.isArray(source.customDaily)?source.customDaily:[]).filter(item=>Array.isArray(item)&&item.length>=2&&typeof item[0]==="string"&&typeof item[1]==="string"&&item[1].trim()).map(item=>[item[0],item[1].trim(),String(item[2]||""),String(item[3]||"Personal task")]);
  for(const key of ["topics","daily","weekly","logs","studyPlanDone","studyPlanProgress","revisionDone","settings"]){if(!next[key]||typeof next[key]!=="object"||Array.isArray(next[key]))next[key]={};}
@@ -883,6 +921,47 @@ function getTrackerAiContext(){
  const logs=Object.entries(state.logs||{}).sort(([a],[b])=>b.localeCompare(a)).slice(0,7).map(([date,log])=>({date,hours:Number(log.hours)||0,mcqs:Number(log.mcqs)||0,csat:Number(log.csat)||0}));
  return{today:localDate(),completed_topics:doneTopics(),total_topics:totalTopics(),revision_pending:Math.max(0,doneTopics()-Object.values(state.revisionDone||{}).filter(Boolean).length),study_plan:getStudyPlanCounts(),subjects,recent_logs:logs,target_date:state.settings?.targetDate||"2027-05-23",daily_goal_hours:state.settings?.studyGoal||4};
 }
+let aiPlannerDraft=null;
+function renderAiTodaySchedule(){
+ const host=$("overviewDailySchedule");if(!host)return;
+ host.querySelector(".ai-today-schedule")?.remove();
+ const day=(state.aiSchedule||[]).find(item=>item.date===localDate());if(!day)return;
+ const section=document.createElement("section");section.className="ai-today-schedule";
+ const heading=document.createElement("h3");heading.textContent="AI-generated timetable · Today";section.append(heading);
+ day.blocks.forEach(block=>{const row=document.createElement("div");row.className="ai-today-block";const time=document.createElement("time");time.textContent=block.start+"–"+block.end;const detail=document.createElement("div");const title=document.createElement("strong");title.textContent=block.subject?(block.subject+" · "+block.topic):block.type;const task=document.createElement("span");task.textContent=block.task;detail.append(title,task);row.append(time,detail);section.append(row)});
+ host.append(section);
+}
+function renderAiPlannerDraft(schedule){
+ const host=$("aiPlannerPreview");host.innerHTML="";
+ schedule.forEach(day=>{const card=document.createElement("section");card.className="ai-planner-day";const heading=document.createElement("h4");heading.textContent=new Date(day.date+"T00:00:00").toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short"});card.append(heading);day.blocks.forEach(block=>{const row=document.createElement("div");row.className="ai-planner-block";const title=document.createElement("strong");title.textContent=block.start+"–"+block.end+" · "+(block.subject?block.subject+" — "+block.topic:block.type);const task=document.createElement("span");task.textContent=block.task;row.append(title,task);card.append(row)});host.append(card)});
+ $("aiPlannerApply").disabled=!schedule.length;
+}
+async function loadAiPlannerModels(){
+ try{const response=await fetch("/api/ollama/status"),result=await response.json(),select=$("aiPlannerModel");select.innerHTML="";
+  if(!result.available||!result.models?.length){$("aiPlannerStatus").textContent="Ollama not detected · start it and refresh";select.add(new Option("No local models found",""));return false;}
+  result.models.forEach(model=>select.add(new Option(model,model)));select.value=result.selected_model||result.models[0];$("aiPlannerStatus").textContent=result.models.length+" local model(s) ready";return true;
+ }catch(error){$("aiPlannerStatus").textContent="Ollama unavailable";return false;}
+}
+async function generateAiSchedule(){
+ const model=$("aiPlannerModel").value;if(!model){notify("Start Ollama and select a local model first.");return}
+ const button=$("aiPlannerGenerate");button.disabled=true;button.textContent="Building your timetable…";$("aiPlannerApply").disabled=true;
+ try{
+  const context=getTrackerAiContext();
+  context.subjects=allSubjects().map(subject=>({subject:subject.name,total:subject.topics.length,completed:subject.topics.filter(topic=>state.topics[subject.name+"::"+topic[0]]).length,pending:subject.topics.filter(topic=>!state.topics[subject.name+"::"+topic[0]]).map(topic=>topic[0])}));
+  context.daily_goal_hours=Number(state.settings?.studyGoal)||4;
+  const response=await fetch("/api/ollama/plan",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model,context,days:Number($("aiPlannerDays").value)||7})});
+  const result=await response.json();if(!response.ok)throw new Error(result.detail||"Could not generate a timetable.");
+  aiPlannerDraft=result.schedule||[];renderAiPlannerDraft(aiPlannerDraft);$("aiPlannerStatus").textContent="Draft ready · review before applying";notify("Your AI timetable is ready to review.");
+ }catch(error){aiPlannerDraft=null;$("aiPlannerPreview").textContent=error.message||"Ollama could not generate a schedule."}
+ finally{button.disabled=false;button.textContent="Generate my schedule";}
+}
+async function applyAiSchedule(){
+ if(!Array.isArray(aiPlannerDraft)||!aiPlannerDraft.length)return;
+ const dates=aiPlannerDraft.map(day=>day.date);
+ if(new Set(dates).size!==dates.length){notify("The generated schedule has duplicate dates. Generate it again.");return}
+ state.aiSchedule=aiPlannerDraft.map(day=>({date:day.date,blocks:day.blocks.map(block=>({...block}))}));
+ await persist();renderAiTodaySchedule();notify("AI schedule saved to Tracker.");$("aiPlannerApply").disabled=true;
+}
 function addOllamaMessage(role,message){
  const host=$("ollamaMessages"),item=document.createElement("div");item.className="log-item";
  const head=document.createElement("div");head.className="log-head";head.textContent=role==="assistant"?"Local AI assistant":"You";
@@ -912,10 +991,91 @@ async function sendOllamaMessage(prompt){
  }catch(error){addOllamaMessage("assistant",error.message||"Ollama could not answer. Check that the local runtime is running.");}
  finally{$("ollamaSend").disabled=false;$("ollamaSend").textContent="Ask Ollama";}
 }
+let teacherLastEventId=Number(localStorage.getItem("trackerTeacherLastEventId")||0);
+let teacherBootstrapped=false;
+let activeTeacherEvent=null;
+let teacherSettingsLoaded=false;
+
+async function syncTeacherContext(){
+ try{
+  const context=getTrackerAiContext();
+  context.subjects=allSubjects().map(subject=>({subject:subject.name,total:subject.topics.length,completed:subject.topics.filter(topic=>state.topics[subject.name+"::"+topic[0]]).length,pending:subject.topics.filter(topic=>!state.topics[subject.name+"::"+topic[0]]).map(topic=>topic[0])}));
+  await fetch("/api/teacher/context",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({context})});
+ }catch(error){}
+}
+async function saveTeacherSettings(){
+ try{
+  const settings={enabled:$("teacherEnabled").value==="true",interval_minutes:Number($("teacherInterval").value)||120,quiet_start:$("teacherQuietStart").value||"22:00",quiet_end:$("teacherQuietEnd").value||"07:00",model:$("aiPlannerModel").value||""};
+  const response=await fetch("/api/teacher/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(settings)});
+  if(!response.ok)throw new Error("Could not save teacher settings.");
+  notify(settings.enabled?"Strict Teacher monitoring enabled.":"Strict Teacher monitoring paused.");
+ }catch(error){notify(error.message||"Could not save teacher settings.");}
+}
+async function loadTeacherSettings(){
+ try{
+  const response=await fetch("/api/teacher/settings"),settings=await response.json();
+  $("teacherEnabled").value=String(settings.enabled!==false);
+  $("teacherInterval").value=String(settings.interval_minutes||120);
+  $("teacherQuietStart").value=settings.quiet_start||"22:00";
+  $("teacherQuietEnd").value=settings.quiet_end||"07:00";
+  teacherSettingsLoaded=true;
+ }catch(error){}
+}
+function renderTeacherEvent(event){
+ activeTeacherEvent=event;
+ $("teacherPrompt").textContent=event.prompt+(event.subject&&event.topic?"\n\n"+event.subject+" · "+event.topic:"");
+ $("teacherAnswer").value=event.answer||"";
+ $("teacherRespond").disabled=Boolean(event.answer);
+ $("teacherFeedback").textContent=event.feedback||"";
+}
+async function pollTeacherEvents(initial=false){
+ try{
+  const cursor=initial?0:teacherLastEventId;
+  const response=await fetch("/api/teacher/events?after_id="+cursor);
+  if(!response.ok)return;
+  const result=await response.json(),events=result.events||[];
+  if(events.length){
+   const newest=events[events.length-1];
+   const unanswered=events.filter(event=>!event.answer);
+   if(unanswered.length)renderTeacherEvent(unanswered[unanswered.length-1]);
+   else if(!activeTeacherEvent)renderTeacherEvent(newest);
+   if(teacherBootstrapped){
+    const fresh=events.filter(event=>Number(event.id)>teacherLastEventId).slice(-1)[0];
+    if(fresh){
+    if("Notification" in window&&Notification.permission==="granted"){
+     const notification=new Notification("Your Strict AI Teacher",{body:fresh.prompt,tag:"tracker-teacher-"+fresh.id});notification.onclick=()=>{window.focus();$("aiPlannerPanel").hidden=false;$("aiPlannerToggle").setAttribute("aria-expanded","true")};
+    }
+    notify("Your teacher has a question. Open the AI Teacher panel.");
+    }
+   }
+   teacherLastEventId=Math.max(teacherLastEventId,...events.map(event=>Number(event.id)||0));
+   localStorage.setItem("trackerTeacherLastEventId",String(teacherLastEventId));
+  }
+  teacherBootstrapped=true;
+ }catch(error){}
+}
+async function submitTeacherAnswer(){
+ if(!activeTeacherEvent||!$("teacherAnswer").value.trim())return;
+ const button=$("teacherRespond");button.disabled=true;button.textContent="Evaluating…";
+ try{
+  const response=await fetch("/api/teacher/respond",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event_id:activeTeacherEvent.id,answer:$("teacherAnswer").value.trim()})});
+  const result=await response.json();if(!response.ok)throw new Error(result.detail||"Could not submit your answer.");
+  $("teacherFeedback").textContent=result.feedback;
+  activeTeacherEvent.answer=$("teacherAnswer").value.trim();activeTeacherEvent.feedback=result.feedback;
+  notify("Answer evaluated. Read your teacher's feedback.");
+ }catch(error){notify(error.message||"Teacher could not evaluate your answer.");button.disabled=false;}
+ finally{button.textContent="Answer submitted";}
+}
+async function enableTeacherNotifications(){
+ if(!("Notification" in window)){notify("This browser does not support notifications.");return}
+ const permission=await Notification.requestPermission();
+ $("teacherNotifications").textContent=permission==="granted"?"Notifications enabled":"Enable notifications";
+ if(permission==="granted")notify("Teacher notifications enabled.");
+}
 function setWorkspaceView(view){const names={overview:"Your daily preparation at a glance.",syllabus:"Track 256 PYQ-focused topics: Top 50 priority plus 206 curated micro-topics.",logs:"Record focused hours, MCQs and daily study notes.",plan:"Follow your weekly targets and full preparation roadmap.",settings:"Personalize your target date, study hours and workspace.",revision:"Revisit every topic you have already completed.",charts:"Visualize your syllabus, revision, study plan and study-time progress.",assistant:"Get local AI help with study planning, backlog and revision.",missing:"Review every syllabus topic that is still pending."};document.querySelectorAll("[data-page]").forEach(card=>{card.hidden=card.dataset.page!==view});document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input=>{input.checked=input.value===view});$("pageHint").textContent=names[view]||names.overview}
 function activeDevice(){return window.matchMedia("(max-width: 760px)").matches?"mobile":"desktop"}
 function applyDeviceTheme(){state.settings=state.settings||{};state.settings.deviceThemes=state.settings.deviceThemes||{};const device=activeDevice();const theme=state.settings.deviceThemes[device]||(state.settings.theme||"light");document.body.classList.toggle("dark",theme==="dark");$("themeToggle").checked=theme==="dark"}
-function renderAll(){syncSubjectFilter();applyDeviceTheme();renderStats();renderDaily();renderOverviewSchedule();renderSubjectOverview();renderTopics();renderMissingTopics();renderRevision();renderCharts();renderWeekly();renderRoadmap();renderLogs();setWorkspaceView(window.trackerView||"overview")}
+function renderAll(){syncSubjectFilter();applyDeviceTheme();renderStats();renderDaily();renderOverviewSchedule();renderAiTodaySchedule();renderSubjectOverview();renderTopics();renderMissingTopics();renderRevision();renderCharts();renderWeekly();renderRoadmap();renderLogs();setWorkspaceView(window.trackerView||"overview")}
 async function showPhoneAccess(){
  const panel=$("phoneAccessPanel"),button=$("phoneAccessBtn");if(!panel)return;
  panel.hidden=false;button?.setAttribute("aria-expanded","true");
@@ -961,11 +1121,23 @@ $("addCustomTopic").addEventListener("click",()=>{
 $("addDailyTask").addEventListener("click",()=>{const name=$("newTaskName").value.trim(),time=$("newTaskTime").value.trim();if(!name){notify("Enter a task name.");return}state.customDaily=state.customDaily||[];state.customDaily.push(["custom-"+Date.now(),name,time,"Personal task"]);persist();$("newTaskName").value="";$("newTaskTime").value="";renderDaily();notify("Daily task added.")});
 
 document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input=>input.addEventListener("change",()=>{if(!input.checked)return;window.trackerView=input.value;setWorkspaceView(window.trackerView);if(window.trackerView==="assistant")loadOllamaStatus()}));
+$("aiPlannerToggle")?.addEventListener("click",()=>{const panel=$("aiPlannerPanel"),open=panel.hidden;panel.hidden=!open;$("aiPlannerToggle").setAttribute("aria-expanded",String(open));if(open)loadAiPlannerModels()});
+$("aiPlannerClose")?.addEventListener("click",()=>{$("aiPlannerPanel").hidden=true;$("aiPlannerToggle").setAttribute("aria-expanded","false")});
+$("aiPlannerGenerate")?.addEventListener("click",generateAiSchedule);
+$("aiPlannerApply")?.addEventListener("click",applyAiSchedule);
+$("aiPlannerChat")?.addEventListener("click",()=>{window.trackerView="assistant";setWorkspaceView("assistant");loadOllamaStatus();$("aiPlannerPanel").hidden=true});
+$("teacherNotifications")?.addEventListener("click",enableTeacherNotifications);
+$("aiPlannerModel")?.addEventListener("change",()=>{if(teacherSettingsLoaded)saveTeacherSettings()});
+$("teacherRespond")?.addEventListener("click",submitTeacherAnswer);
+["teacherEnabled","teacherInterval","teacherQuietStart","teacherQuietEnd"].forEach(id=>$(id)?.addEventListener("change",()=>{if(teacherSettingsLoaded)saveTeacherSettings()}));
+
 $("ollamaRefresh")?.addEventListener("click",loadOllamaStatus);
 $("ollamaSend")?.addEventListener("click",()=>sendOllamaMessage());
 $("ollamaPrompt")?.addEventListener("keydown",event=>{if(event.key==="Enter"&&(event.ctrlKey||event.metaKey)){event.preventDefault();sendOllamaMessage()}});
 $("ollamaReview")?.addEventListener("click",()=>sendOllamaMessage("Review my current Tracker progress and give me a realistic plan for today. Identify the biggest backlog risks, suggest the next 3 actions and a short revision priority list. Do not mark anything complete."));
 initFilters();renderAll();(async()=>{try{const response=await fetch("/api/state");if(!response.ok)throw new Error("API unavailable");const remote=normalizeProgressState(await response.json());if(localMutationVersion!==0){const local=normalizeProgressState(state);localStorage.setItem(STORE+"-recovery",JSON.stringify({savedAt:new Date().toISOString(),reason:"A change was made before SQLite startup synchronization completed. Both copies were preserved for recovery.",data:local,remote}));state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll();notify("SQLite state loaded. Early browser changes were preserved in the recovery backup.");return}const rawLocal=localStorage.getItem(STORE),local=readState(),localVersion=Number(local.version)||0,remoteVersion=Number(remote.version)||0;const sameContent=JSON.stringify({...local,version:0})===JSON.stringify({...remote,version:0});if(!rawLocal){state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll();return}if(remoteVersion>localVersion&&!sameContent){localStorage.setItem(STORE+"-recovery",JSON.stringify({savedAt:new Date().toISOString(),reason:"Server state was newer than this browser copy.",data:local}));state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll();notify("Newer SQLite data loaded. Your previous browser copy was preserved as a recovery backup.");return}if(localVersion>remoteVersion||!sameContent){state=local;state.version=remoteVersion;persist();renderAll();return}state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll()}catch(error){notify("Using browser backup. Start Tracker with run.bat for SQLite sync.")}})();
+setTimeout(async()=>{await loadTeacherSettings();await syncTeacherContext();await pollTeacherEvents(true)},2500);
+setInterval(()=>{syncTeacherContext();pollTeacherEvents()},30000);
 </script>
 </body>
 </html>

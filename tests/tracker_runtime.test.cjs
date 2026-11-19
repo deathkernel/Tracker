@@ -79,3 +79,50 @@ test("local Ollama assistant is optional and never writes progress automatically
   assert.match(html, /AI suggestions never mark topics complete or change your progress automatically/);
   assert.doesNotMatch(script, /ollama.*state\.topics\[[^\]]+\]\s*=\s*true/i);
 });
+
+
+test("AI planner is a floating tool with optional secondary chat", () => {
+  assert.match(html, /id="aiPlannerToggle"/);
+  assert.match(html, /id="aiPlannerPanel"/);
+  assert.match(html, /id="aiPlannerChat"/);
+  assert.match(script, /function generateAiSchedule\(\)/);
+  assert.match(script, /fetch\("\/api\/ollama\/plan"/);
+  assert.match(script, /async function applyAiSchedule\(\)/);
+});
+
+test("AI schedule is saved only after explicit approval and shown on overview", () => {
+  assert.match(script, /aiSchedule:\[\]/);
+  assert.match(script, /next\.aiSchedule=Array\.isArray\(source\.aiSchedule\)/);
+  assert.match(script, /state\.aiSchedule=aiPlannerDraft\.map/);
+  assert.match(script, /renderAiTodaySchedule\(\)/);
+  assert.match(script, /AI-generated timetable · Today/);
+  assert.match(html, /AI suggestions never mark topics complete/);
+});
+
+test("AI planner receives full pending syllabus and daily study goal", () => {
+  assert.match(script, /context\.subjects=allSubjects\(\)\.map/);
+  assert.match(script, /context\.daily_goal_hours=Number\(state\.settings\?\.studyGoal\)\|\|4/);
+});
+
+
+
+test("Strict AI Teacher panel supports proactive questions, settings and answer evaluation", () => {
+  assert.match(html, /id="teacherPrompt"/);
+  assert.match(html, /id="teacherAnswer"/);
+  assert.match(html, /id="teacherRespond"/);
+  assert.match(html, /id="teacherEnabled"/);
+  assert.match(html, /id="teacherInterval"/);
+  assert.match(script, /function syncTeacherContext\(\)/);
+  assert.match(script, /function pollTeacherEvents\(initial=false\)/);
+  assert.match(script, /function submitTeacherAnswer\(\)/);
+  assert.match(script, /fetch\("\/api\/teacher\/respond"/);
+  assert.match(script, /fetch\("\/api\/teacher\/events\?after_id="/);
+});
+
+
+test("Strict AI Teacher uses browser notifications only after explicit permission", () => {
+  assert.match(html, /id="teacherNotifications"/);
+  assert.match(script, /Notification\.requestPermission\(\)/);
+  assert.match(script, /Notification\.permission==="granted"/);
+  assert.match(script, /setInterval\(\(\)=>\{syncTeacherContext\(\);pollTeacherEvents\(\)\},30000\)/);
+});
