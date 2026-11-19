@@ -530,7 +530,7 @@ function syncSyllabusCompletionToStudyPlan(subject,topic){
   const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);
   const dateKey=localDateKey(date),progressKey=getStudyPlanProgressDateKey({...entry,dateKey});
   state.studyPlanProgress=state.studyPlanProgress||{};
-  state.studyPlanProgress[progressKey]={...getStudyPlanProgress({...entry,dateKey}),studyDone:true};
+  state.studyPlanProgress[progressKey]={...getStudyPlanProgress({...entry,dateKey}),studyDone:true,studyReset:false};
   state.studyPlanDone=state.studyPlanDone||{};
   state.studyPlanDone[dateKey]=true;
  });
@@ -768,7 +768,6 @@ function getStudyPlanProgress(entry){
  const progress=state.studyPlanProgress?.[progressDateKey]||{};
  if(entry.phase!=="mcq_revision"||progressDateKey===entry.dateKey)return progress;
  const legacy=state.studyPlanProgress?.[entry.dateKey]||{};
- const has=(value,key)=>Object.prototype.hasOwnProperty.call(value,key);
  return{
   ...legacy,
   ...progress,
@@ -846,7 +845,7 @@ function renderOverviewSchedule(){
   }
   if(!isStudy&&!progress.revisionDone){if(!confirm("Have you revised this same topic?")){notify("MCQ count saved. Complete the revision before finishing Day 2.");return;}if(!await syncStudyPlanRevisionToSyllabus(entry))return;progress.revisionDone=true;}
   state.studyPlanProgress=state.studyPlanProgress||{};state.studyPlanProgress[entry.progressDateKey]=progress;
-  state.studyPlanDone=state.studyPlanDone||{};state.studyPlanDone[today]=!!(progress.mcqDone&&progress.revisionDone);
+  state.studyPlanDone=state.studyPlanDone||{};state.studyPlanDone[today]=!!(progress.studyDone&&progress.mcqDone&&progress.revisionDone);
   state.logs[today]=state.logs[today]||{hours:0,mcqs:0,csat:0,notes:""};
   if(!progress.mcqLogged){state.logs[today].mcqs=(Number(state.logs[today].mcqs)||0)+(Number(progress.mcqCount)||0);progress.mcqLogged=true;}
   persist();renderAll();
