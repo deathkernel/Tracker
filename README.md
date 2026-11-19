@@ -68,7 +68,9 @@ Tracker is being extended from a timetable generator into a local-first **Strict
 - MCQ attempt counts may be tracked; this feature does not introduce an MCQ question bank or generate/store MCQ question content.
 - Proactive questions must be relevant, rate-limited, deduplicated and controlled by configurable study windows and quiet hours.
 
-The Strict AI Teacher behaviour is the next implementation target; the existing floating planner is the foundation, not proof that all proactive teacher capabilities are already available.
+### First implementation slice
+
+The server-side teacher worker now checks on a 60-second loop while Tracker is running. It creates one Ollama-generated teacher question at the configured interval, queues it in local SQLite, and will not create another while the previous question is unanswered. The floating Teacher panel can show queued questions, submit an answer for local Ollama evaluation, and display feedback. Monitoring can be paused, the interval and quiet hours are configurable, and browser notifications are opt-in. If the browser is closed, the server can still queue a question; it will be shown when the Tracker page is opened again. This first slice does not provide guaranteed native Windows notifications while every browser window is closed, and it does not yet provide voice interaction or a complete long-term mastery model.
 
 ## Personal data and privacy
 
