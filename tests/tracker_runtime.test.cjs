@@ -71,31 +71,37 @@ test("topic completion is synchronized with exact matching study-plan entries", 
 });
 
 test("removed AI interfaces and endpoints stay absent", () => {
-  assert.doesNotMatch(html, /id="nav-assistant"|id="ollamaMessages"|id="aiPlannerToggle"|id="teacherPrompt"/);
-  assert.doesNotMatch(script, /\\/api\\/ollama\\/|\\/api\\/teacher\\/|function generateAiSchedule/);
-  assert.doesNotMatch(html, /AI suggestions never mark topics complete/);
+  for (const marker of ['id="nav-assistant"', 'id="ollamaMessages"', 'id="aiPlannerToggle"', 'id="teacherPrompt"', "AI suggestions never mark topics complete"]) {
+    assert.equal(html.includes(marker), false, marker);
+  }
+  for (const marker of ["/api/ollama/", "/api/teacher/", "function generateAiSchedule"]) {
+    assert.equal(script.includes(marker), false, marker);
+  }
 });
 
 test("MCQ prompt cancellation does not become a zero-attempt submission", () => {
-  assert.match(script, /const rawAmount=prompt\\(/);
-  assert.match(script, /if\\(rawAmount===null\\)return/);
-  assert.match(script, /rawAmount\\.trim\\(\\)==="" /);
+  assert.ok(script.includes("const rawAmount=prompt("));
+  assert.ok(script.includes("if(rawAmount===null)return"));
+  assert.ok(script.includes('rawAmount.trim()===""'));
 });
 
 test("all study completion paths initialize a next-day revision schedule", () => {
-  assert.match(script, /function syncStudyPlanCompletionToSyllabus\\(entry\\)[\\s\\S]*?revisionSchedule\\[key\\]=\\{due_date:revisionDateAfter\\(1\\)/);
-  assert.match(script, /function completeTopicWithMastery\\(subject,topic\\)[\\s\\S]*?revisionSchedule\\[key\\]=\\{due_date:revisionDateAfter\\(1\\)/);
+  const syllabusSync = script.slice(script.indexOf("function syncStudyPlanCompletionToSyllabus"), script.indexOf("function syncStudyPlanRevisionToSyllabus"));
+  const topicCompletion = script.slice(script.indexOf("function completeTopicWithMastery"), script.indexOf("async function completeScheduledRevision"));
+  assert.ok(syllabusSync.includes("revisionSchedule[key]={due_date:revisionDateAfter(1)"));
+  assert.ok(topicCompletion.includes("revisionSchedule[key]={due_date:revisionDateAfter(1)"));
 });
 
 test("workspace navigation and core tracking handlers remain wired", () => {
-  assert.match(script, /input\\.addEventListener\\("change"/);
-  assert.match(script, /function initFilters\\(\\)/);
-  assert.match(script, /function renderAll\\(\\)/);
-  assert.match(script, /\\$\\("saveLog"\\)\\.addEventListener\\("click"/);
+  assert.ok(script.includes('input.addEventListener("change"'));
+  assert.ok(script.includes("function initFilters()"));
+  assert.ok(script.includes("function renderAll()"));
+  assert.ok(script.includes('$("saveLog").addEventListener("click"'));
 });
 
 test("revision completion delegates scheduling to the shared backend policy", () => {
-  assert.match(script, /fetch\\("\\/api\\/revision\\/next"/);
+  const completion = script.slice(script.indexOf("async function completeScheduledRevision"), script.indexOf("function renderTopics"));
+  assert.ok(completion.includes('fetch("/api/revision/next"'));
 });
 
 test("revision analytics count due dates rather than permanent historical checkmarks", () => {
