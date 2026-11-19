@@ -53,6 +53,14 @@ Tracker is being extended from a timetable generator into a local-first **Strict
 - Use a firm, disciplined and respectful tone: no insults, humiliation, threats or guilt-based pressure.
 - Respect configured quiet hours, rest periods and the student's ability to pause proactive prompts.
 
+### Phase 6 — Intelligent revision foundation
+
+- Newly completed topics receive a first revision date for the next day.
+- Revision completion advances a deterministic spaced-revision cadence; due and overdue items remain visible in the Revision workspace.
+- Legacy completed topics without a saved revision date are treated as due, so earlier progress is not silently ignored.
+- The teacher receives completed topics and revision dates, then prioritizes due revisions while validating every question against the actual Tracker syllabus.
+- The revision policy supports a 0–5 recall-quality score in the deterministic engine; the current checkbox workflow records a normal completed review until a future UI step adds explicit recall grading.
+
 ### Server-aware operation
 
 - When the Tracker server and local Ollama runtime are available, the teacher engine can run its scheduled checks and deliver proactive prompts.
