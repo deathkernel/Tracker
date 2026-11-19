@@ -97,7 +97,7 @@ class OllamaChatRequest(BaseModel):
     @field_validator("model")
     @classmethod
     def validate_model_name(cls, value: str) -> str:
-        if not value.strip() or any(char in value for char in "\\r\\n"):
+        if not value.strip() or any(char in value for char in "\r\n"):
             raise ValueError("Choose a valid local Ollama model.")
         return value.strip()
 
