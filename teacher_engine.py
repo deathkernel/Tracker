@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime, time, timedelta
 from typing import Any
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 TEACHER_PROMPT_KINDS = {
     "daily_check_in",
@@ -73,7 +72,7 @@ def validate_teacher_event(
         raise ValueError("Teacher returned an invalid question.")
     if not isinstance(subject, str) or not isinstance(topic, str):
         raise ValueError("Teacher returned invalid topic metadata.")
-    if subject and topic and allowed_topics and (subject, topic) not in allowed_topics:
+    if subject and topic and (subject, topic) not in allowed_topics:
         raise ValueError("Teacher referenced a topic outside the Tracker syllabus.")
     if not isinstance(reason, str):
         reason = ""
