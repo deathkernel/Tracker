@@ -103,3 +103,26 @@ test("AI planner receives full pending syllabus and daily study goal", () => {
   assert.match(script, /context\.subjects=allSubjects\(\)\.map/);
   assert.match(script, /context\.daily_goal_hours=Number\(state\.settings\?\.studyGoal\)\|\|4/);
 });
+
+
+
+test("Strict AI Teacher panel supports proactive questions, settings and answer evaluation", () => {
+  assert.match(html, /id="teacherPrompt"/);
+  assert.match(html, /id="teacherAnswer"/);
+  assert.match(html, /id="teacherRespond"/);
+  assert.match(html, /id="teacherEnabled"/);
+  assert.match(html, /id="teacherInterval"/);
+  assert.match(script, /function syncTeacherContext\(\)/);
+  assert.match(script, /function pollTeacherEvents\(\)/);
+  assert.match(script, /function submitTeacherAnswer\(\)/);
+  assert.match(script, /fetch\("\/api\/teacher\/respond"/);
+  assert.match(script, /fetch\("\/api\/teacher\/events\?after_id="/);
+});
+
+
+test("Strict AI Teacher uses browser notifications only after explicit permission", () => {
+  assert.match(html, /id="teacherNotifications"/);
+  assert.match(script, /Notification\.requestPermission\(\)/);
+  assert.match(script, /Notification\.permission==="granted"/);
+  assert.match(script, /setInterval\(\(\)=>\{syncTeacherContext\(\);pollTeacherEvents\(\)\},30000\)/);
+});
