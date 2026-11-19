@@ -333,6 +333,7 @@ def ollama_plan(request: OllamaPlannerRequest) -> dict[str, Any]:
                 if previous_end and start < previous_end:
                     raise ValueError("Schedule blocks cannot overlap.")
                 previous_end = end
+                kind = block.get("type", "study")
                 if kind != "break":
                     planned_minutes += (int(end[:2]) * 60 + int(end[3:])) - (int(start[:2]) * 60 + int(start[3:]))
                 subject = str(block.get("subject", ""))[:100]
