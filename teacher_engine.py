@@ -127,12 +127,16 @@ def next_revision_schedule(
     quality: int,
 ) -> dict[str, Any]:
     """Return a deterministic SM-2-style next review date for a 0–5 recall score."""
-    if quality < 0 or quality > 5:
-        raise ValueError("Revision quality must be between 0 and 5.")
+    if isinstance(quality, bool) or not isinstance(quality, int) or not 0 <= quality <= 5:
+        raise ValueError("Revision quality must be an integer between 0 and 5.")
     review_date = datetime.strptime(today, "%Y-%m-%d").date()
     prior = previous if isinstance(previous, dict) else {}
-    repetitions = max(0, int(prior.get("repetitions", 0)))
-    interval_days = max(1, int(prior.get("interval_days", 1)))
+    try:
+        repetitions = max(0, int(prior.get("repetitions", 0)))
+        interval_days = max(1, int(prior.get("interval_days", 1)))
+    except (TypeError, ValueError, OverflowError):
+        repetitions = 0
+        interval_days = 1
     try:
         ease_factor = float(prior.get("ease_factor", 2.5))
     except (TypeError, ValueError):
