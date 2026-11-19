@@ -496,6 +496,8 @@ function syncStudyPlanCompletionToSyllabus(entry){
  if(!key)return;
  state.topics=state.topics||{};
  state.topics[key]=true;
+ state.revisionSchedule=state.revisionSchedule||{};
+ if(!state.revisionSchedule[key])state.revisionSchedule[key]={due_date:revisionDateAfter(1),interval_days:1,repetitions:0,ease_factor:2.5,last_reviewed_at:null,last_quality:null};
 }
 function syncStudyPlanRevisionToSyllabus(entry){
  const key=findMatchingSyllabusTopic(entry.subject,entry.topic);
@@ -742,8 +744,10 @@ function renderOverviewSchedule(){
   if(isStudy&&!progress.studyDone){markStudyPlanPhaseComplete(entry);return;}
   if(!isStudy&&!progress.studyDone){notify("Complete Day 1 study before recording Day 2.");return;}
   if(!isStudy&&!progress.mcqDone){
-   const amount=Number(prompt("How many MCQs did you attempt for this topic?","0"));
-   if(!Number.isInteger(amount)||amount<0||amount>500){notify("Enter a valid MCQ count from 0 to 500.");return;}
+   const rawAmount=prompt("How many MCQs did you attempt for this topic?","0");
+   if(rawAmount===null)return;
+   const amount=Number(rawAmount.trim());
+   if(rawAmount.trim()===""||!Number.isInteger(amount)||amount<0||amount>500){notify("Enter a valid MCQ count from 0 to 500.");return;}
    progress.mcqDone=true;progress.mcqCount=amount;
    state.studyPlanProgress=state.studyPlanProgress||{};
    state.studyPlanProgress[entry.progressDateKey]=progress;
