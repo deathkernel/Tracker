@@ -550,7 +550,7 @@ function findMatchingSyllabusTopic(subject,topic){
  const planName=normalizePlanTopic(topic);
  if(!planName)return null;
  const aliases=STUDY_PLAN_TOPIC_ALIASES[String(subject||"").toLowerCase()]||{};
- const alias=aliases[planName];
+ const alias=Object.entries(aliases).find(([name])=>normalizePlanTopic(name)===planName)?.[1];
  const target=alias?normalizePlanTopic(alias):planName;
  const matches=group.topics.filter(([name])=>normalizePlanTopic(name)===target);
  return matches.length===1?syllabusSubject+"::"+matches[0][0]:null;
