@@ -141,9 +141,14 @@ def build_study_plan_rows(html: str, state: dict[str, Any]) -> list[dict[str, An
             for phase, label in (("study", "Day 1 · Study"), ("mcq_revision", "Day 2 · MCQ + Revision")):
                 planned_date = start + timedelta(days=entry_index)
                 date_key = planned_date.isoformat()
-                progress = progress_state.get(date_key, {})
+                progress_date = planned_date - timedelta(days=1) if phase == "mcq_revision" else planned_date
+                progress = progress_state.get(progress_date.isoformat(), {})
                 if not isinstance(progress, dict):
                     progress = {}
+                if phase == "mcq_revision" and not progress:
+                    legacy_progress = progress_state.get(date_key, {})
+                    if isinstance(legacy_progress, dict):
+                        progress = legacy_progress
                 if phase == "study":
                     completed = bool(progress.get("studyDone")) or (not progress and bool(legacy_done.get(date_key)))
                     attempts = ""
