@@ -14,7 +14,6 @@ Keep the command window open while using the tracker. Press Ctrl+C to stop the l
 ## Dashboard
 
 - Daily checklist and completion progress.
-- The daily topic is split into a two-day cycle: Day 1 study, Day 2 MCQ count + revision of the same topic.
 - Two-day topic cycle: Day 1 study, Day 2 MCQ attempt count + revision for the same topic.
 - 9 base subjects and 65 approximate PYQ topic mappings.
 - Subject-wise progress, topic search and completion filters.
