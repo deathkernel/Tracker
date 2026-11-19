@@ -109,6 +109,20 @@ class OllamaChatRequest(BaseModel):
         return value.strip()
 
 
+
+class OllamaPlannerRequest(BaseModel):
+    model: str = Field(min_length=1, max_length=200)
+    context: dict[str, Any] = Field(default_factory=dict)
+    days: int = Field(default=7, ge=3, le=14)
+
+    @field_validator("model")
+    @classmethod
+    def validate_planner_model(cls, value: str) -> str:
+        if not value.strip() or any(char in value for char in "\r\n"):
+            raise ValueError("Choose a valid local Ollama model.")
+        return value.strip()
+
+
 OLLAMA_URL = "http://127.0.0.1:11434"
 
 
@@ -230,6 +244,112 @@ def ollama_chat(request: OllamaChatRequest) -> dict[str, str]:
         raise HTTPException(status_code=502, detail=f"Ollama request failed: {detail}") from exc
     except (OSError, TimeoutError, ValueError, urllib.error.URLError, json.JSONDecodeError) as exc:
         raise HTTPException(status_code=503, detail="Ollama is unavailable or did not respond in time.") from exc
+
+
+@app.post("/api/ollama/plan")
+def ollama_plan(request: OllamaPlannerRequest) -> dict[str, Any]:
+    try:
+        available = ollama_request("/api/tags", timeout=3.0)
+        models = available.get("models", [])
+        names = {
+            item.get("name")
+            for item in models
+            if isinstance(item, dict) and isinstance(item.get("name"), str)
+        }
+        if request.model not in names:
+            raise HTTPException(status_code=400, detail="That model is not installed in Ollama.")
+
+        context = json.dumps(request.context, ensure_ascii=False)[:20000]
+        prompt = (
+            "Create a practical UPSC study schedule for the next "
+            f"{request.days} days using ONLY this Tracker data: {context}. "
+            "Return JSON only with exactly this shape: "
+            '{"schedule":[{"date":"YYYY-MM-DD","blocks":[{"start":"HH:MM","end":"HH:MM",'
+            '"subject":"...","topic":"...","task":"...","type":"study|revision|practice|break"}]}]}. '
+            "Include every date, use 24-hour local time, keep within the daily study-hours goal, "
+            "include breaks, revision and realistic study blocks. Prioritize pending high-priority "
+            "topics and overdue work; do not schedule completed topics as new study. "
+            "Respect the existing two-day topic cycle when it is represented in the context. "
+            "Never create MCQ questions or a question bank; practice blocks may say attempt MCQs "
+            "and record only the count. Do not invent topics: every subject/topic must come from "
+            "the supplied pending topics. Keep the schedule actionable and avoid overlapping blocks."
+        )
+        result = ollama_request(
+            "/api/chat",
+            {
+                "model": request.model,
+                "stream": False,
+                "format": "json",
+                "messages": [
+                    {"role": "system", "content": "You are an autonomous UPSC timetable planner. Return valid JSON only. Never fabricate Tracker data."},
+                    {"role": "user", "content": prompt},
+                ],
+                "options": {"temperature": 0.1},
+            },
+            timeout=180.0,
+        )
+        message = result.get("message", {})
+        raw = message.get("content", "") if isinstance(message, dict) else ""
+        plan = json.loads(raw)
+        days = plan.get("schedule") if isinstance(plan, dict) else None
+        if not isinstance(days, list) or len(days) != request.days:
+            raise ValueError("Ollama returned an incomplete schedule.")
+        normalized = []
+        seen_dates = set()
+        allowed_topics = {
+            (str(subject), str(topic))
+            for item in request.context.get("subjects", [])
+            if isinstance(item, dict)
+            for topic in item.get("pending", [])
+            for subject in [item.get("subject", "")]
+        }
+        for day in days:
+            if not isinstance(day, dict) or not isinstance(day.get("date"), str):
+                raise ValueError("Ollama returned an invalid schedule date.")
+            date = day["date"]
+            if len(date) != 10 or date in seen_dates:
+                raise ValueError("Ollama returned duplicate or invalid dates.")
+            seen_dates.add(date)
+            blocks = day.get("blocks")
+            if not isinstance(blocks, list) or not 1 <= len(blocks) <= 12:
+                raise ValueError("Ollama returned an invalid number of daily blocks.")
+            clean_blocks = []
+            previous_end = ""
+            for block in blocks:
+                if not isinstance(block, dict):
+                    raise ValueError("Ollama returned an invalid schedule block.")
+                start, end = block.get("start"), block.get("end")
+                if not isinstance(start, str) or not isinstance(end, str):
+                    raise ValueError("Schedule blocks need start and end times.")
+                if not all(len(value) == 5 and value[2] == ":" and value[:2].isdigit() and value[3:].isdigit() for value in (start, end)):
+                    raise ValueError("Schedule times must use HH:MM.")
+                if not ("00:00" <= start < "24:00" and "00:00" < end <= "24:00" and start < end):
+                    raise ValueError("Schedule block times are out of range.")
+                if previous_end and start < previous_end:
+                    raise ValueError("Schedule blocks cannot overlap.")
+                previous_end = end
+                subject = str(block.get("subject", ""))[:100]
+                topic = str(block.get("topic", ""))[:200]
+                kind = block.get("type", "study")
+                if kind not in {"study", "revision", "practice", "break"}:
+                    raise ValueError("Schedule block type is invalid.")
+                if kind != "break" and subject and topic and allowed_topics and (subject, topic) not in allowed_topics:
+                    raise ValueError("Ollama suggested a topic outside the pending Tracker syllabus.")
+                clean_blocks.append({
+                    "start": start, "end": end, "subject": subject,
+                    "topic": topic, "task": str(block.get("task", ""))[:300],
+                    "type": kind,
+                })
+            normalized.append({"date": date, "blocks": clean_blocks})
+        normalized.sort(key=lambda item: item["date"])
+        return {"schedule": normalized, "model": request.model}
+    except HTTPException:
+        raise
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:500]
+        raise HTTPException(status_code=502, detail=f"Ollama planner failed: {detail}") from exc
+    except (OSError, TimeoutError, ValueError, TypeError, urllib.error.URLError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=503, detail="Ollama could not build a valid schedule. Retry or choose another local model.") from exc
 
 
 @app.get("/api/health")
