@@ -30,3 +30,17 @@ test("MCQ tracking records counts without rendering a question bank", () => {
   assert.match(script, /How many MCQs did you attempt for this topic/);
   assert.doesNotMatch(script, /questionBank\.forEach|renderQuestionBank/);
 });
+
+test("only dates strictly before today count as overdue", () => {
+  assert.match(script, /const isPlanDateOverdue=\(dateKey,today=localDate\(\)\)=>dateKey<today/);
+  assert.match(script, /isPlanDateOverdue\(studyDateKey,today\)/);
+  assert.match(script, /isPlanDateOverdue\(revisionDateKey,today\)/);
+  assert.match(script, /else if\(date<todayDate\)missed\+\+;else if\(date>todayDate\)upcoming\+\+/);
+  assert.match(script, /if\(date<todayDate\)\{if\(isStudyPlanEntryDone/);
+});
+
+test("missing-topic action opens and highlights the exact overdue roadmap date", () => {
+  assert.match(script, /row\.id="plan-"\+dateKey/);
+  assert.match(script, /getElementById\("plan-"\+dueDate\)/);
+  assert.match(script, /missing-target-row/);
+});
