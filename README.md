@@ -15,7 +15,7 @@ Keep the command window open while using the tracker. Press Ctrl+C to stop the l
 
 - Daily checklist and completion progress.
 - Two-day topic cycle: Day 1 study, Day 2 MCQ attempt count + revision for the same topic.
-- 9 base subjects and 256 curated syllabus topics.
+- 9 base subjects and 288 curated syllabus topics.
 - Subject-wise progress, topic search and completion filters.
 - Weekly roadmap with date, subject and study focus.
 - Study log for focused hours, MCQs, CSAT and notes.

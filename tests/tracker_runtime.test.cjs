@@ -109,3 +109,46 @@ test("revision analytics count due dates rather than permanent historical checkm
   assert.match(script, /revisionSchedule\?\.\[key\]\?\.due_date/);
   assert.match(script, /dueDate<=revisionToday/);
 });
+
+
+test("subject progress crosswalk targets only existing canonical syllabus topics", () => {
+  const subjectData = JSON.parse(script.match(/const SUBJECTS=(\[[\s\S]*?\]);\nconst ROADMAP/)[1]);
+  const mappingStart = script.indexOf("const STUDY_PLAN_TOPIC_ALIASES=");
+  const mappingEnd = script.indexOf(";\nfunction findMatchingSyllabusTopics", mappingStart);
+  assert.ok(mappingStart >= 0 && mappingEnd > mappingStart);
+  const sandbox = { SUBJECTS: subjectData, allSubjects: () => subjectData };
+  require("node:vm").runInNewContext(script.slice(mappingStart, mappingEnd + 1) + "\nthis.crosswalk=STUDY_PLAN_TOPIC_ALIASES;", sandbox);
+  const valid = new Set(subjectData.flatMap(subject => subject.topics.map(([topic]) => subject.name + "::" + topic)));
+  const invalid = [];
+  for (const [planSubject, entries] of Object.entries(sandbox.crosswalk)) {
+    for (const [planTopic, targets] of Object.entries(entries)) {
+      for (const target of targets) if (!valid.has(target)) invalid.push({ planSubject, planTopic, target });
+    }
+  }
+  assert.deepEqual(invalid, []);
+});
+
+test("subject progress mapping supports explicit multi-topic aliases and safe exact fallback", () => {
+  assert.match(script, /function findMatchingSyllabusTopics\(subject,topic\)/);
+  assert.match(script, /const validKeys=new Set\(allSubjects\(\)\.flatMap/);
+  assert.match(script, /return unique\.length===keys\.length&&unique\.length>0&&unique\.every\(key=>validKeys\.has\(key\)\)\?unique:\[\];/);
+  assert.match(script, /"indian temple architecture nagara dravida vesara":\["Art & Culture::Nagara Temples","Art & Culture::Dravida Temples","Art & Culture::Vesara Temples"\]/);
+});
+
+test("subject uncompletion invalidates linked Day 1 records without deleting Day 2 attempt history", () => {
+  assert.match(script, /function syncSyllabusUncompletionToStudyPlan\(subject,topic\)/);
+  assert.match(script, /syncSyllabusUncompletionToStudyPlan\(s\.name,name\)/);
+  assert.match(script, /studyPlanDone\[dateKey\]=false/);
+  assert.match(script, /return entry\.phase==="study"\?!!progress\.studyDone:!!progress\.studyDone&&!!progress\.mcqDone&&!!progress\.revisionDone/);
+});
+
+test("Day 2 mapped revision advances the shared next-review schedule", () => {
+  const revisionSync = script.slice(script.indexOf("async function syncStudyPlanRevisionToSyllabus"), script.indexOf("function revisionDateAfter"));
+  assert.match(revisionSync, /fetch\("\/api\/revision\/next"/);
+  assert.match(revisionSync, /state\.revisionSchedule\[key\]=await response\.json\(\)/);
+  assert.match(script, /await syncStudyPlanRevisionToSyllabus\(entry\)/);
+});
+
+test("empty custom subjects render zero progress instead of NaN", () => {
+  assert.match(script, /s\.topics\.length\?Math\.round\(done\/s\.topics\.length\*100\):0/);
+});
