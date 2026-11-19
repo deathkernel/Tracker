@@ -33,6 +33,7 @@ def test_state_round_trip_preserves_strict_exam_data(client):
     payload = {
         **initial.json(),
         "topics": {"Polity::Fundamental Rights": True},
+        "studyPlanProgress": {"2026-11-17": {"studyDone": True}, "2026-11-18": {"mcqDone": True, "revisionDone": True, "mcqCount": 18}},
         "questionBank": [{
             "id": "q-1",
             "subject": "Polity",
@@ -52,6 +53,7 @@ def test_state_round_trip_preserves_strict_exam_data(client):
     restored = client.get("/api/state").json()
     assert restored["version"] == 1
     assert restored["topics"] == payload["topics"]
+    assert restored["studyPlanProgress"] == payload["studyPlanProgress"]
     assert restored["questionBank"] == payload["questionBank"]
     assert restored["masteryProgress"] == payload["masteryProgress"]
     assert restored["examSession"] == payload["examSession"]
