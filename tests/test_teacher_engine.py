@@ -127,4 +127,22 @@ def test_teacher_can_test_due_completed_topics_without_opening_pending_topics():
     context["due_revision_topics"] = build_due_revision_queue(
         context["completed_topics"], context["revision_schedule"], "2026-11-19"
     )
-    assert ("Polity", "Basic Structure") in server.teacher_allowed_topics(context)
+    from server import teacher_allowed_topics
+
+    assert ("Polity", "Basic Structure") in teacher_allowed_topics(context)
+
+
+
+def test_due_revision_queue_treats_legacy_completed_topics_as_due():
+    from teacher_engine import build_due_revision_queue
+
+    result = build_due_revision_queue(
+        [{"subject": "Polity", "topic": "Fundamental Rights"}],
+        {},
+        "2026-11-19",
+    )
+    assert result == [{
+        "subject": "Polity",
+        "topic": "Fundamental Rights",
+        "due_date": "2026-11-19",
+    }]
