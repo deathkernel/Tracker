@@ -908,6 +908,7 @@ function getTrackerAiContext(){
 let aiPlannerDraft=null;
 function renderAiTodaySchedule(){
  const host=$("overviewDailySchedule");if(!host)return;
+ host.querySelector(".ai-today-schedule")?.remove();
  const day=(state.aiSchedule||[]).find(item=>item.date===localDate());if(!day)return;
  const section=document.createElement("section");section.className="ai-today-schedule";
  const heading=document.createElement("h3");heading.textContent="AI-generated timetable · Today";section.append(heading);
@@ -938,7 +939,7 @@ async function generateAiSchedule(){
  }catch(error){aiPlannerDraft=null;$("aiPlannerPreview").textContent=error.message||"Ollama could not generate a schedule."}
  finally{button.disabled=false;button.textContent="Generate my schedule";}
 }
-async function applyAiSchedule(){
+async async function applyAiSchedule(){
  if(!Array.isArray(aiPlannerDraft)||!aiPlannerDraft.length)return;
  const dates=aiPlannerDraft.map(day=>day.date);
  if(new Set(dates).size!==dates.length){notify("The generated schedule has duplicate dates. Generate it again.");return}
