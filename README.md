@@ -34,9 +34,9 @@ The tracker records daily MCQ counts, study hours, CSAT minutes and notes. It tr
 
 The Charts section provides built-in dashboard visuals for syllabus completion, subject progress, revision status, study hours, MCQ counts and study consistency. Power BI export is optional and is not required for normal Tracker use.
 
-The optional AI Study Assistant connects to Ollama at `http://127.0.0.1:11434` and automatically lists models already installed on this PC. Start Ollama before opening the assistant, then choose a local model. The assistant can review pending topics, suggest daily study priorities and summarize progress. It does not mark topics complete or edit study records automatically.
+The floating AI Study Planner connects to Ollama at `http://127.0.0.1:11434` and automatically lists models already installed on this PC. Open the floating planner, choose a local model, and generate a 7- or 14-day timetable from the current pending syllabus, study-hour goal and recent study logs. Review the proposed time blocks, then explicitly apply the schedule to save it in Tracker. The current day’s AI timetable is also shown on the overview. Existing study-plan completion records are preserved. The separate AI Assistant chat remains available as an optional secondary feature.
 
-Tracker sends the selected prompt and a compact progress summary only to the local Ollama service. It does not call a hosted AI API. If Ollama is not running, the rest of Tracker continues to work normally.
+Tracker sends the selected prompt or planning context only to the local Ollama service. It does not call a hosted AI API. AI-generated schedules are validated against pending syllabus topics and checked for duplicate dates and overlapping time blocks. If Ollama is not running, the rest of Tracker continues to work normally.
 
 ## Personal data and privacy
 
