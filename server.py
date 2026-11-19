@@ -564,7 +564,7 @@ async def teacher_background_loop() -> None:
     while True:
         try:
             await asyncio.to_thread(run_teacher_cycle)
-        except (OSError, ValueError, KeyError, TypeError, urllib.error.URLError, json.JSONDecodeError):
+        except Exception:
             pass
         await asyncio.sleep(60)
 
@@ -623,11 +623,13 @@ def respond_to_teacher(request: TeacherResponseRequest) -> dict[str, Any]:
 
     with database_session() as connection:
         row = connection.execute(
-            "SELECT prompt, subject, topic FROM teacher_events WHERE id = ?",
+            "SELECT prompt, subject, topic, answer FROM teacher_events WHERE id = ?",
             (request.event_id,),
         ).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Teacher question not found.")
+    if row[3] is not None:
+        raise HTTPException(status_code=409, detail="This teacher question has already been answered.")
 
     try:
         result = ollama_request(
@@ -666,10 +668,12 @@ def respond_to_teacher(request: TeacherResponseRequest) -> dict[str, Any]:
         connection.execute(
             """
             UPDATE teacher_events SET answer = ?, feedback = ?, answered_at = ?
-            WHERE id = ?
+            WHERE id = ? AND answer IS NULL
             """,
             (request.answer.strip(), feedback.strip(), answered_at, request.event_id),
         )
+        if connection.execute("SELECT changes()").fetchone()[0] != 1:
+            raise HTTPException(status_code=409, detail="This teacher question has already been answered.")
     return {"event_id": request.event_id, "feedback": feedback.strip()}
 
 
