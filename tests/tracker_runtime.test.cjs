@@ -18,7 +18,7 @@ test("syllabus and revision completion handlers exist", () => {
 test("two-day progress is normalized and persisted in browser state", () => {
   assert.match(script, /studyPlanProgress=Object\.fromEntries/);
   assert.match(script, /studyPlanProgress:\{\}/);
-  assert.match(script, /state\.studyPlanProgress\[today\]=progress/);
+  assert.match(script, /state\.studyPlanProgress\[entry\.progressDateKey\]=progress/);
 });
 
 test("missing-topic navigation opens the actual plan page", () => {
