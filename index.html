@@ -383,7 +383,7 @@ const WEEKLY=[["topics","Finish planned topics"],["pyqs","Solve relevant PYQs"],
 const STORE="upsc-dashboard-v2";
 const $=id=>document.getElementById(id);
 const localDate=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-")};
-const defaultState=()=>({version:0,topics:{},daily:{},weekly:{},logs:{},studyPlanDone:{},revisionDone:{},settings:{targetDate:"2027-05-23",studyGoal:4,theme:"light"},customSubjects:[],customDaily:[]});
+const defaultState=()=>({version:0,topics:{},daily:{},weekly:{},logs:{},studyPlanDone:{},studyPlanProgress:{},revisionDone:{},settings:{targetDate:"2027-05-23",studyGoal:4,theme:"light"},customSubjects:[],customDaily:[]});
 function normalizeProgressState(value){
  const source=value&&typeof value==="object"&&!Array.isArray(value)?value:{};
  const next={...defaultState(),...source};
@@ -392,9 +392,10 @@ function normalizeProgressState(value){
  next.testResults=Array.isArray(source.testResults)?source.testResults:[];
  next.errorNotebook=Array.isArray(source.errorNotebook)?source.errorNotebook:[];
  next.pendingTopicEvidence=source.pendingTopicEvidence&&typeof source.pendingTopicEvidence==="object"&&!Array.isArray(source.pendingTopicEvidence)?source.pendingTopicEvidence:{};
+ next.studyPlanProgress=Object.fromEntries(Object.entries(source.studyPlanProgress&&typeof source.studyPlanProgress==="object"&&!Array.isArray(source.studyPlanProgress)?source.studyPlanProgress:{}).filter(([key,item])=>/^\d{4}-\d{2}-\d{2}$/.test(key)&&item&&typeof item==="object"&&!Array.isArray(item)).map(([key,item])=>[key,{studyDone:!!item.studyDone,mcqDone:!!item.mcqDone,revisionDone:!!item.revisionDone,mcqCount:Number.isInteger(item.mcqCount)&&item.mcqCount>=0&&item.mcqCount<=500?item.mcqCount:0,mcqLogged:!!item.mcqLogged}]));
  next.customSubjects=(Array.isArray(source.customSubjects)?source.customSubjects:[]).filter(item=>item&&typeof item.name==="string"&&item.name.trim()).map(item=>({name:item.name.trim(),topics:(Array.isArray(item.topics)?item.topics:[]).filter(topic=>Array.isArray(topic)&&typeof topic[0]==="string"&&topic[0].trim()).map(topic=>[topic[0].trim(),Number.isFinite(Number(topic[1]))?Number(topic[1]):null,typeof topic[2]==="string"?topic[2]:"P2"])}));
  next.customDaily=(Array.isArray(source.customDaily)?source.customDaily:[]).filter(item=>Array.isArray(item)&&item.length>=2&&typeof item[0]==="string"&&typeof item[1]==="string"&&item[1].trim()).map(item=>[item[0],item[1].trim(),String(item[2]||""),String(item[3]||"Personal task")]);
- for(const key of ["topics","daily","weekly","logs","studyPlanDone","revisionDone","settings"]){if(!next[key]||typeof next[key]!=="object"||Array.isArray(next[key]))next[key]={};}
+ for(const key of ["topics","daily","weekly","logs","studyPlanDone","studyPlanProgress","revisionDone","settings"]){if(!next[key]||typeof next[key]!=="object"||Array.isArray(next[key]))next[key]={};}
  next.version=Number.isInteger(Number(source.version))&&Number(source.version)>=0?Number(source.version):0;
  const subjects=SUBJECTS.map(subject=>({name:subject.name,topics:[...subject.topics]}));
  next.customSubjects.forEach(custom=>{let group=subjects.find(subject=>subject.name.toLowerCase()===custom.name.toLowerCase());if(!group){group={name:custom.name,topics:[]};subjects.push(group)}custom.topics.forEach(topic=>{if(!group.topics.some(item=>item[0].toLowerCase()===topic[0].toLowerCase()))group.topics.push(topic)})});
@@ -405,8 +406,8 @@ function normalizeProgressState(value){
 }
 let saveQueue=Promise.resolve(),localMutationVersion=0;
 let state=normalizeProgressState(readState());
-function readState(){try{const v=JSON.parse(localStorage.getItem(STORE)||"{}");return normalizeProgressState(v)}catch{return defaultState()}}
-function persist(){try{state=normalizeProgressState(state);const mutation=++localMutationVersion;localStorage.setItem(STORE,JSON.stringify(state));const snapshot=JSON.parse(JSON.stringify(state));saveQueue=saveQueue.then(async()=>{const payload={...snapshot,version:state.version||0};const response=await fetch("/api/state",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});if(response.status===409){notify("Tracker changed on another device. Reload before saving again.");throw new Error("State version conflict")}if(!response.ok)throw new Error("Database sync failed");const result=await response.json();state.version=result.version;if(mutation===localMutationVersion)localStorage.setItem(STORE,JSON.stringify(state));}).catch(error=>{if(error.message!=="State version conflict")notify("Local backup saved, but database sync failed. Keep the app running and retry.");});return true}catch{notify("Could not save. Export a backup and check browser storage.");return false}}
+function readState(){const raw=localStorage.getItem(STORE);try{return normalizeProgressState(JSON.parse(raw||"{}"))}catch(error){if(raw){try{if(!localStorage.getItem(STORE+"-recovery"))localStorage.setItem(STORE+"-recovery",JSON.stringify({savedAt:new Date().toISOString(),reason:"The browser progress JSON was corrupt. The original raw value was preserved for recovery.",raw}))}catch{}}return defaultState()}}
+function persist(){try{state=normalizeProgressState(state);const mutation=++localMutationVersion;localStorage.setItem(STORE,JSON.stringify(state));const snapshot=JSON.parse(JSON.stringify(state));saveQueue=saveQueue.then(async()=>{const payload={...snapshot,version:state.version||0};const response=await fetch("/api/state",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});if(response.status===409){notify("Tracker changed on another device. Reload before saving again.");throw new Error("State version conflict")}if(!response.ok)throw new Error("Database sync failed");const result=await response.json();state.version=result.version;if(mutation===localMutationVersion)localStorage.setItem(STORE,JSON.stringify(state));}).catch(error=>{if(error.message!=="State version conflict")notify("Local backup saved, but database sync failed. Keep the app running and retry.");});return saveQueue}catch{notify("Could not save. Export a backup and check browser storage.");return Promise.resolve(false)}}
 function notify(message){const el=$("toast");el.textContent=message;el.classList.add("show");clearTimeout(notify.timer);notify.timer=setTimeout(()=>el.classList.remove("show"),2200)}
 const allSubjects=()=>{
  const subjects=SUBJECTS.map(subject=>({name:subject.name,topics:[...subject.topics]}));
@@ -440,6 +441,24 @@ function renderSubjectOverview(){
  const body=document.createElement("tbody");
  allSubjects().forEach(s=>{const done=s.topics.filter(t=>state.topics[s.name+"::"+t[0]]).length,p=Math.round(done/s.topics.length*100);const row=document.createElement("tr");const name=document.createElement("td");name.textContent=s.name;const count=document.createElement("td");count.textContent=done+" / "+s.topics.length;const progress=document.createElement("td");const wrap=document.createElement("div");wrap.className="table-progress";const bar=document.createElement("span");bar.style.width=p+"%";wrap.append(bar);const pct=document.createElement("small");pct.textContent=p+"%";progress.append(wrap,pct);row.append(name,count,progress);body.append(row)});
  table.append(body);host.append(table);$("subjectCount").textContent=allSubjects().length+" subjects";
+}
+function completeTopicWithMastery(subject,topic){
+ const key=subject+"::"+topic;
+ state.topics=state.topics||{};
+ state.topics[key]=true;
+ state.revisionDone=state.revisionDone||{};
+ if(!state.revisionDone[key])delete state.revisionDone[key];
+ persist();
+ renderAll();
+}
+function completeScheduledRevision(subject,topic){
+ const key=subject+"::"+topic;
+ if(!state.topics?.[key]){notify("Complete the topic before marking its revision done.");renderRevision();return;}
+ state.revisionDone=state.revisionDone||{};
+ state.revisionDone[key]=true;
+ persist();
+ renderRevision();
+ renderCharts();
 }
 function renderTopics(){
  const host=$("topicChecklist"),q=$("topicSearch").value.trim().toLowerCase(),filter=$("subjectFilter").value,status=$("topicStatus").value;host.innerHTML="";
@@ -480,7 +499,7 @@ function renderMissingTopics(){
   if(studyPast&&!studyDone)phases.push("study");
   if(revisionPast&&!revisionDone)phases.push("mcq_revision");
   if(!phases.length)continue;
-  overdue.push({subject:studyEntry.subject,topic:studyEntry.topic,phases,dueDate:phases.includes("study")?studyDateKey:revisionDateKey});
+  overdue.push({subject:studyEntry.subject,topic:studyEntry.topic,phases,studyDueDate:studyDateKey,revisionDueDate:revisionDateKey});
  }
  const table=document.createElement("table");table.className="data-table topic-table";
  table.innerHTML="<thead><tr><th>Overdue phase</th><th>Subject</th><th>Missing topic</th><th>Due date</th><th>Action</th></tr></thead>";
@@ -488,16 +507,17 @@ function renderMissingTopics(){
  overdue.forEach(item=>{
   if(subjectFilter!=="all"&&subjectFilter!==item.subject)return;
   if(!item.topic.toLowerCase().includes(query))return;
-  const matchingPhase=phaseFilter==="all"||item.phases.includes(phaseFilter);
-  if(!matchingPhase)return;
+  const displayPhases=phaseFilter==="all"?item.phases:item.phases.filter(phase=>phase===phaseFilter);
+  if(!displayPhases.length)return;
   shown++;
   const row=document.createElement("tr");
-  const phaseCell=document.createElement("td");phaseCell.textContent=item.phases.map(phase=>phase==="study"?"Study pending":"MCQ + Revision pending").join(" · ");
+  const phaseCell=document.createElement("td");phaseCell.textContent=displayPhases.map(phase=>phase==="study"?"Study pending":"MCQ + Revision pending").join(" · ");
   const subjectCell=document.createElement("td");subjectCell.textContent=item.subject;
   const topicCell=document.createElement("td");topicCell.textContent=item.topic;
-  const dateCell=document.createElement("td");dateCell.textContent=new Date(item.dueDate+"T00:00:00").toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
+  const dueDate=displayPhases.includes("study")?item.studyDueDate:item.revisionDueDate;
+  const dateCell=document.createElement("td");dateCell.textContent=new Date(dueDate+"T00:00:00").toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
   const actionCell=document.createElement("td"),button=document.createElement("button");button.type="button";button.className="btn";button.textContent="Open in Roadmap";
-  button.addEventListener("click",()=>{setWorkspaceView("roadmap");});
+  button.addEventListener("click",()=>{setWorkspaceView("plan");$("roadmap")?.scrollIntoView({behavior:"smooth",block:"start"});});
   actionCell.append(button);row.append(phaseCell,subjectCell,topicCell,dateCell,actionCell);body.append(row);
  });
  table.append(body);const wrap=document.createElement("div");wrap.className="data-table-wrap";wrap.append(table);host.append(wrap);
@@ -583,6 +603,7 @@ function isStudyPlanEntryDone(entry){
  if(!entry)return false;
  const key=entry.dateKey;
  const progress=state.studyPlanProgress?.[key]||{};
+ if(!Object.keys(progress).length)return !!state.studyPlanDone?.[key];
  return entry.phase==="study"?!!progress.studyDone:!!progress.mcqDone&&!!progress.revisionDone;
 }
 function markStudyPlanPhaseComplete(entry){
@@ -678,8 +699,8 @@ function renderCharts(){
  const validPlanDates=new Set();DAILY_STUDY_PLAN.forEach((entry,index)=>{const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);validPlanDates.add(localDateKey(date));});
  const planTotal=validPlanDates.size,planDone=Object.entries(state.studyPlanDone||{}).filter(([key,value])=>validPlanDates.has(key)&&!!value).length,planPending=Math.max(0,planTotal-planDone);
  const today=localDate(),dailyState=state.daily[today]||{},dailyTotal=dailyItems().length,dailyDone=dailyItems().filter(item=>dailyState[item[0]]).length,dailyPending=Math.max(0,dailyTotal-dailyDone);
- const todayDate=new Date(today+"T00:00:00"),planStart=new Date(2026,10,17);let pastCompleted=0,missed=0;
- DAILY_STUDY_PLAN.forEach((week,weekIndex)=>week.days.forEach((topic,dayIndex)=>{const date=new Date(planStart);date.setDate(planStart.getDate()+weekIndex*7+dayIndex);const key=[date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-");if(date<=todayDate){if(state.studyPlanDone&&state.studyPlanDone[key])pastCompleted++;else missed++;}}));
+ const todayDate=new Date(today+"T00:00:00");let pastCompleted=0,missed=0;
+ DAILY_STUDY_PLAN.forEach((entry,index)=>{const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);const key=localDateKey(date);if(date<=todayDate){if(isStudyPlanEntryDone({...entry,dateKey:key}))pastCompleted++;else missed++;}});
  const p1Topics=allSubjects().flatMap(subject=>subject.topics.map(topic=>({subject:subject.name,name:topic[0],priority:topic[2]}))).filter(topic=>topic.priority==="P1");
  const p1Done=p1Topics.filter(topic=>!!state.topics[topic.subject+"::"+topic.name]).length;
  const metrics=[
@@ -784,7 +805,7 @@ $("saveLog").addEventListener("click",()=>{const date=$("logDate").value;if(!/^\
 $("clearLog").addEventListener("click",()=>{["logHours","logMcq","logCsat","logNotes"].forEach(id=>$(id).value="")});
 $("exportBtn").addEventListener("click",()=>{const blob=new Blob([JSON.stringify({version:2,exportedAt:new Date().toISOString(),data:state},null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="upsc-2027-progress-backup.json";a.click();URL.revokeObjectURL(url);notify("Backup exported.")});
 $("importBtn").addEventListener("click",()=>$("importFile").click());
-async function replaceProgressState(incoming){await saveQueue;let version=Number(state.version)||0;try{const response=await fetch("/api/state");if(response.ok){const remote=await response.json();if(Number.isInteger(Number(remote.version))&&Number(remote.version)>=0)version=Number(remote.version)}}catch{}state=normalizeProgressState({...incoming,version});persist();renderAll()}
+async function replaceProgressState(incoming){await saveQueue;let version=Number(state.version)||0;try{const response=await fetch("/api/state");if(response.ok){const remote=await response.json();if(Number.isInteger(Number(remote.version))&&Number(remote.version)>=0)version=Number(remote.version)}}catch{}state=normalizeProgressState({...incoming,version});await persist();renderAll();const response=await fetch("/api/state");if(!response.ok)throw new Error("Backup is saved in this browser, but SQLite could not confirm the import.");const saved=normalizeProgressState(await response.json());const expected={...state,version:0},actual={...saved,version:0};if(JSON.stringify(expected)!==JSON.stringify(actual))throw new Error("Backup is saved locally, but SQLite verification did not match. Keep the browser backup and retry.");state=saved;localStorage.setItem(STORE,JSON.stringify(state));renderAll()}
 $("importFile").addEventListener("change",async e=>{const file=e.target.files[0];if(!file)return;try{if(file.size>10*1024*1024)throw new Error("Backup files must be 10 MB or smaller.");const parsed=JSON.parse(await file.text()),incoming=parsed?.data??parsed;if(!incoming||typeof incoming!=="object"||Array.isArray(incoming)||!incoming.topics||typeof incoming.topics!=="object"||Array.isArray(incoming.topics)||!incoming.logs||typeof incoming.logs!=="object"||Array.isArray(incoming.logs))throw new Error("This file is not a valid UPSC tracker backup.");if(!confirm("Import backup and replace the progress currently saved in this browser?"))return;await replaceProgressState(incoming);notify("Backup imported successfully.")}catch(err){notify(err.message||"Could not import backup.")}finally{e.target.value=""}});
 $("resetBtn").addEventListener("click",async()=>{if(confirm("Reset study progress, logs and revision records? Your custom subjects, daily tasks and settings will be preserved. Export a backup first if you may need the progress.")){const current=state;const reset={...defaultState(),version:current.version,settings:current.settings,customSubjects:current.customSubjects,customDaily:current.customDaily};if(Array.isArray(current.questionBank))reset.questionBank=current.questionBank;await replaceProgressState(reset);$("logHours").value="";$("logMcq").value="";$("logCsat").value="";$("logNotes").value="";notify("Study progress reset. Your custom setup was preserved.")}});
 
