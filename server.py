@@ -460,15 +460,18 @@ def teacher_allowed_topics(context: dict[str, Any]) -> set[tuple[str, str]]:
         (str(item.get("subject", "")), str(topic))
         for item in context.get("subjects", [])
         if isinstance(item, dict)
+        and isinstance(item.get("pending", []), list)
         for topic in item.get("pending", [])
     }
-    allowed.update(
-        (item["subject"], item["topic"])
-        for item in context.get("due_revision_topics", [])
-        if isinstance(item, dict)
-        and isinstance(item.get("subject"), str)
-        and isinstance(item.get("topic"), str)
-    )
+    due_topics = context.get("due_revision_topics", [])
+    if isinstance(due_topics, list):
+        allowed.update(
+            (item["subject"], item["topic"])
+            for item in due_topics
+            if isinstance(item, dict)
+            and isinstance(item.get("subject"), str)
+            and isinstance(item.get("topic"), str)
+        )
     return allowed
 
 
