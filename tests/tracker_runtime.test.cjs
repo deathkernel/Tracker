@@ -109,3 +109,81 @@ test("revision analytics count due dates rather than permanent historical checkm
   assert.match(script, /revisionSchedule\?\.\[key\]\?\.due_date/);
   assert.match(script, /dueDate<=revisionToday/);
 });
+
+
+test("subject progress crosswalk targets only existing canonical syllabus topics", () => {
+  const subjectData = JSON.parse(script.match(/const SUBJECTS=(\[[\s\S]*?\]);\nconst ROADMAP/)[1]);
+  const mappingStart = script.indexOf("const STUDY_PLAN_TOPIC_ALIASES=");
+  const mappingEnd = script.indexOf(";\nfunction findMatchingSyllabusTopics", mappingStart);
+  assert.ok(mappingStart >= 0 && mappingEnd > mappingStart);
+  const sandbox = { SUBJECTS: subjectData, allSubjects: () => subjectData };
+  require("node:vm").runInNewContext(script.slice(mappingStart, mappingEnd + 1) + "\nthis.crosswalk=STUDY_PLAN_TOPIC_ALIASES;", sandbox);
+  const valid = new Set(subjectData.flatMap(subject => subject.topics.map(([topic]) => subject.name + "::" + topic)));
+  const invalid = [];
+  for (const [planSubject, entries] of Object.entries(sandbox.crosswalk)) {
+    for (const [planTopic, targets] of Object.entries(entries)) {
+      for (const target of targets) if (!valid.has(target)) invalid.push({ planSubject, planTopic, target });
+    }
+  }
+  assert.deepEqual(invalid, []);
+});
+
+test("subject progress mapping supports explicit multi-topic aliases and safe exact fallback", () => {
+  assert.match(script, /function findMatchingSyllabusTopics\(subject,topic\)/);
+  assert.match(script, /const validKeys=new Set\(allSubjects\(\)\.flatMap/);
+  assert.match(script, /return unique\.length===keys\.length&&unique\.length>0&&unique\.every\(key=>validKeys\.has\(key\)\)\?unique:\[\];/);
+  assert.match(script, /"indian temple architecture nagara dravida vesara":\["Art & Culture::Nagara Temples","Art & Culture::Dravida Temples","Art & Culture::Vesara Temples"\]/);
+});
+
+test("subject uncompletion invalidates linked Day 1 records without deleting Day 2 attempt history", () => {
+  assert.match(script, /function syncSyllabusUncompletionToStudyPlan\(subject,topic\)/);
+  assert.match(script, /syncSyllabusUncompletionToStudyPlan\(s\.name,name\)/);
+  assert.match(script, /studyPlanDone\[studyDateKey\]=false/);
+  assert.match(script, /studyPlanDone\[revisionDateKey\]=false/);
+  assert.match(script, /return entry\.phase==="study"\?!!progress\.studyDone:!!progress\.studyDone&&!!progress\.mcqDone&&!!progress\.revisionDone/);
+});
+
+test("Day 2 mapped revision advances the shared next-review schedule", () => {
+  const revisionSync = script.slice(script.indexOf("async function syncStudyPlanRevisionToSyllabus"), script.indexOf("function revisionDateAfter"));
+  assert.match(revisionSync, /fetch\("\/api\/revision\/next"/);
+  assert.match(revisionSync, /state\.revisionSchedule\[key\]=await response\.json\(\)/);
+  assert.match(script, /await syncStudyPlanRevisionToSyllabus\(entry\)/);
+});
+
+test("empty custom subjects render zero progress instead of NaN", () => {
+  assert.match(script, /s\.topics\.length\?Math\.round\(done\/s\.topics\.length\*100\):0/);
+});
+
+
+test("legacy Day 2 records cannot override an explicit Day 1 uncompletion", () => {
+  const progress = script.slice(script.indexOf("function getStudyPlanProgress(entry)"), script.indexOf("function getStudyPlanEntry("));
+  assert.match(progress, /studyDone:!!progress\.studyReset\?false:!!\(progress\.studyDone\|\|legacy\.studyDone\)/);
+  assert.match(script, /studyReset:!!item\.studyReset/);
+  assert.match(script, /state\.studyPlanProgress\[revisionDateKey\]=\{\.\.\.getStudyPlanProgress\(\{\.\.\.revisionEntry,dateKey:revisionDateKey\}\),studyDone:false,studyReset:true\}/);
+  assert.match(script, /state\.studyPlanDone\[revisionDateKey\]=false/);
+});
+
+test("remaining subject-labelled lessons are either mapped or explicitly classified as activities", () => {
+  assert.match(script, /"systems government full polity":\["Polity::Systems of Government"\]/);
+  assert.match(script, /"indices hdi cpi wpi other indicators":\["Economy::Economic Indicators and Indices","Economy::CPI and WPI"\]/);
+  assert.match(script, /"scientific developments in current affairs":\["Science & Technology::Emerging Tech"\]/);
+});
+
+
+test("subject progress mapping executes exact multi-topic aliases", () => {
+  const subjectData = JSON.parse(script.match(/const SUBJECTS=(\[[\s\S]*?\]);\nconst ROADMAP/)[1]);
+  const start = script.indexOf("function normalizePlanTopic(value){");
+  const end = script.indexOf("function syncSyllabusCompletionToStudyPlan(subject,topic)", start);
+  assert.ok(start >= 0 && end > start);
+  const sandbox = { allSubjects: () => subjectData };
+  require("node:vm").runInNewContext(script.slice(start, end) + "\nthis.resolve=findMatchingSyllabusTopics;", sandbox);
+  assert.deepEqual(Array.from(sandbox.resolve("Art & Culture", "Indian temple architecture: Nagara, Dravida, Vesara")), [
+    "Art & Culture::Nagara Temples",
+    "Art & Culture::Dravida Temples",
+    "Art & Culture::Vesara Temples"
+  ]);
+  assert.deepEqual(Array.from(sandbox.resolve("Modern History", "Rise of British power and expansion")), [
+    "History::Rise of British Power and Expansion"
+  ]);
+  assert.deepEqual(Array.from(sandbox.resolve("Mock Tests", "Full GS mock test 2 + analysis")), []);
+});

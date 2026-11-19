@@ -385,7 +385,7 @@ body.dark .today-topic-card.is-complete{background:linear-gradient(135deg,#191f2
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
-const SUBJECTS=[{"name":"History","topics":[["Modern India",91,"P1"],["Ancient Medieval",53,"P1"],["Indus Valley Sites",null,"P2"],["Harappan Culture",null,"P2"],["Early Vedic Period",null,"P2"],["Later Vedic Period",null,"P2"],["Mahajanapadas",null,"P2"],["Buddhist Councils",null,"P2"],["Buddhist Philosophy",null,"P2"],["Jain Sects",null,"P2"],["Mauryan Administration",null,"P2"],["Ashoka's Edicts",null,"P2"],["Post-Mauryan Kingdoms",null,"P2"],["Sangam Age",null,"P2"],["Gupta Administration",null,"P2"],["Harsha",null,"P2"],["Ancient Universities",null,"P2"],["Ancient Science",null,"P2"],["Rock-cut Architecture",null,"P2"],["Chola Administration",null,"P2"],["Delhi Sultanate",null,"P2"],["Vijayanagara Empire",null,"P2"],["Bahmani Kingdom",null,"P2"],["Mughal Mansabdari",null,"P2"],["Mughal Revenue System",null,"P2"],["Bhakti Movement",null,"P2"],["Sufi Orders",null,"P2"]]},{"name":"Economy","topics":[["Money and Banking",63,"P1"],["Economic Planning",42,"P1"],["International Trade",40,"P1"],["Agriculture",31,"P1"],["Balance of Payments",14,"P1"],["Subsidies Welfare",12,"P1"],["Government Budget",11,"P1"],["Industrial Policy",6,"P1"],["National Income Accounting",5,"P1"],["Poverty Inequality",5,"P1"],["RBI Monetary Tools",null,"P2"],["Repo and Reverse Repo",null,"P2"],["CRR and SLR",null,"P2"],["Open Market Operations",null,"P2"],["Bank Regulation",null,"P2"],["NPAs",null,"P2"],["Priority Sector Lending",null,"P2"],["Payment Banks",null,"P2"],["Digital Payments and UPI",null,"P2"],["Financial Inclusion",null,"P2"],["Money Supply",null,"P2"],["CPI and WPI",null,"P2"],["Inflation Types",null,"P2"],["Fiscal Policy",null,"P2"],["Government Receipts",null,"P2"],["Direct and Indirect Taxes",null,"P2"],["GST",null,"P2"],["Public Debt",null,"P2"],["Disinvestment",null,"P2"],["Current Account",null,"P2"],["Capital Account",null,"P2"],["Exchange Rates",null,"P2"],["Forex Reserves",null,"P2"],["FDI and FPI",null,"P2"],["Trade Deficit",null,"P2"],["Trade Agreements and Trade Barriers",null,"P2"],["Export Promotion",null,"P2"],["IMF and World Bank",null,"P2"],["GDP and GVA",null,"P2"],["National Income",null,"P2"]]},{"name":"Polity","topics":[["Governance",44,"P1"],["Fundamental Rights",25,"P1"],["Statutory Bodies",20,"P1"],["Judiciary",19,"P1"],["Executive",14,"P1"],["Federalism",13,"P1"],["Legislature",11,"P1"],["Philosophy of Constitution",7,"P1"],["Political Process",6,"P1"],["Constitutional Bodies",6,"P1"],["Polity International Relations",6,"P1"],["Election System",5,"P1"],["Scheduled Tribal Areas",5,"P1"],["Constitutional development",null,"P2"],["Constituent Assembly",null,"P2"],["Preamble",null,"P2"],["Union and Territory",null,"P2"],["Citizenship",null,"P2"],["Right to Equality",null,"P2"],["Right to Freedom",null,"P2"],["Right against Exploitation",null,"P2"],["Freedom of Religion",null,"P2"],["Cultural and Educational Rights",null,"P2"],["Constitutional Remedies and Writs",null,"P2"],["DPSP",null,"P2"],["Fundamental Duties",null,"P2"],["Basic Structure",null,"P2"],["Constitutional Amendments",null,"P2"],["Parliamentary Privileges",null,"P2"],["Lok Sabha",null,"P2"],["Rajya Sabha",null,"P2"],["Money Bill and Finance Bill",null,"P2"],["Parliamentary Committees",null,"P2"],["Anti-Defection Law",null,"P2"],["President",null,"P2"],["Vice-President",null,"P2"],["Prime Minister and Council",null,"P2"],["Governor",null,"P2"],["State Council of Ministers",null,"P2"],["Supreme Court",null,"P2"],["High Courts",null,"P2"],["Judicial Review",null,"P2"],["Tribunals",null,"P2"]]},{"name":"Environment","topics":[["Ecosystem",42,"P1"],["Biodiversity",36,"P1"],["Climate Change",30,"P1"],["Conservation",23,"P1"],["Environmental Issues",17,"P1"],["International Conventions",7,"P1"],["Food Chains and Webs",null,"P2"],["Ecological Pyramids",null,"P2"],["Energy Flow",null,"P2"],["Ecological Succession",null,"P2"],["Biomes",null,"P2"],["Species Interactions",null,"P2"],["Invasive Species",null,"P2"],["IUCN Categories",null,"P2"],["Keystone Species",null,"P2"],["Biodiversity Hotspots",null,"P2"],["Genetic Diversity",null,"P2"],["Biosphere Reserves",null,"P2"],["National Parks",null,"P2"],["Wildlife Sanctuaries",null,"P2"],["Ramsar Wetlands",null,"P2"],["Mangroves",null,"P2"],["Coral Conservation",null,"P2"],["Forest Conservation",null,"P2"],["Wildlife Protection Act",null,"P2"],["Forest Laws",null,"P2"],["Environment Protection Act",null,"P2"],["Biological Diversity Act",null,"P2"],["Environmental Impact Assessment",null,"P2"],["Air Pollution",null,"P2"],["Water Pollution",null,"P2"]]},{"name":"Geography","topics":[["Physical Geography",34,"P1"],["Climatology",21,"P1"],["Settlements",19,"P1"],["Human Geography",15,"P1"],["Population",15,"P1"],["India Water Resources",14,"P1"],["Hydrosphere",6,"P1"],["Geomorphology",6,"P1"],["Atmosphere",6,"P1"],["India Population",5,"P1"],["Earth Interior",null,"P2"],["Plate Tectonics",null,"P2"],["Continental Drift",null,"P2"],["Volcanoes and Earthquakes",null,"P2"],["Weathering",null,"P2"],["Fluvial Landforms",null,"P2"],["Glacial Landforms",null,"P2"],["Coastal Landforms",null,"P2"],["Atmospheric Layers",null,"P2"],["Heat Budget",null,"P2"],["Temperature Inversion",null,"P2"],["Pressure Belts",null,"P2"],["Jet Streams",null,"P2"],["Monsoon Mechanism",null,"P2"],["Western Disturbances",null,"P2"],["Cyclones",null,"P2"],["Air Masses",null,"P2"],["Clouds and Rainfall",null,"P2"],["Ocean Floor",null,"P2"],["Ocean Currents",null,"P2"],["Tides",null,"P2"],["Coral Reefs",null,"P2"],["El Nino and La Nina",null,"P2"],["Indian Drainage",null,"P2"],["Indian Soils",null,"P2"]]},{"name":"Science & Technology","topics":[["Space and Defence",27,"P1"],["Human Health",26,"P1"],["Digital and IT",18,"P1"],["Basic Science",17,"P1"],["Energy Tech",16,"P1"],["Emerging Tech",15,"P1"],["Ecology",13,"P1"],["Biotechnology",11,"P1"],["Food Production",8,"P1"],["Cell Biology",null,"P2"],["DNA and RNA",null,"P2"],["Genetic Engineering",null,"P2"],["CRISPR",null,"P2"],["Stem Cells",null,"P2"],["Vaccines",null,"P2"],["Immune System",null,"P2"],["Antibiotic Resistance",null,"P2"],["Pathogens",null,"P2"],["Medical Diagnostics",null,"P2"],["Nutrition and Deficiency",null,"P2"],["Communicable Diseases",null,"P2"],["Non-communicable Diseases",null,"P2"],["Human Physiology",null,"P2"],["Biotechnology Applications",null,"P2"],["Bioinformatics",null,"P2"],["Synthetic Biology",null,"P2"],["Nanomaterials",null,"P2"],["Semiconductors",null,"P2"],["Artificial Intelligence",null,"P2"],["Quantum Computing",null,"P2"],["Blockchain",null,"P2"],["Cybersecurity",null,"P2"],["5G Technology",null,"P2"],["Internet of Things",null,"P2"]]},{"name":"International Relations","topics":[["United Nations",null,"P2"],["UN Security Council",null,"P2"],["WTO",null,"P2"],["IMF",null,"P2"],["World Bank",null,"P2"],["ASEAN",null,"P2"],["SAARC",null,"P2"],["BIMSTEC",null,"P2"],["BRICS",null,"P2"],["G20",null,"P2"],["International Court of Justice",null,"P2"],["International Criminal Court",null,"P2"]]},{"name":"Art & Culture","topics":[["Classical Dances",null,"P2"],["Folk Dances",null,"P2"],["Hindustani Music",null,"P2"],["Carnatic Music",null,"P2"],["Musical Instruments",null,"P2"],["Miniature Paintings",null,"P2"],["Mural Traditions",null,"P2"],["Buddhist Architecture",null,"P2"],["Jain Architecture",null,"P2"],["Nagara Temples",null,"P2"],["Dravida Temples",null,"P2"],["Vesara Temples",null,"P2"],["Indo-Islamic Architecture",null,"P2"],["UNESCO Heritage",null,"P2"]]},{"name":"Current-linked GS","topics":[["Government Schemes",null,"P2"],["International Reports",null,"P2"],["Indian Government Reports",null,"P2"],["Places in News",null,"P2"],["Species in News",null,"P2"],["Protected Areas in News",null,"P2"],["Space Missions in News",null,"P2"],["International Summits",null,"P2"],["Global Declarations",null,"P2"],["National Missions",null,"P2"],["Health Initiatives",null,"P2"],["Climate Initiatives",null,"P2"],["Energy Initiatives",null,"P2"],["Defence Developments",null,"P2"],["Digital Governance",null,"P2"],["Agriculture Initiatives",null,"P2"],["Social Sector Programmes",null,"P2"],["Important Indices",null,"P2"],["International Groupings",null,"P2"],["Current Science Developments",null,"P2"]]}];
+const SUBJECTS=[{"name":"History","topics":[["Modern India",91,"P1"],["Ancient Medieval",53,"P1"],["Indus Valley Sites",null,"P2"],["Harappan Culture",null,"P2"],["Early Vedic Period",null,"P2"],["Later Vedic Period",null,"P2"],["Mahajanapadas",null,"P2"],["Buddhist Councils",null,"P2"],["Buddhist Philosophy",null,"P2"],["Jain Sects",null,"P2"],["Mauryan Administration",null,"P2"],["Ashoka's Edicts",null,"P2"],["Post-Mauryan Kingdoms",null,"P2"],["Sangam Age",null,"P2"],["Gupta Administration",null,"P2"],["Harsha",null,"P2"],["Ancient Universities",null,"P2"],["Ancient Science",null,"P2"],["Rock-cut Architecture",null,"P2"],["Chola Administration",null,"P2"],["Delhi Sultanate",null,"P2"],["Vijayanagara Empire",null,"P2"],["Bahmani Kingdom",null,"P2"],["Mughal Mansabdari",null,"P2"],["Mughal Revenue System",null,"P2"],["Bhakti Movement",null,"P2"],["Sufi Orders",null,"P2"],["Rise of British Power and Expansion",null,"P2"],["Economic Impact of British Rule",null,"P2"],["Revolt of 1857",null,"P2"],["Administrative Changes after 1857",null,"P2"],["Socio-Religious Reform Movements",null,"P2"],["Education, Press and Intellectual Awakening",null,"P2"],["Formation of INC and Early Nationalism",null,"P2"],["Moderates and Extremists",null,"P2"],["Partition of Bengal and Swadeshi Movement",null,"P2"],["Revolutionary Activities and Home Rule",null,"P2"],["Gandhian Movements 1918–1922",null,"P2"],["National Movement 1923–1929",null,"P2"],["Prehistoric Cultures and Ancient Sites",null,"P2"],["Ancient Ports, Sites and Important Terms",null,"P2"],["Regional Kingdoms Overview",null,"P2"],["Mughal Rulers",null,"P2"],["Early Medieval Regional Powers",null,"P2"],["Medieval Architecture, Literature and Sources",null,"P2"]]},{"name":"Economy","topics":[["Money and Banking",63,"P1"],["Economic Planning",42,"P1"],["International Trade",40,"P1"],["Agriculture",31,"P1"],["Balance of Payments",14,"P1"],["Subsidies Welfare",12,"P1"],["Government Budget",11,"P1"],["Industrial Policy",6,"P1"],["National Income Accounting",5,"P1"],["Poverty Inequality",5,"P1"],["RBI Monetary Tools",null,"P2"],["Repo and Reverse Repo",null,"P2"],["CRR and SLR",null,"P2"],["Open Market Operations",null,"P2"],["Bank Regulation",null,"P2"],["NPAs",null,"P2"],["Priority Sector Lending",null,"P2"],["Payment Banks",null,"P2"],["Digital Payments and UPI",null,"P2"],["Financial Inclusion",null,"P2"],["Money Supply",null,"P2"],["CPI and WPI",null,"P2"],["Inflation Types",null,"P2"],["Fiscal Policy",null,"P2"],["Government Receipts",null,"P2"],["Direct and Indirect Taxes",null,"P2"],["GST",null,"P2"],["Public Debt",null,"P2"],["Disinvestment",null,"P2"],["Current Account",null,"P2"],["Capital Account",null,"P2"],["Exchange Rates",null,"P2"],["Forex Reserves",null,"P2"],["FDI and FPI",null,"P2"],["Trade Deficit",null,"P2"],["Trade Agreements and Trade Barriers",null,"P2"],["Export Promotion",null,"P2"],["IMF and World Bank",null,"P2"],["GDP and GVA",null,"P2"],["National Income",null,"P2"],["Capital Market and Securities",null,"P2"],["Money Market and Financial Instruments",null,"P2"],["Economic Reports and Schemes",null,"P2"],["Economic Indicators and Indices",null,"P2"]]},{"name":"Polity","topics":[["Governance",44,"P1"],["Fundamental Rights",25,"P1"],["Statutory Bodies",20,"P1"],["Judiciary",19,"P1"],["Executive",14,"P1"],["Federalism",13,"P1"],["Legislature",11,"P1"],["Philosophy of Constitution",7,"P1"],["Political Process",6,"P1"],["Constitutional Bodies",6,"P1"],["Polity International Relations",6,"P1"],["Election System",5,"P1"],["Scheduled Tribal Areas",5,"P1"],["Constitutional development",null,"P2"],["Constituent Assembly",null,"P2"],["Preamble",null,"P2"],["Union and Territory",null,"P2"],["Citizenship",null,"P2"],["Right to Equality",null,"P2"],["Right to Freedom",null,"P2"],["Right against Exploitation",null,"P2"],["Freedom of Religion",null,"P2"],["Cultural and Educational Rights",null,"P2"],["Constitutional Remedies and Writs",null,"P2"],["DPSP",null,"P2"],["Fundamental Duties",null,"P2"],["Basic Structure",null,"P2"],["Constitutional Amendments",null,"P2"],["Parliamentary Privileges",null,"P2"],["Lok Sabha",null,"P2"],["Rajya Sabha",null,"P2"],["Money Bill and Finance Bill",null,"P2"],["Parliamentary Committees",null,"P2"],["Anti-Defection Law",null,"P2"],["President",null,"P2"],["Vice-President",null,"P2"],["Prime Minister and Council",null,"P2"],["Governor",null,"P2"],["State Council of Ministers",null,"P2"],["Supreme Court",null,"P2"],["High Courts",null,"P2"],["Judicial Review",null,"P2"],["Tribunals",null,"P2"],["Emergency Provisions",null,"P2"],["Systems of Government",null,"P2"]]},{"name":"Environment","topics":[["Ecosystem",42,"P1"],["Biodiversity",36,"P1"],["Climate Change",30,"P1"],["Conservation",23,"P1"],["Environmental Issues",17,"P1"],["International Conventions",7,"P1"],["Food Chains and Webs",null,"P2"],["Ecological Pyramids",null,"P2"],["Energy Flow",null,"P2"],["Ecological Succession",null,"P2"],["Biomes",null,"P2"],["Species Interactions",null,"P2"],["Invasive Species",null,"P2"],["IUCN Categories",null,"P2"],["Keystone Species",null,"P2"],["Biodiversity Hotspots",null,"P2"],["Genetic Diversity",null,"P2"],["Biosphere Reserves",null,"P2"],["National Parks",null,"P2"],["Wildlife Sanctuaries",null,"P2"],["Ramsar Wetlands",null,"P2"],["Mangroves",null,"P2"],["Coral Conservation",null,"P2"],["Forest Conservation",null,"P2"],["Wildlife Protection Act",null,"P2"],["Forest Laws",null,"P2"],["Environment Protection Act",null,"P2"],["Biological Diversity Act",null,"P2"],["Environmental Impact Assessment",null,"P2"],["Air Pollution",null,"P2"],["Water Pollution",null,"P2"],["Soil Pollution",null,"P2"],["Noise Pollution",null,"P2"],["Renewable Energy and Sustainability",null,"P2"],["Environmental Reports and Indices",null,"P2"],["Agriculture and Environment",null,"P2"]]},{"name":"Geography","topics":[["Physical Geography",34,"P1"],["Climatology",21,"P1"],["Settlements",19,"P1"],["Human Geography",15,"P1"],["Population",15,"P1"],["India Water Resources",14,"P1"],["Hydrosphere",6,"P1"],["Geomorphology",6,"P1"],["Atmosphere",6,"P1"],["India Population",5,"P1"],["Earth Interior",null,"P2"],["Plate Tectonics",null,"P2"],["Continental Drift",null,"P2"],["Volcanoes and Earthquakes",null,"P2"],["Weathering",null,"P2"],["Fluvial Landforms",null,"P2"],["Glacial Landforms",null,"P2"],["Coastal Landforms",null,"P2"],["Atmospheric Layers",null,"P2"],["Heat Budget",null,"P2"],["Temperature Inversion",null,"P2"],["Pressure Belts",null,"P2"],["Jet Streams",null,"P2"],["Monsoon Mechanism",null,"P2"],["Western Disturbances",null,"P2"],["Cyclones",null,"P2"],["Air Masses",null,"P2"],["Clouds and Rainfall",null,"P2"],["Ocean Floor",null,"P2"],["Ocean Currents",null,"P2"],["Tides",null,"P2"],["Coral Reefs",null,"P2"],["El Nino and La Nina",null,"P2"],["Indian Drainage",null,"P2"],["Indian Soils",null,"P2"],["Natural Vegetation",null,"P2"],["World Mapping",null,"P2"],["Indian Mapping",null,"P2"],["Resources, Industries and Transport",null,"P2"],["Agriculture and Land Use",null,"P2"]]},{"name":"Science & Technology","topics":[["Space and Defence",27,"P1"],["Human Health",26,"P1"],["Digital and IT",18,"P1"],["Basic Science",17,"P1"],["Energy Tech",16,"P1"],["Emerging Tech",15,"P1"],["Ecology",13,"P1"],["Biotechnology",11,"P1"],["Food Production",8,"P1"],["Cell Biology",null,"P2"],["DNA and RNA",null,"P2"],["Genetic Engineering",null,"P2"],["CRISPR",null,"P2"],["Stem Cells",null,"P2"],["Vaccines",null,"P2"],["Immune System",null,"P2"],["Antibiotic Resistance",null,"P2"],["Pathogens",null,"P2"],["Medical Diagnostics",null,"P2"],["Nutrition and Deficiency",null,"P2"],["Communicable Diseases",null,"P2"],["Non-communicable Diseases",null,"P2"],["Human Physiology",null,"P2"],["Biotechnology Applications",null,"P2"],["Bioinformatics",null,"P2"],["Synthetic Biology",null,"P2"],["Nanomaterials",null,"P2"],["Semiconductors",null,"P2"],["Artificial Intelligence",null,"P2"],["Quantum Computing",null,"P2"],["Blockchain",null,"P2"],["Cybersecurity",null,"P2"],["5G Technology",null,"P2"],["Internet of Things",null,"P2"],["Nuclear Technology and Applications",null,"P2"]]},{"name":"International Relations","topics":[["United Nations",null,"P2"],["UN Security Council",null,"P2"],["WTO",null,"P2"],["IMF",null,"P2"],["World Bank",null,"P2"],["ASEAN",null,"P2"],["SAARC",null,"P2"],["BIMSTEC",null,"P2"],["BRICS",null,"P2"],["G20",null,"P2"],["International Court of Justice",null,"P2"],["International Criminal Court",null,"P2"]]},{"name":"Art & Culture","topics":[["Classical Dances",null,"P2"],["Folk Dances",null,"P2"],["Hindustani Music",null,"P2"],["Carnatic Music",null,"P2"],["Musical Instruments",null,"P2"],["Miniature Paintings",null,"P2"],["Mural Traditions",null,"P2"],["Buddhist Architecture",null,"P2"],["Jain Architecture",null,"P2"],["Nagara Temples",null,"P2"],["Dravida Temples",null,"P2"],["Vesara Temples",null,"P2"],["Indo-Islamic Architecture",null,"P2"],["UNESCO Heritage",null,"P2"]]},{"name":"Current-linked GS","topics":[["Government Schemes",null,"P2"],["International Reports",null,"P2"],["Indian Government Reports",null,"P2"],["Places in News",null,"P2"],["Species in News",null,"P2"],["Protected Areas in News",null,"P2"],["Space Missions in News",null,"P2"],["International Summits",null,"P2"],["Global Declarations",null,"P2"],["National Missions",null,"P2"],["Health Initiatives",null,"P2"],["Climate Initiatives",null,"P2"],["Energy Initiatives",null,"P2"],["Defence Developments",null,"P2"],["Digital Governance",null,"P2"],["Agriculture Initiatives",null,"P2"],["Social Sector Programmes",null,"P2"],["Important Indices",null,"P2"],["International Groupings",null,"P2"],["Current Science Developments",null,"P2"]]}];
 const ROADMAP=[
 ["17–23 Nov 2026","Polity","Constitution, Preamble, Parliament, Fundamental Rights, Miscellaneous Acts"],
 ["24–30 Nov 2026","Polity","DPSP, Schedules & Parts, Constitutional Concepts, Supreme Court & High Courts"],
@@ -430,7 +430,7 @@ function normalizeProgressState(value){
  next.testResults=Array.isArray(source.testResults)?source.testResults:[];
  next.errorNotebook=Array.isArray(source.errorNotebook)?source.errorNotebook:[];
  next.pendingTopicEvidence=source.pendingTopicEvidence&&typeof source.pendingTopicEvidence==="object"&&!Array.isArray(source.pendingTopicEvidence)?source.pendingTopicEvidence:{};
- next.studyPlanProgress=Object.fromEntries(Object.entries(source.studyPlanProgress&&typeof source.studyPlanProgress==="object"&&!Array.isArray(source.studyPlanProgress)?source.studyPlanProgress:{}).filter(([key,item])=>/^\d{4}-\d{2}-\d{2}$/.test(key)&&item&&typeof item==="object"&&!Array.isArray(item)).map(([key,item])=>[key,{studyDone:!!item.studyDone,mcqDone:!!item.mcqDone,revisionDone:!!item.revisionDone,mcqCount:Number.isInteger(item.mcqCount)&&item.mcqCount>=0&&item.mcqCount<=500?item.mcqCount:0,mcqLogged:!!item.mcqLogged}]));
+ next.studyPlanProgress=Object.fromEntries(Object.entries(source.studyPlanProgress&&typeof source.studyPlanProgress==="object"&&!Array.isArray(source.studyPlanProgress)?source.studyPlanProgress:{}).filter(([key,item])=>/^\d{4}-\d{2}-\d{2}$/.test(key)&&item&&typeof item==="object"&&!Array.isArray(item)).map(([key,item])=>[key,{studyDone:!!item.studyDone,mcqDone:!!item.mcqDone,revisionDone:!!item.revisionDone,mcqCount:Number.isInteger(item.mcqCount)&&item.mcqCount>=0&&item.mcqCount<=500?item.mcqCount:0,mcqLogged:!!item.mcqLogged,studyReset:!!item.studyReset}]));
  next.customSubjects=(Array.isArray(source.customSubjects)?source.customSubjects:[]).filter(item=>item&&typeof item.name==="string"&&item.name.trim()).map(item=>({name:item.name.trim(),topics:(Array.isArray(item.topics)?item.topics:[]).filter(topic=>Array.isArray(topic)&&typeof topic[0]==="string"&&topic[0].trim()).map(topic=>[topic[0].trim(),Number.isFinite(Number(topic[1]))?Number(topic[1]):null,typeof topic[2]==="string"?topic[2]:"P2"])}));
  next.customDaily=(Array.isArray(source.customDaily)?source.customDaily:[]).filter(item=>Array.isArray(item)&&item.length>=2&&typeof item[0]==="string"&&typeof item[1]==="string"&&item[1].trim()).map(item=>[item[0],item[1].trim(),String(item[2]||""),String(item[3]||"Personal task")]);
  for(const key of ["topics","daily","weekly","logs","studyPlanDone","studyPlanProgress","revisionDone","settings"]){if(!next[key]||typeof next[key]!=="object"||Array.isArray(next[key]))next[key]={};}
@@ -477,11 +477,11 @@ function renderSubjectOverview(){
  const table=document.createElement("table");table.className="data-table";
  table.innerHTML="<thead><tr><th>Subject</th><th>Topics completed</th><th>Progress</th></tr></thead>";
  const body=document.createElement("tbody");
- allSubjects().forEach(s=>{const done=s.topics.filter(t=>state.topics[s.name+"::"+t[0]]).length,p=Math.round(done/s.topics.length*100);const row=document.createElement("tr");const name=document.createElement("td");name.textContent=s.name;const count=document.createElement("td");count.textContent=done+" / "+s.topics.length;const progress=document.createElement("td");const wrap=document.createElement("div");wrap.className="table-progress";const bar=document.createElement("span");bar.style.width=p+"%";wrap.append(bar);const pct=document.createElement("small");pct.textContent=p+"%";progress.append(wrap,pct);row.append(name,count,progress);body.append(row)});
+ allSubjects().forEach(s=>{const done=s.topics.filter(t=>state.topics[s.name+"::"+t[0]]).length,p=s.topics.length?Math.round(done/s.topics.length*100):0;const row=document.createElement("tr");const name=document.createElement("td");name.textContent=s.name;const count=document.createElement("td");count.textContent=done+" / "+s.topics.length;const progress=document.createElement("td");const wrap=document.createElement("div");wrap.className="table-progress";const bar=document.createElement("span");bar.style.width=p+"%";wrap.append(bar);const pct=document.createElement("small");pct.textContent=p+"%";progress.append(wrap,pct);row.append(name,count,progress);body.append(row)});
  table.append(body);host.append(table);$("subjectCount").textContent=allSubjects().length+" subjects";
 }
 function normalizePlanTopic(value){
- return String(value||"").toLowerCase().replace(/directive principles of state policy/g,"dpsp").replace(/union and its territory/g,"union and territory").replace(/goods and services tax/g,"gst").replace(/reserve bank of india/g,"rbi").replace(/[^a-z0-9 ]/g," ").replace(/\b(the|and|of|its|for|with|from|overview|key|important|major|core|basics|introduction|revision|test|pyqs|pyq|practice|analysis)\b/g," ").replace(/\s+/g," ").trim();
+ return String(value||"").toLowerCase().replace(/\b(the|and|of|its|for|with|from|overview|key|important|major|core|basics|introduction|revision|test|pyqs|pyq|practice|analysis)\b/g," ").replace(/\s+/g," ").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
 }
 function syllabusSubjectForPlan(subject){
  const name=String(subject||"").toLowerCase();
@@ -494,96 +494,100 @@ function syllabusSubjectForPlan(subject){
  if(name==="art & culture")return "Art & Culture";
  return "";
 }
-const STUDY_PLAN_TOPIC_ALIASES={
- "polity":{
-  "constitutional development and historical background":"Constitutional development",
-  "constituent assembly and making the constitution":"Constituent Assembly",
-  "preamble keywords philosophy":"Preamble",
-  "union and its territory":"Union and Territory",
-  "citizenship provisions":"Citizenship",
-  "fundamental rights overview articles":"Fundamental Rights",
-  "right to constitutional remedies":"Constitutional Remedies and Writs",
-  "directive principles of state policy":"DPSP",
-  "fundamental duties and":"Fundamental Duties",
-  "union executive":"Executive","parliament":"Legislature",
-  "supreme court and high courts":"Judiciary"
- },
- "economy":{
-  "money banking and financial system":"Money and Banking",
-  "rbi and monetary policy":"RBI Monetary Tools",
-  "monetary policy tools":"RBI Monetary Tools",
-  "fiscal policy and budget":"Government Budget",
-  "inflation and price indices":"CPI and WPI",
-  "national income and gdp":"National Income Accounting",
-  "balance of payments and external sector":"Balance of Payments",
-  "international trade and trade policy":"International Trade",
-  "goods and services tax":"GST"
- },
- "geography":{
-  "physical features of india":"Physical Geography",
-  "indian monsoon":"Climatology",
-  "rivers and water resources of india":"India Water Resources",
-  "population and demographics":"Population",
-  "human settlements":"Settlements"
- },
- "environment":{
-  "ecosystem structure and function":"Ecosystem",
-  "biodiversity conservation":"Biodiversity",
-  "climate change and global warming":"Climate Change",
-  "environmental conventions":"International Conventions"
- },
- "science & technology":{
-  "space technology and applications":"Space Technology",
-  "biotechnology and applications":"Biotechnology"
- },
- "art & culture":{
-  "indian architecture":"Architecture",
-  "indian paintings":"Painting",
-  "dance music and theatre":"Performing Arts"
- }
-};
-function findMatchingSyllabusTopic(subject,topic){
+const STUDY_PLAN_TOPIC_ALIASES={"polity":{"constitutional development historical background":["Polity::Constitutional development"],"constituent assembly making constitution":["Polity::Constituent Assembly"],"preamble keywords philosophy":["Polity::Preamble"],"union territory":["Polity::Union and Territory"],"citizenship provisions":["Polity::Citizenship"],"fundamental rights articles":["Polity::Fundamental Rights"],"fundamental rights cases":["Polity::Fundamental Rights"],"directive principles state policy":["Polity::DPSP"],"fundamental duties their comparison dpsp":["Polity::Fundamental Duties"],"parliament composition sessions officers":["Polity::Legislature"],"parliament legislative procedure":["Polity::Legislature"],"president india":["Polity::President"],"prime minister council ministers":["Polity::Prime Minister and Council"],"supreme court jurisdiction powers":["Polity::Supreme Court"],"high courts":["Polity::High Courts"],"constitutional statutory bodies":["Polity::Constitutional Bodies","Polity::Statutory Bodies"],"emergency provisions":["Polity::Emergency Provisions"],"right to equality":["Polity::Right to Equality"],"right against exploitation":["Polity::Right against Exploitation"],"right to constitutional remedies":["Polity::Constitutional Remedies and Writs"],"systems government full polity":["Polity::Systems of Government"]},"modern history":{"rise british power expansion":["History::Rise of British Power and Expansion"],"economic impact british rule":["History::Economic Impact of British Rule"],"revolt 1857 causes consequences":["History::Revolt of 1857"],"administrative changes after 1857":["History::Administrative Changes after 1857"],"socio religious reform movements":["History::Socio-Religious Reform Movements"],"education press intellectual awakening":["History::Education, Press and Intellectual Awakening"],"formation inc early nationalism":["History::Formation of INC and Early Nationalism"],"moderates extremists":["History::Moderates and Extremists"],"partition bengal swadeshi movement":["History::Partition of Bengal and Swadeshi Movement"],"revolutionary activities home rule":["History::Revolutionary Activities and Home Rule"],"gandhian movements 1918 1922":["History::Gandhian Movements 1918–1922"],"national movement 1923 1929":["History::National Movement 1923–1929"]},"ancient history":{"prehistoric cultures ancient sites":["History::Prehistoric Cultures and Ancient Sites"],"harappan civilization town planning":["History::Harappan Culture"],"early vedic period":["History::Early Vedic Period"],"mahajanapadas":["History::Mahajanapadas"],"mauryan empire administration":["History::Mauryan Administration"],"post mauryan period trade":["History::Post-Mauryan Kingdoms"]},"ancient + medieval history":{"gupta empire administration":["History::Gupta Administration"],"ancient art literature science":["History::Ancient Science"],"ancient ports sites important terms":["History::Ancient Ports, Sites and Important Terms"],"regional kingdoms overview":["History::Regional Kingdoms Overview"],"vijayanagara empire administration culture":["History::Vijayanagara Empire"],"delhi sultanate dynasties administration":["History::Delhi Sultanate"]},"medieval history":{"mughal empire rulers":["History::Mughal Rulers"],"mughal administration":["History::Mughal Mansabdari","History::Mughal Revenue System"],"bhakti movement":["History::Bhakti Movement"],"sufi movement":["History::Sufi Orders"],"early medieval india regional powers":["History::Early Medieval Regional Powers"],"architecture literature important sources":["History::Medieval Architecture, Literature and Sources"]},"art & culture":{"buddhism core teachings":["History::Buddhist Philosophy"],"jainism core teachings":["History::Jain Sects"],"indian temple architecture nagara dravida vesara":["Art & Culture::Nagara Temples","Art & Culture::Dravida Temples","Art & Culture::Vesara Temples"],"buddhist jain architecture stupas caves":["Art & Culture::Buddhist Architecture","Art & Culture::Jain Architecture"],"indian painting traditions schools":["Art & Culture::Miniature Paintings","Art & Culture::Mural Traditions"],"classical dances music cultural institutions":["Art & Culture::Classical Dances","Art & Culture::Hindustani Music","Art & Culture::Carnatic Music","Art & Culture::Musical Instruments"]},"economy":{"national income gdp gnp":["Economy::GDP and GVA","Economy::National Income Accounting"],"economic growth development sectors":["Economy::Economic Planning"],"money functions supply monetary aggregates":["Economy::Money Supply"],"reserve bank india functions":["Economy::RBI Monetary Tools"],"indian banking system":["Economy::Money and Banking","Economy::Bank Regulation"],"inflation types causes control":["Economy::CPI and WPI","Economy::Inflation Types"],"government budget receipts expenditure":["Economy::Government Budget"],"fiscal deficit revenue deficit frbm":["Economy::Fiscal Policy","Economy::Government Budget","Economy::Public Debt"],"goods services tax gst":["Economy::GST"],"subsidies public finance":["Economy::Subsidies Welfare"],"agriculture cropping seasons patterns":["Economy::Agriculture"],"msp pds food security agricultural reforms":["Economy::Agriculture","Economy::Subsidies Welfare"],"balance payments":["Economy::Balance of Payments"],"exchange rates forex reserves external trade":["Economy::Exchange Rates","Economy::Forex Reserves","Economy::International Trade"],"international monetary fund imf":["Economy::IMF and World Bank"],"industry infrastructure core sectors":["Economy::Industrial Policy"],"disinvestment privatisation industrial policy":["Economy::Disinvestment","Economy::Industrial Policy"],"capital market sebi securities":["Economy::Capital Market and Securities"],"money market financial instruments":["Economy::Money Market and Financial Instruments"],"capital market mutual funds":["Economy::Capital Market and Securities"],"employment poverty inequality":["Economy::Poverty Inequality"],"government schemes economic reports":["Economy::Economic Reports and Schemes"],"economic survey concepts data":["Economy::Economic Reports and Schemes"],"indices hdi cpi wpi other indicators":["Economy::Economic Indicators and Indices","Economy::CPI and WPI"]},"environment":{"ecology ecosystem food chain food web":["Environment::Ecosystem","Environment::Food Chains and Webs"],"ecological pyramids succession biomes":["Environment::Ecological Pyramids","Environment::Ecological Succession","Environment::Biomes"],"levels biodiversity":["Environment::Biodiversity"],"species endemic endangered invasive":["Environment::Invasive Species","Environment::Species Interactions"],"iucn categories important species":["Environment::IUCN Categories"],"protected areas national parks sanctuaries":["Environment::National Parks","Environment::Wildlife Sanctuaries"],"air pollution sources control":["Environment::Air Pollution"],"water soil noise pollution":["Environment::Water Pollution","Environment::Soil Pollution","Environment::Noise Pollution"],"wildlife protection act 1972":["Environment::Wildlife Protection Act"],"international conventions protocols":["Environment::International Conventions"],"climate change causes impacts":["Environment::Climate Change"],"unfccc framework objectives":["Environment::International Conventions","Environment::Climate Change"],"renewable energy sustainability":["Environment::Renewable Energy and Sustainability"],"agriculture soil health environment":["Environment::Agriculture and Environment"],"wetlands forests conservation":["Environment::Ramsar Wetlands","Environment::Forest Conservation"],"biosphere reserves ramsar sites":["Environment::Biosphere Reserves","Environment::Ramsar Wetlands"],"environmental impact assessment":["Environment::Environmental Impact Assessment"],"important environmental reports indices":["Environment::Environmental Reports and Indices"]},"geography":{"interior earth":["Geography::Earth Interior"],"geomorphology landforms processes":["Geography::Geomorphology"],"layers atmosphere":["Geography::Atmospheric Layers","Geography::Atmosphere"],"winds monsoon indian climate":["Geography::Climatology","Geography::Monsoon Mechanism","Geography::Jet Streams"],"indian rivers drainage systems":["Geography::Indian Drainage","Geography::India Water Resources"],"soils natural vegetation agriculture":["Geography::Indian Soils","Geography::Natural Vegetation","Geography::Agriculture and Land Use"],"ocean floor currents tides":["Geography::Ocean Floor","Geography::Ocean Currents","Geography::Tides"],"ocean temperature salinity coral reefs":["Geography::Hydrosphere","Geography::Coral Reefs"],"world mapping continents countries straits":["Geography::World Mapping"],"indian mapping rivers dams mountain ranges":["Geography::Indian Mapping"],"resources industries transport":["Geography::Resources, Industries and Transport"],"population human geography":["Geography::Population","Geography::India Population","Geography::Human Geography"]},"science & technology":{"internet computer networks":["Science & Technology::Digital and IT"],"artificial intelligence quantum emerging tech":["Science & Technology::Artificial Intelligence","Science & Technology::Quantum Computing","Science & Technology::Emerging Tech"],"space missions launch vehicles satellites":["Science & Technology::Space and Defence"],"isro programmes applications":["Science & Technology::Space and Defence"],"dna genes":["Science & Technology::DNA and RNA"],"vaccines diagnostics bioinformatics":["Science & Technology::Vaccines","Science & Technology::Medical Diagnostics","Science & Technology::Bioinformatics"],"human health immunity nutrition":["Science & Technology::Human Health","Science & Technology::Immune System","Science & Technology::Nutrition and Deficiency"],"pathogens infectious diseases":["Science & Technology::Pathogens","Science & Technology::Communicable Diseases"],"defence technology missile systems":["Science & Technology::Space and Defence"],"nuclear technology applications":["Science & Technology::Nuclear Technology and Applications"],"nanotechnology materials":["Science & Technology::Nanomaterials"],"scientific developments in current affairs":["Science & Technology::Emerging Tech"]}};
+function findMatchingSyllabusTopics(subject,topic){
  const syllabusSubject=syllabusSubjectForPlan(subject);
- if(!syllabusSubject)return null;
+ if(!syllabusSubject)return [];
  const group=allSubjects().find(item=>item.name===syllabusSubject);
- if(!group)return null;
+ if(!group)return [];
  const planName=normalizePlanTopic(topic);
- if(!planName)return null;
+ if(!planName)return [];
  const aliases=STUDY_PLAN_TOPIC_ALIASES[String(subject||"").toLowerCase()]||{};
- const alias=Object.entries(aliases).find(([name])=>normalizePlanTopic(name)===planName)?.[1];
- const target=alias?normalizePlanTopic(alias):planName;
- const matches=group.topics.filter(([name])=>normalizePlanTopic(name)===target);
- return matches.length===1?syllabusSubject+"::"+matches[0][0]:null;
+ const matches=Object.entries(aliases).filter(([name])=>normalizePlanTopic(name)===planName);
+ let keys=[];
+ if(matches.length>1)return [];
+ if(matches.length===1)keys=matches[0][1];
+ else{
+  const exact=group.topics.filter(([name])=>normalizePlanTopic(name)===planName);
+  if(exact.length!==1)return [];
+  keys=[syllabusSubject+"::"+exact[0][0]];
+ }
+ const validKeys=new Set(allSubjects().flatMap(item=>item.topics.map(([name])=>item.name+"::"+name)));
+ const unique=[...new Set(keys)];
+ return unique.length===keys.length&&unique.length>0&&unique.every(key=>validKeys.has(key))?unique:[];
+}
+function findMatchingSyllabusTopic(subject,topic){
+ const keys=findMatchingSyllabusTopics(subject,topic);
+ return keys.length===1?keys[0]:null;
 }
 function syncSyllabusCompletionToStudyPlan(subject,topic){
- const key=findMatchingSyllabusTopic(subject,topic);
- if(!key)return;
- const canonicalSubject=key.split("::")[0],canonicalTopic=key.slice(canonicalSubject.length+2);
- if(canonicalSubject!==subject||canonicalTopic!==topic)return;
+ const key=subject+"::"+topic;
+ if(!validTopicKeys().has(key))return;
  DAILY_STUDY_PLAN.forEach((entry,index)=>{
-  if(entry.phase!=="study"||findMatchingSyllabusTopic(entry.subject,entry.topic)!==key)return;
+  if(entry.phase!=="study")return;
+  const keys=findMatchingSyllabusTopics(entry.subject,entry.topic);
+  if(!keys.includes(key)||!keys.every(mappedKey=>!!state.topics?.[mappedKey]))return;
   const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);
   const dateKey=localDateKey(date),progressKey=getStudyPlanProgressDateKey({...entry,dateKey});
   state.studyPlanProgress=state.studyPlanProgress||{};
-  state.studyPlanProgress[progressKey]={...getStudyPlanProgress({...entry,dateKey}),studyDone:true};
+  state.studyPlanProgress[progressKey]={...getStudyPlanProgress({...entry,dateKey}),studyDone:true,studyReset:false};
   state.studyPlanDone=state.studyPlanDone||{};
   state.studyPlanDone[dateKey]=true;
  });
 }
+function syncSyllabusUncompletionToStudyPlan(subject,topic){
+ const key=subject+"::"+topic;
+ DAILY_STUDY_PLAN.forEach((entry,index)=>{
+  if(entry.phase!=="study"||!findMatchingSyllabusTopics(entry.subject,entry.topic).includes(key))return;
+  const studyDate=new Date(CYCLE_START_DATE+"T00:00:00");studyDate.setDate(studyDate.getDate()+index);
+  const studyDateKey=localDateKey(studyDate),studyProgressKey=getStudyPlanProgressDateKey({...entry,dateKey:studyDateKey});
+  const studyProgress={...getStudyPlanProgress({...entry,dateKey:studyDateKey}),studyDone:false,studyReset:true};
+  state.studyPlanProgress=state.studyPlanProgress||{};
+  state.studyPlanProgress[studyProgressKey]=studyProgress;
+  state.studyPlanDone=state.studyPlanDone||{};
+  state.studyPlanDone[studyDateKey]=false;
+  const revisionEntry=DAILY_STUDY_PLAN[index+1];
+  if(revisionEntry?.phase==="mcq_revision"){
+   const revisionDate=new Date(CYCLE_START_DATE+"T00:00:00");revisionDate.setDate(revisionDate.getDate()+index+1);
+   const revisionDateKey=localDateKey(revisionDate);
+   state.studyPlanProgress[revisionDateKey]={...getStudyPlanProgress({...revisionEntry,dateKey:revisionDateKey}),studyDone:false,studyReset:true};
+   state.studyPlanDone[revisionDateKey]=false;
+  }
+ });
+}
 function syncStudyPlanCompletionToSyllabus(entry){
  if(!entry||entry.phase!=="study")return;
- const key=findMatchingSyllabusTopic(entry.subject,entry.topic);
- if(!key)return;
+ const keys=findMatchingSyllabusTopics(entry.subject,entry.topic);
+ if(!keys.length)return;
  state.topics=state.topics||{};
- state.topics[key]=true;
  state.revisionSchedule=state.revisionSchedule||{};
- if(!state.revisionSchedule[key])state.revisionSchedule[key]={due_date:revisionDateAfter(1),interval_days:1,repetitions:0,ease_factor:2.5,last_reviewed_at:null,last_quality:null};
+ keys.forEach(key=>{
+  const contributors=DAILY_STUDY_PLAN.map((planEntry,index)=>({planEntry,index})).filter(({planEntry})=>planEntry.phase==="study"&&findMatchingSyllabusTopics(planEntry.subject,planEntry.topic).includes(key));
+  const allDone=contributors.length>0&&contributors.every(({planEntry,index})=>{
+   const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);
+   return !!getStudyPlanProgress({...planEntry,dateKey:localDateKey(date)}).studyDone;
+  });
+  if(!allDone)return;
+  state.topics[key]=true;
+  if(!state.revisionSchedule[key])state.revisionSchedule[key]={due_date:revisionDateAfter(1),interval_days:1,repetitions:0,ease_factor:2.5,last_reviewed_at:null,last_quality:null};
+ });
 }
-function syncStudyPlanRevisionToSyllabus(entry){
- const key=findMatchingSyllabusTopic(entry.subject,entry.topic);
- if(!key)return;
+async function syncStudyPlanRevisionToSyllabus(entry){
+ const keys=findMatchingSyllabusTopics(entry?.subject,entry?.topic);
+ if(!keys.length)return true;
+ state.revisionSchedule=state.revisionSchedule||{};
  state.revisionDone=state.revisionDone||{};
- state.revisionDone[key]=true;
+ try{
+  for(const key of keys){
+   if(!state.topics?.[key])continue;
+   const previous=state.revisionSchedule[key]||{interval_days:1,repetitions:0,ease_factor:2.5};
+   const response=await fetch("/api/revision/next",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({today:localDate(),previous,quality:3})});
+   if(!response.ok)throw new Error("Revision schedule could not be updated.");
+   state.revisionSchedule[key]=await response.json();
+   state.revisionDone[key]=true;
+  }
+  return true;
+ }catch(error){notify(error.message||"Could not update the revision schedule.");return false;}
 }
 function revisionDateAfter(days){
  const date=new Date();date.setHours(12,0,0,0);date.setDate(date.getDate()+days);return localDateKey(date);
@@ -632,7 +636,7 @@ function renderTopics(){
  const mapped=document.createElement("td");mapped.textContent=count==null?"Not verified":String(count);
  const stateCell=document.createElement("td");const label=document.createElement("label");label.className="table-status"+(done?" done":"");
  const check=createAnimatedCheckbox(done,"Mark "+name+" complete"),cb=check.input;
- cb.addEventListener("change",()=>{if(cb.checked){completeTopicWithMastery(s.name,name)}else{if(confirm("Remove this topic from completed progress? Its mastery evidence and revision schedule will also be cleared.")){delete state.topics[s.name+"::"+name];delete state.topicEvidence?.[s.name+"::"+name];delete state.revisionSchedule?.[s.name+"::"+name];delete state.masteryProgress?.[s.name+"::"+name];delete state.retestSchedule?.[s.name+"::"+name];delete state.pendingTopicEvidence?.[s.name+"::"+name];state.recoveryQueue=(state.recoveryQueue||[]).filter(item=>item.key!==s.name+"::"+name);state.revisionDone=state.revisionDone||{};delete state.revisionDone[s.name+"::"+name];persist();renderAll()}else{cb.checked=true}}});
+ cb.addEventListener("change",()=>{if(cb.checked){completeTopicWithMastery(s.name,name)}else{if(confirm("Remove this topic from completed progress? Its mastery evidence and revision schedule will also be cleared.")){delete state.topics[s.name+"::"+name];syncSyllabusUncompletionToStudyPlan(s.name,name);delete state.topicEvidence?.[s.name+"::"+name];delete state.revisionSchedule?.[s.name+"::"+name];delete state.masteryProgress?.[s.name+"::"+name];delete state.retestSchedule?.[s.name+"::"+name];delete state.pendingTopicEvidence?.[s.name+"::"+name];state.recoveryQueue=(state.recoveryQueue||[]).filter(item=>item.key!==s.name+"::"+name);state.revisionDone=state.revisionDone||{};delete state.revisionDone[s.name+"::"+name];persist();renderAll()}else{cb.checked=true}}});
  const statusText=document.createElement("span");statusText.textContent=done?"Completed":"Pending";label.append(check.wrapper,statusText);stateCell.append(label);row.append(priorityCell,subject,topic,mapped,stateCell);body.append(row);
  })});
  table.append(body);host.append(table);
@@ -767,11 +771,12 @@ function getStudyPlanProgress(entry){
  return{
   ...legacy,
   ...progress,
-  studyDone:!!(progress.studyDone||legacy.studyDone),
+  studyDone:!!progress.studyReset?false:!!(progress.studyDone||legacy.studyDone),
   mcqDone:!!(progress.mcqDone||legacy.mcqDone),
   revisionDone:!!(progress.revisionDone||legacy.revisionDone),
   mcqCount:progress.mcqDone?progress.mcqCount:(legacy.mcqCount??progress.mcqCount??0),
-  mcqLogged:!!(progress.mcqLogged||legacy.mcqLogged)
+  mcqLogged:!!(progress.mcqLogged||legacy.mcqLogged),
+  studyReset:!!progress.studyReset
  };
 }
 function getStudyPlanEntry(dateKey=localDate()){
@@ -787,17 +792,22 @@ function getStudyPlanEntry(dateKey=localDate()){
 function isStudyPlanEntryDone(entry){
  if(!entry)return false;
  const progress=getStudyPlanProgress(entry);
- if(!Object.keys(progress).length)return !!state.studyPlanDone?.[entry.dateKey];
- return entry.phase==="study"?!!progress.studyDone:!!progress.mcqDone&&!!progress.revisionDone;
+ if(!Object.keys(progress).length){
+  if(entry.phase==="study")return !!state.studyPlanDone?.[entry.dateKey];
+  const previousDate=new Date(entry.dateKey+"T00:00:00");previousDate.setDate(previousDate.getDate()-1);
+  return !!state.studyPlanDone?.[localDateKey(previousDate)]&&!!state.studyPlanDone?.[entry.dateKey];
+ }
+ return entry.phase==="study"?!!progress.studyDone:!!progress.studyDone&&!!progress.mcqDone&&!!progress.revisionDone;
 }
 function markStudyPlanPhaseComplete(entry){
  if(!entry)return;
  state.studyPlanProgress=state.studyPlanProgress||{};
  const progress=getStudyPlanProgress(entry);
- if(entry.phase==="study"){progress.studyDone=true;syncStudyPlanCompletionToSyllabus(entry);}
+ if(entry.phase==="study"){progress.studyDone=true;progress.studyReset=false;}
  state.studyPlanProgress[entry.progressDateKey||getStudyPlanProgressDateKey(entry)]=progress;
+ if(entry.phase==="study")syncStudyPlanCompletionToSyllabus(entry);
  state.studyPlanDone=state.studyPlanDone||{};
- state.studyPlanDone[entry.dateKey]=entry.phase==="study"?!!progress.studyDone:!!(progress.mcqDone&&progress.revisionDone);
+ state.studyPlanDone[entry.dateKey]=entry.phase==="study"?!!progress.studyDone:!!(progress.studyDone&&progress.mcqDone&&progress.revisionDone);
  persist();
  renderStats();renderSubjectOverview();renderTopics();renderMissingTopics();renderRevision();renderCharts();renderRoadmap();renderOverviewSchedule();
 }
@@ -806,7 +816,7 @@ function renderOverviewSchedule(){
  const entry=getStudyPlanEntry(),today=localDate();
  if(!entry){host.textContent="No study topic is scheduled for today.";return;}
  const progress=getStudyPlanProgress(entry);
- const isStudy=entry.phase==="study",done=isStudy?!!progress.studyDone:!!(progress.mcqDone&&progress.revisionDone);
+ const isStudy=entry.phase==="study",done=isStudy?!!progress.studyDone:!!(progress.studyDone&&progress.mcqDone&&progress.revisionDone);
  const date=new Date(today+"T00:00:00");
  const card=document.createElement("div");card.className="today-topic-card"+(done?" is-complete":"");
  const meta=document.createElement("div");meta.className="today-topic-meta";
@@ -820,7 +830,7 @@ function renderOverviewSchedule(){
  const footer=document.createElement("div");footer.className="today-topic-footer";
  const status=document.createElement("span");status.className="today-topic-status";status.textContent=done?"Completed":(isStudy?"Study pending":"MCQ + revision pending");
  const completeButton=document.createElement("button");completeButton.type="button";completeButton.className="btn primary study-complete-btn";completeButton.textContent=done?"Completed":(entry.locked?"Locked · finish Day 1 first":(isStudy?"Mark study complete":"Mark MCQ + revision complete"));completeButton.disabled=done||entry.locked;
- completeButton.addEventListener("click",()=>{
+ completeButton.addEventListener("click",async()=>{
   if(isStudy&&!progress.studyDone){markStudyPlanPhaseComplete(entry);return;}
   if(!isStudy&&!progress.studyDone){notify("Complete Day 1 study before recording Day 2.");return;}
   if(!isStudy&&!progress.mcqDone){
@@ -833,9 +843,9 @@ function renderOverviewSchedule(){
    state.studyPlanProgress[entry.progressDateKey]=progress;
    persist();
   }
-  if(!isStudy&&!progress.revisionDone){if(!confirm("Have you revised this same topic?")){notify("MCQ count saved. Complete the revision before finishing Day 2.");return;}progress.revisionDone=true;syncStudyPlanRevisionToSyllabus(entry);}
+  if(!isStudy&&!progress.revisionDone){if(!confirm("Have you revised this same topic?")){notify("MCQ count saved. Complete the revision before finishing Day 2.");return;}if(!await syncStudyPlanRevisionToSyllabus(entry))return;progress.revisionDone=true;}
   state.studyPlanProgress=state.studyPlanProgress||{};state.studyPlanProgress[entry.progressDateKey]=progress;
-  state.studyPlanDone=state.studyPlanDone||{};state.studyPlanDone[today]=!!(progress.mcqDone&&progress.revisionDone);
+  state.studyPlanDone=state.studyPlanDone||{};state.studyPlanDone[today]=!!(progress.studyDone&&progress.mcqDone&&progress.revisionDone);
   state.logs[today]=state.logs[today]||{hours:0,mcqs:0,csat:0,notes:""};
   if(!progress.mcqLogged){state.logs[today].mcqs=(Number(state.logs[today].mcqs)||0)+(Number(progress.mcqCount)||0);progress.mcqLogged=true;}
   persist();renderAll();
@@ -975,7 +985,7 @@ function renderCharts(){
  }
  $("chartsUpdated").textContent="Updated "+new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
 }
-function setWorkspaceView(view){const names={overview:"Your daily preparation at a glance.",syllabus:"Track 256 PYQ-focused topics: Top 50 priority plus 206 curated micro-topics.",logs:"Record focused hours, MCQs and daily study notes.",plan:"Follow your weekly targets and full preparation roadmap.",settings:"Personalize your target date, study hours and workspace.",revision:"Revisit every topic you have already completed.",charts:"Visualize your syllabus, revision, study plan and study-time progress.",missing:"Review every syllabus topic that is still pending."};document.querySelectorAll("[data-page]").forEach(card=>{card.hidden=card.dataset.page!==view});document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input=>{input.checked=input.value===view});$("pageHint").textContent=names[view]||names.overview}
+function setWorkspaceView(view){const names={overview:"Your daily preparation at a glance.",syllabus:"Track 291 PYQ-focused topics: 50 priority topics plus 241 curated micro-topics.",logs:"Record focused hours, MCQs and daily study notes.",plan:"Follow your weekly targets and full preparation roadmap.",settings:"Personalize your target date, study hours and workspace.",revision:"Revisit every topic you have already completed.",charts:"Visualize your syllabus, revision, study plan and study-time progress.",missing:"Review every syllabus topic that is still pending."};document.querySelectorAll("[data-page]").forEach(card=>{card.hidden=card.dataset.page!==view});document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input=>{input.checked=input.value===view});$("pageHint").textContent=names[view]||names.overview}
 function activeDevice(){return window.matchMedia("(max-width: 760px)").matches?"mobile":"desktop"}
 function applyDeviceTheme(){state.settings=state.settings||{};state.settings.deviceThemes=state.settings.deviceThemes||{};const device=activeDevice();const theme=state.settings.deviceThemes[device]||(state.settings.theme||"light");document.body.classList.toggle("dark",theme==="dark");$("themeToggle").checked=theme==="dark"}
 function renderAll(){syncSubjectFilter();applyDeviceTheme();renderStats();renderDaily();renderOverviewSchedule();renderSubjectOverview();renderTopics();renderMissingTopics();renderRevision();renderCharts();renderWeekly();renderRoadmap();renderLogs();setWorkspaceView(window.trackerView||"overview")}
