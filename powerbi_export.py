@@ -145,10 +145,20 @@ def build_study_plan_rows(html: str, state: dict[str, Any]) -> list[dict[str, An
                 progress = progress_state.get(progress_date.isoformat(), {})
                 if not isinstance(progress, dict):
                     progress = {}
-                if phase == "mcq_revision" and not progress:
+                if phase == "mcq_revision":
                     legacy_progress = progress_state.get(date_key, {})
                     if isinstance(legacy_progress, dict):
-                        progress = legacy_progress
+                        current_progress = progress
+                        progress = {
+                            **legacy_progress,
+                            **current_progress,
+                            "studyDone": bool(current_progress.get("studyDone") or legacy_progress.get("studyDone")),
+                            "mcqDone": bool(current_progress.get("mcqDone") or legacy_progress.get("mcqDone")),
+                            "revisionDone": bool(current_progress.get("revisionDone") or legacy_progress.get("revisionDone")),
+                            "mcqLogged": bool(current_progress.get("mcqLogged") or legacy_progress.get("mcqLogged")),
+                        }
+                        if not current_progress.get("mcqDone") and legacy_progress.get("mcqDone"):
+                            progress["mcqCount"] = legacy_progress.get("mcqCount", 0)
                 if phase == "study":
                     completed = bool(progress.get("studyDone")) or (not progress and bool(legacy_done.get(date_key)))
                     attempts = ""
