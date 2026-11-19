@@ -109,3 +109,20 @@ test("revision analytics count due dates rather than permanent historical checkm
   assert.match(script, /revisionSchedule\?\.\[key\]\?\.due_date/);
   assert.match(script, /dueDate<=revisionToday/);
 });
+
+
+test("study-plan topic mapping uses exact normalized names or explicit aliases only", () => {
+  const start = script.indexOf("function findMatchingSyllabusTopic");
+  const end = script.indexOf("function syncSyllabusCompletionToStudyPlan", start);
+  const mapper = script.slice(start, end);
+  assert.match(script, /const STUDY_PLAN_TOPIC_ALIASES=/);
+  assert.match(mapper, /normalizePlanTopic\(name\)===target/);
+  assert.doesNotMatch(mapper, /planName\.includes|syllabusName\.includes/);
+  assert.match(mapper, /aliases\[planName\]/);
+});
+
+test("subject progress remains based on canonical syllabus topic keys", () => {
+  assert.match(script, /state\.topics\[s\.name\+"::"\+t\[0\]\]/);
+  assert.match(script, /function syncStudyPlanCompletionToSyllabus\(entry\)/);
+  assert.match(script, /state\.topics\[key\]=true/);
+});

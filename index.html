@@ -494,6 +494,54 @@ function syllabusSubjectForPlan(subject){
  if(name==="art & culture")return "Art & Culture";
  return "";
 }
+const STUDY_PLAN_TOPIC_ALIASES={
+ "polity":{
+  "constitutional development and historical background":"Constitutional development",
+  "constituent assembly and making the constitution":"Constituent Assembly",
+  "preamble keywords philosophy":"Preamble",
+  "union and its territory":"Union and Territory",
+  "citizenship provisions":"Citizenship",
+  "fundamental rights overview articles":"Fundamental Rights",
+  "right to constitutional remedies":"Constitutional Remedies and Writs",
+  "directive principles of state policy":"DPSP",
+  "fundamental duties and":"Fundamental Duties",
+  "union executive":"Executive","parliament":"Legislature",
+  "supreme court and high courts":"Judiciary"
+ },
+ "economy":{
+  "money banking and financial system":"Money and Banking",
+  "rbi and monetary policy":"RBI Monetary Tools",
+  "monetary policy tools":"RBI Monetary Tools",
+  "fiscal policy and budget":"Government Budget",
+  "inflation and price indices":"CPI and WPI",
+  "national income and gdp":"National Income Accounting",
+  "balance of payments and external sector":"Balance of Payments",
+  "international trade and trade policy":"International Trade",
+  "goods and services tax":"GST"
+ },
+ "geography":{
+  "physical features of india":"Physical Geography",
+  "indian monsoon":"Climatology",
+  "rivers and water resources of india":"India Water Resources",
+  "population and demographics":"Population",
+  "human settlements":"Settlements"
+ },
+ "environment":{
+  "ecosystem structure and function":"Ecosystem",
+  "biodiversity conservation":"Biodiversity",
+  "climate change and global warming":"Climate Change",
+  "environmental conventions":"International Conventions"
+ },
+ "science & technology":{
+  "space technology and applications":"Space Technology",
+  "biotechnology and applications":"Biotechnology"
+ },
+ "art & culture":{
+  "indian architecture":"Architecture",
+  "indian paintings":"Painting",
+  "dance music and theatre":"Performing Arts"
+ }
+};
 function findMatchingSyllabusTopic(subject,topic){
  const syllabusSubject=syllabusSubjectForPlan(subject);
  if(!syllabusSubject)return null;
@@ -501,11 +549,10 @@ function findMatchingSyllabusTopic(subject,topic){
  if(!group)return null;
  const planName=normalizePlanTopic(topic);
  if(!planName)return null;
- const matches=group.topics.filter(([name])=>{
-  const syllabusName=normalizePlanTopic(name);
-  if(syllabusName.length<5||planName.length<5)return false;
-  return planName===syllabusName||planName.includes(syllabusName)||syllabusName.includes(planName);
- });
+ const aliases=STUDY_PLAN_TOPIC_ALIASES[String(subject||"").toLowerCase()]||{};
+ const alias=aliases[planName];
+ const target=alias?normalizePlanTopic(alias):planName;
+ const matches=group.topics.filter(([name])=>normalizePlanTopic(name)===target);
  return matches.length===1?syllabusSubject+"::"+matches[0][0]:null;
 }
 function syncSyllabusCompletionToStudyPlan(subject,topic){
