@@ -25,7 +25,7 @@ body.dark{--bg:#10141d;--surface:#191f2b;--ink:#edf1f8;--muted:#a1acbd;--line:#2
 .data-table-wrap{width:100%;overflow-x:auto;border:1px solid var(--line);border-radius:10px}.data-table{width:100%;border-collapse:collapse;text-align:left;font-size:12px}.data-table th{background:#f5f7fb;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;white-space:nowrap}.data-table th,.data-table td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:middle}.data-table tbody tr:last-child td{border-bottom:0}.data-table tbody tr:hover{background:#f8faff}.data-table td:first-child{font-weight:650}.topic-table td:nth-child(3){text-align:center;font-variant-numeric:tabular-nums}.table-status{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;color:var(--muted);font-size:11px}.table-status input{width:15px;height:15px;margin:0;accent-color:var(--green)}.table-status.done{color:var(--green);font-weight:700}.table-progress{display:inline-block;vertical-align:middle;width:min(150px,65%);height:7px;background:#edf0f5;border-radius:20px;overflow:hidden;margin-right:8px}.table-progress span{display:block;height:100%;background:var(--green);border-radius:20px}.data-table td small{color:var(--muted);font-size:10px}.current-row{background:#f1f4ff}.data-table .badge{margin:0 0 0 5px;white-space:nowrap}body.dark .data-table th{background:#202838}body.dark .data-table tbody tr:hover{background:#202a3b}body.dark .current-row{background:#202b42}
 
 .exam-countdown-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;margin:-2px 0 16px}.exam-countdown-card{padding:16px 18px;border:1px solid var(--line);border-radius:12px;background:var(--surface);display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:12px;row-gap:3px}.exam-countdown-label{font-size:10px;letter-spacing:.09em;font-weight:850;color:var(--muted)}.exam-countdown-date{font-size:12px;color:var(--ink);font-weight:650}.exam-countdown-remaining{grid-column:2;grid-row:1/3;font-size:27px;line-height:1;font-weight:800;letter-spacing:-.04em;color:var(--blue);font-variant-numeric:tabular-nums}.exam-countdown-caption{grid-column:2;grid-row:3;text-align:right;font-size:10px;color:var(--muted)}body.dark .exam-countdown-card{background:var(--surface)}@media(max-width:650px){.exam-countdown-grid{grid-template-columns:1fr}.exam-countdown-card{padding:14px}}
-.grid-stats{grid-template-columns:repeat(5,minmax(0,1fr))}@media(max-width:1100px){.grid-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}.missed-plan-row{background:#fff8f6}.missed-plan-row td:nth-child(5){color:#b54735;font-weight:750}body.dark .missed-plan-row{background:#332522}
+.grid-stats{grid-template-columns:repeat(5,minmax(0,1fr))}@media(max-width:1100px){.grid-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}.missed-plan-row{background:#fff8f6}.missing-target-row{outline:2px solid var(--blue);outline-offset:-2px;background:var(--blue-soft)!important}.missed-plan-row td:nth-child(5){color:#b54735;font-weight:750}body.dark .missed-plan-row{background:#332522}
 .daily-plan-table{min-width:760px}.daily-plan-table th:first-child,.daily-plan-table td:first-child{white-space:nowrap}.daily-plan-table td:nth-child(2){white-space:nowrap;color:var(--muted)}.daily-plan-table td:nth-child(4){min-width:320px}.daily-plan-table input{width:16px;height:16px;accent-color:var(--green)}.daily-plan-table .current-row{outline:2px solid #aabaff;outline-offset:-2px}
 
 /* Progress analytics */
@@ -383,6 +383,7 @@ const WEEKLY=[["topics","Finish planned topics"],["pyqs","Solve relevant PYQs"],
 const STORE="upsc-dashboard-v2";
 const $=id=>document.getElementById(id);
 const localDate=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-")};
+const isPlanDateOverdue=(dateKey,today=localDate())=>dateKey<today;
 const defaultState=()=>({version:0,topics:{},daily:{},weekly:{},logs:{},studyPlanDone:{},studyPlanProgress:{},revisionDone:{},settings:{targetDate:"2027-05-23",studyGoal:4,theme:"light"},customSubjects:[],customDaily:[]});
 function normalizeProgressState(value){
  const source=value&&typeof value==="object"&&!Array.isArray(value)?value:{};
@@ -420,7 +421,7 @@ const validTopicKeys=()=>new Set(allSubjects().flatMap(subject=>subject.topics.m
 const doneTopics=()=>{const valid=validTopicKeys();return Object.keys(state.topics||{}).filter(key=>valid.has(key)&&!!state.topics[key]).length};
 const totalDays=()=>Math.max(0,Math.ceil((new Date(((state.settings||{}).targetDate||"2027-05-23")+"T00:00:00")-new Date(localDate()+"T00:00:00"))/86400000));
 const weekIndex=()=>{const start=new Date("2026-11-17T00:00:00"),now=new Date(localDate()+"T00:00:00");return Math.max(0,Math.min(26,Math.floor((now-start)/604800000)))};
-function getStudyPlanCounts(){const today=localDate(),todayDate=new Date(today+"T00:00:00");let completed=0,missed=0,upcoming=0;DAILY_STUDY_PLAN.forEach((entry,index)=>{const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);const key=localDateKey(date);if(isStudyPlanEntryDone({...entry,dateKey:key}))completed++;else if(date<=todayDate)missed++;else upcoming++;});return{completed,missed,upcoming}}
+function getStudyPlanCounts(){const today=localDate(),todayDate=new Date(today+"T00:00:00");let completed=0,missed=0,upcoming=0;DAILY_STUDY_PLAN.forEach((entry,index)=>{const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);const key=localDateKey(date);if(isStudyPlanEntryDone({...entry,dateKey:key}))completed++;else if(date<todayDate)missed++;else if(date>todayDate)upcoming++;});return{completed,missed,upcoming}}
 function localDateKey(date){return [date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-")}
 function daysUntilExam(dateString){const today=new Date(localDate()+"T00:00:00"),exam=new Date(dateString+"T00:00:00");return Math.max(0,Math.ceil((exam-today)/86400000))}
 function renderStats(){const logs=Object.values(state.logs),planCounts=getStudyPlanCounts(),targetDate=(state.settings||{}).targetDate||"2027-05-23";$("daysLeft").textContent=totalDays();$("targetDate").value=targetDate;$("studyGoal").value=(state.settings||{}).studyGoal||4;$("topicsDone").textContent=doneTopics()+"/"+totalTopics();$("topicSub").textContent=(totalTopics()?Math.round(doneTopics()/totalTopics()*100):0)+"% of mapped topics";$("hoursDone").textContent=logs.reduce((n,x)=>n+(Number(x.hours)||0),0).toFixed(1)+"h";$("daysDone").textContent=logs.length;$("missedDays").textContent=planCounts.missed;$("topicCompletion").textContent=doneTopics()+" of "+totalTopics();$("prelimsRemaining").textContent=daysUntilExam(targetDate);const prelimsDate=document.querySelector(".prelims-countdown .exam-countdown-date");if(prelimsDate)prelimsDate.textContent=new Date(targetDate+"T00:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});$("mainsRemaining").textContent=daysUntilExam("2027-08-20");$("todayLabel").textContent=new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short",year:"numeric"})}
@@ -492,7 +493,7 @@ function renderMissingTopics(){
   const studyDate=new Date(CYCLE_START_DATE+"T00:00:00");studyDate.setDate(studyDate.getDate()+index);
   const revisionDate=new Date(CYCLE_START_DATE+"T00:00:00");revisionDate.setDate(revisionDate.getDate()+index+1);
   const studyDateKey=localDateKey(studyDate),revisionDateKey=localDateKey(revisionDate);
-  const studyPast=studyDateKey<today,revisionPast=revisionDateKey<today;
+  const studyPast=isPlanDateOverdue(studyDateKey,today),revisionPast=isPlanDateOverdue(revisionDateKey,today);
   const studyDone=isStudyPlanEntryDone({...studyEntry,dateKey:studyDateKey});
   const revisionDone=isStudyPlanEntryDone({...revisionEntry,dateKey:revisionDateKey});
   const phases=[];
@@ -517,7 +518,7 @@ function renderMissingTopics(){
   const dueDate=displayPhases.includes("study")?item.studyDueDate:item.revisionDueDate;
   const dateCell=document.createElement("td");dateCell.textContent=new Date(dueDate+"T00:00:00").toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
   const actionCell=document.createElement("td"),button=document.createElement("button");button.type="button";button.className="btn";button.textContent="Open in Roadmap";
-  button.addEventListener("click",()=>{setWorkspaceView("plan");$("roadmap")?.scrollIntoView({behavior:"smooth",block:"start"});});
+  button.addEventListener("click",()=>{setWorkspaceView("plan");const target=document.getElementById("plan-"+dueDate);target?.scrollIntoView({behavior:"smooth",block:"center"});if(target){target.classList.add("missing-target-row");setTimeout(()=>target.classList.remove("missing-target-row"),2200);}});
   actionCell.append(button);row.append(phaseCell,subjectCell,topicCell,dateCell,actionCell);body.append(row);
  });
  table.append(body);const wrap=document.createElement("div");wrap.className="data-table-wrap";wrap.append(table);host.append(wrap);
@@ -659,7 +660,7 @@ function renderRoadmap(){
   const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);
   const dateKey=localDateKey(date),progress=state.studyPlanProgress?.[dateKey]||{};
   const done=isStudyPlanEntryDone({...entry,dateKey}),isToday=dateKey===today,isPast=dateKey<today;
-  const row=document.createElement("tr");if(isToday)row.className="current-row";else if(isPast&&!done)row.className="missed-plan-row";
+  const row=document.createElement("tr");row.id="plan-"+dateKey;if(isToday)row.className="current-row";else if(isPast&&!done)row.className="missed-plan-row";
   const dateCell=document.createElement("td");dateCell.textContent=date.toLocaleDateString("en-IN",{day:"2-digit",month:"short"});
   const dayCell=document.createElement("td");dayCell.textContent=date.toLocaleDateString("en-IN",{weekday:"long"});
   const subjectCell=document.createElement("td");subjectCell.textContent=entry.subject;
@@ -700,7 +701,7 @@ function renderCharts(){
  const planTotal=validPlanDates.size,planDone=Object.entries(state.studyPlanDone||{}).filter(([key,value])=>validPlanDates.has(key)&&!!value).length,planPending=Math.max(0,planTotal-planDone);
  const today=localDate(),dailyState=state.daily[today]||{},dailyTotal=dailyItems().length,dailyDone=dailyItems().filter(item=>dailyState[item[0]]).length,dailyPending=Math.max(0,dailyTotal-dailyDone);
  const todayDate=new Date(today+"T00:00:00");let pastCompleted=0,missed=0;
- DAILY_STUDY_PLAN.forEach((entry,index)=>{const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);const key=localDateKey(date);if(date<=todayDate){if(isStudyPlanEntryDone({...entry,dateKey:key}))pastCompleted++;else missed++;}});
+ DAILY_STUDY_PLAN.forEach((entry,index)=>{const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);const key=localDateKey(date);if(date<todayDate){if(isStudyPlanEntryDone({...entry,dateKey:key}))pastCompleted++;else missed++;}});
  const p1Topics=allSubjects().flatMap(subject=>subject.topics.map(topic=>({subject:subject.name,name:topic[0],priority:topic[2]}))).filter(topic=>topic.priority==="P1");
  const p1Done=p1Topics.filter(topic=>!!state.topics[topic.subject+"::"+topic.name]).length;
  const metrics=[
