@@ -308,3 +308,107 @@ def test_ollama_planner_rejects_overlapping_schedule_blocks(client, monkeypatch)
     )
     assert response.status_code == 503
     assert "valid schedule" in response.json()["detail"]
+
+
+
+def test_teacher_settings_and_context_are_persisted(client):
+    settings = client.put(
+        "/api/teacher/settings",
+        json={
+            "enabled": True,
+            "interval_minutes": 60,
+            "quiet_start": "21:30",
+            "quiet_end": "07:30",
+            "model": "qwen3.5:9b",
+        },
+    )
+    assert settings.status_code == 200
+    assert settings.json()["interval_minutes"] == 60
+    assert client.get("/api/teacher/settings").json()["model"] == "qwen3.5:9b"
+
+    context = {
+        "today": "2026-11-20",
+        "subjects": [{"subject": "Polity", "pending": ["Basic Structure"]}],
+        "daily_goal_hours": 4,
+    }
+    assert client.put("/api/teacher/context", json={"context": context}).json() == {"status": "saved"}
+    assert server.read_teacher_config()["context"] == context
+
+
+def test_teacher_cycle_creates_one_syllabus_grounded_question(client, monkeypatch):
+    calls = []
+
+    def fake_ollama(path, payload=None, timeout=5.0):
+        calls.append((path, payload))
+        if path == "/api/tags":
+            return {"models": [{"name": "qwen3.5:9b"}]}
+        return {
+            "message": {
+                "content": json.dumps(
+                    {
+                        "kind": "concept_check",
+                        "prompt": "Explain the basic structure doctrine in your own words.",
+                        "subject": "Polity",
+                        "topic": "Basic Structure",
+                        "reason": "Check conceptual understanding.",
+                    }
+                )
+            }
+        }
+
+    monkeypatch.setattr(server, "ollama_request", fake_ollama)
+    client.put(
+        "/api/teacher/settings",
+        json={
+            "enabled": True,
+            "interval_minutes": 120,
+            "quiet_start": "22:00",
+            "quiet_end": "07:00",
+            "model": "qwen3.5:9b",
+        },
+    )
+    client.put(
+        "/api/teacher/context",
+        json={
+            "context": {
+                "today": "2026-11-20",
+                "subjects": [{"subject": "Polity", "pending": ["Basic Structure"]}],
+                "daily_goal_hours": 4,
+            }
+        },
+    )
+
+    server.run_teacher_cycle()
+    events = client.get("/api/teacher/events").json()["events"]
+    assert len(events) == 1
+    assert events[0]["kind"] == "concept_check"
+    assert events[0]["topic"] == "Basic Structure"
+    assert calls[0][0] == "/api/tags"
+    assert calls[1][0] == "/api/chat"
+
+
+def test_teacher_cycle_does_not_duplicate_an_unanswered_question(client, monkeypatch):
+    client.put(
+        "/api/teacher/settings",
+        json={
+            "enabled": True,
+            "interval_minutes": 120,
+            "quiet_start": "22:00",
+            "quiet_end": "07:00",
+            "model": "qwen3.5:9b",
+        },
+    )
+    with server.database_session() as connection:
+        connection.execute(
+            """
+            INSERT INTO teacher_events (created_at, kind, prompt)
+            VALUES (?, ?, ?)
+            """,
+            ("2026-11-20T09:00:00+05:30", "daily_check_in", "Did you complete yesterday's work?"),
+        )
+
+    def should_not_call(*args, **kwargs):
+        raise AssertionError("Ollama must not be called while a question is unanswered.")
+
+    monkeypatch.setattr(server, "ollama_request", should_not_call)
+    server.run_teacher_cycle()
