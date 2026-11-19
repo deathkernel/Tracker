@@ -30,6 +30,14 @@ Keep the command window open while using the tracker. Press Ctrl+C to stop the l
 
 The tracker records daily MCQ counts, study hours, CSAT minutes and notes. It tracks the number of questions attempted; it does not store, display, import or run MCQ question content.
 
+## Dashboard charts and local AI
+
+The Charts section provides built-in dashboard visuals for syllabus completion, subject progress, revision status, study hours, MCQ counts and study consistency. Power BI export is optional and is not required for normal Tracker use.
+
+The optional AI Study Assistant connects to Ollama at `http://127.0.0.1:11434` and automatically lists models already installed on this PC. Start Ollama before opening the assistant, then choose a local model. The assistant can review pending topics, suggest daily study priorities and summarize progress. It does not mark topics complete or edit study records automatically.
+
+Tracker sends the selected prompt and a compact progress summary only to the local Ollama service. It does not call a hosted AI API. If Ollama is not running, the rest of Tracker continues to work normally.
+
 ## Personal data and privacy
 
 The local server binds to `127.0.0.1` by default. Study progress is stored in `tracker.db` in this folder and is not uploaded to a cloud service. Use Export backup regularly. Do not delete `tracker.db` if you want to keep the database.
