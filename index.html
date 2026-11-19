@@ -569,7 +569,7 @@ function renderOverviewSchedule(){
   state.studyPlanProgress=state.studyPlanProgress||{};state.studyPlanProgress[today]=progress;
   state.studyPlanDone=state.studyPlanDone||{};state.studyPlanDone[today]=!!(progress.mcqDone&&progress.revisionDone);
   state.logs[today]=state.logs[today]||{hours:0,mcqs:0,csat:0,notes:""};
-  state.logs[today].mcqs=(Number(state.logs[today].mcqs)||0)+(Number(progress.mcqCount)||0);
+  if(!progress.mcqLogged){state.logs[today].mcqs=(Number(state.logs[today].mcqs)||0)+(Number(progress.mcqCount)||0);progress.mcqLogged=true;}
   persist();renderAll();
  });
  footer.append(status,completeButton);card.append(meta,subject,topicLabel,topicName,phaseDescription,footer);host.append(card);
