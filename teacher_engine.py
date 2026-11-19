@@ -195,11 +195,14 @@ def build_due_revision_queue(
         if key in seen:
             continue
         schedule = revision_schedule.get(key)
-        if not isinstance(schedule, dict):
-            continue
-        try:
-            due_date = datetime.strptime(str(schedule.get("due_date", "")), "%Y-%m-%d").date()
-        except ValueError:
+        if schedule is None:
+            due_date = current_date
+        elif isinstance(schedule, dict):
+            try:
+                due_date = datetime.strptime(str(schedule.get("due_date", "")), "%Y-%m-%d").date()
+            except ValueError:
+                continue
+        else:
             continue
         if due_date <= current_date:
             seen.add(key)
