@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import json
+from datetime import datetime
 from datetime import date as date_type, timedelta
 import os
 import socket
@@ -15,6 +17,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field, field_validator
 
+from teacher_engine import is_quiet_time, prompt_is_due, validate_teacher_event
+
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "tracker.db"
 INDEX_PATH = BASE_DIR / "index.html"
@@ -22,7 +26,15 @@ INDEX_PATH = BASE_DIR / "index.html"
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     initialize_database()
-    yield
+    teacher_task = asyncio.create_task(teacher_background_loop())
+    try:
+        yield
+    finally:
+        teacher_task.cancel()
+        try:
+            await teacher_task
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(title="UPSC 2027 Tracker", version="1.1.0", lifespan=lifespan)
@@ -62,6 +74,34 @@ def initialize_database() -> None:
         )
         connection.execute(
             "INSERT OR IGNORE INTO app_state (id, payload) VALUES (1, '{}')"
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS teacher_config (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                payload TEXT NOT NULL
+            )
+            """
+        )
+        connection.execute(
+            """INSERT OR IGNORE INTO teacher_config (id, payload)
+               VALUES (1, '{"enabled":true,"interval_minutes":120,"quiet_start":"22:00","quiet_end":"07:00","model":"","last_prompt_at":null,"context":{}}')"""
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS teacher_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                prompt TEXT NOT NULL,
+                subject TEXT NOT NULL DEFAULT '',
+                topic TEXT NOT NULL DEFAULT '',
+                reason TEXT NOT NULL DEFAULT '',
+                answer TEXT,
+                feedback TEXT,
+                answered_at TEXT
+            )
+            """
         )
 
 
@@ -110,6 +150,32 @@ class OllamaChatRequest(BaseModel):
             raise ValueError("Enter a message for the study assistant.")
         return value.strip()
 
+
+
+class TeacherSettingsRequest(BaseModel):
+    enabled: bool = True
+    interval_minutes: int = Field(default=120, ge=30, le=720)
+    quiet_start: str = "22:00"
+    quiet_end: str = "07:00"
+    model: str = Field(default="", max_length=200)
+
+    @field_validator("quiet_start", "quiet_end")
+    @classmethod
+    def validate_clock(cls, value: str) -> str:
+        try:
+            datetime.strptime(value, "%H:%M")
+        except ValueError as exc:
+            raise ValueError("Quiet hours must use HH:MM.") from exc
+        return value
+
+
+class TeacherContextRequest(BaseModel):
+    context: dict[str, Any] = Field(default_factory=dict)
+
+
+class TeacherResponseRequest(BaseModel):
+    event_id: int = Field(gt=0)
+    answer: str = Field(min_length=1, max_length=4000)
 
 
 class OllamaPlannerRequest(BaseModel):
@@ -365,6 +431,246 @@ def ollama_plan(request: OllamaPlannerRequest) -> dict[str, Any]:
         raise HTTPException(status_code=502, detail=f"Ollama planner failed: {detail}") from exc
     except (OSError, TimeoutError, ValueError, TypeError, urllib.error.URLError, json.JSONDecodeError) as exc:
         raise HTTPException(status_code=503, detail="Ollama could not build a valid schedule. Retry or choose another local model.") from exc
+
+
+def read_teacher_config() -> dict[str, Any]:
+    with database_session() as connection:
+        row = connection.execute(
+            "SELECT payload FROM teacher_config WHERE id = 1"
+        ).fetchone()
+    if not row:
+        return {}
+    try:
+        payload = json.loads(row[0])
+        return payload if isinstance(payload, dict) else {}
+    except json.JSONDecodeError:
+        return {}
+
+
+def save_teacher_config(config: dict[str, Any]) -> None:
+    with database_session() as connection:
+        connection.execute(
+            "UPDATE teacher_config SET payload = ? WHERE id = 1",
+            (json.dumps(config, ensure_ascii=False),),
+        )
+
+
+def teacher_allowed_topics(context: dict[str, Any]) -> set[tuple[str, str]]:
+    return {
+        (str(item.get("subject", "")), str(topic))
+        for item in context.get("subjects", [])
+        if isinstance(item, dict)
+        for topic in item.get("pending", [])
+    }
+
+
+def run_teacher_cycle() -> None:
+    config = read_teacher_config()
+    if not config.get("enabled", True):
+        return
+
+    now = datetime.now().astimezone()
+    quiet_start = str(config.get("quiet_start", "22:00"))
+    quiet_end = str(config.get("quiet_end", "07:00"))
+    if not prompt_is_due(
+        now,
+        config.get("last_prompt_at"),
+        int(config.get("interval_minutes", 120)),
+        quiet_start,
+        quiet_end,
+    ):
+        return
+
+    with database_session() as connection:
+        pending = connection.execute(
+            "SELECT id FROM teacher_events WHERE answer IS NULL ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+    if pending:
+        return
+
+    available = ollama_request("/api/tags", timeout=3.0)
+    models = available.get("models", [])
+    names = [
+        item.get("name")
+        for item in models
+        if isinstance(item, dict) and isinstance(item.get("name"), str)
+    ]
+    model = config.get("model") if config.get("model") in names else (names[0] if names else "")
+    if not model:
+        return
+
+    context = config.get("context", {})
+    if not isinstance(context, dict):
+        context = {}
+    compact_context = json.dumps(context, ensure_ascii=False)[:16000]
+    result = ollama_request(
+        "/api/chat",
+        {
+            "model": model,
+            "stream": False,
+            "format": "json",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are Tracker's strict but respectful UPSC teacher. Take initiative. "
+                        "Ask exactly ONE clear question that makes the student accountable or tests "
+                        "understanding. Be firm, direct and supportive; never insult, shame, threaten "
+                        "or guilt the student. Use only supplied Tracker facts. Do not invent completed "
+                        "work. Use only pending syllabus topics. Never generate MCQ questions or a "
+                        "question bank; MCQ attempt counts only are tracked. Return JSON only with "
+                        "kind, prompt, subject, topic, reason. kind must be daily_check_in, "
+                        "completion_follow_up, recall_question, concept_check or revision_check."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Local time: {now.isoformat()}\nTracker context: {compact_context}\n"
+                        "Generate the next teacher check-in now."
+                    ),
+                },
+            ],
+            "options": {"temperature": 0.25},
+        },
+        timeout=120.0,
+    )
+    message = result.get("message", {})
+    raw = message.get("content", "") if isinstance(message, dict) else ""
+    event = validate_teacher_event(json.loads(raw), teacher_allowed_topics(context))
+    created_at = now.isoformat()
+    with database_session() as connection:
+        connection.execute(
+            """
+            INSERT INTO teacher_events
+                (created_at, kind, prompt, subject, topic, reason)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                created_at,
+                event["kind"],
+                event["prompt"],
+                event["subject"],
+                event["topic"],
+                event["reason"],
+            ),
+        )
+    config["last_prompt_at"] = created_at
+    save_teacher_config(config)
+
+
+async def teacher_background_loop() -> None:
+    await asyncio.sleep(5)
+    while True:
+        try:
+            await asyncio.to_thread(run_teacher_cycle)
+        except (OSError, ValueError, KeyError, TypeError, urllib.error.URLError, json.JSONDecodeError):
+            pass
+        await asyncio.sleep(60)
+
+
+@app.get("/api/teacher/settings")
+def get_teacher_settings() -> dict[str, Any]:
+    config = read_teacher_config()
+    return {
+        "enabled": config.get("enabled", True),
+        "interval_minutes": config.get("interval_minutes", 120),
+        "quiet_start": config.get("quiet_start", "22:00"),
+        "quiet_end": config.get("quiet_end", "07:00"),
+        "model": config.get("model", ""),
+    }
+
+
+@app.put("/api/teacher/settings")
+def update_teacher_settings(request: TeacherSettingsRequest) -> dict[str, Any]:
+    config = read_teacher_config()
+    config.update(request.model_dump())
+    save_teacher_config(config)
+    return {"status": "saved", **request.model_dump()}
+
+
+@app.put("/api/teacher/context")
+def update_teacher_context(request: TeacherContextRequest) -> dict[str, str]:
+    config = read_teacher_config()
+    config["context"] = request.context
+    save_teacher_config(config)
+    return {"status": "saved"}
+
+
+@app.get("/api/teacher/events")
+def get_teacher_events(after_id: int = 0) -> dict[str, Any]:
+    with database_session() as connection:
+        rows = connection.execute(
+            """
+            SELECT id, created_at, kind, prompt, subject, topic, reason, answer, feedback
+            FROM teacher_events WHERE id > ? ORDER BY id ASC LIMIT 50
+            """,
+            (max(0, after_id),),
+        ).fetchall()
+    fields = ("id", "created_at", "kind", "prompt", "subject", "topic", "reason", "answer", "feedback")
+    return {"events": [dict(zip(fields, row)) for row in rows]}
+
+
+@app.post("/api/teacher/respond")
+def respond_to_teacher(request: TeacherResponseRequest) -> dict[str, Any]:
+    config = read_teacher_config()
+    model = config.get("model", "")
+    if not model:
+        status = ollama_status()
+        model = status.get("selected_model", "")
+    if not model:
+        raise HTTPException(status_code=503, detail="Start Ollama and select a local model first.")
+
+    with database_session() as connection:
+        row = connection.execute(
+            "SELECT prompt, subject, topic FROM teacher_events WHERE id = ?",
+            (request.event_id,),
+        ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Teacher question not found.")
+
+    try:
+        result = ollama_request(
+            "/api/chat",
+            {
+                "model": model,
+                "stream": False,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": (
+                            "Evaluate the student's answer as a strict but respectful UPSC teacher. "
+                            "State what is correct, what is missing, and one concrete improvement. "
+                            "Do not shame the student. Do not claim Tracker progress changed. "
+                            "Keep feedback under 180 words."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Teacher question: {row[0]}\nSubject: {row[1]}\nTopic: {row[2]}\nStudent answer: {request.answer}",
+                    },
+                ],
+                "options": {"temperature": 0.2},
+            },
+            timeout=120.0,
+        )
+        message = result.get("message", {})
+        feedback = message.get("content", "") if isinstance(message, dict) else ""
+        if not isinstance(feedback, str) or not feedback.strip():
+            raise ValueError("Teacher feedback was empty.")
+    except (OSError, ValueError, urllib.error.URLError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=503, detail="Ollama could not evaluate the answer.") from exc
+
+    answered_at = datetime.now().astimezone().isoformat()
+    with database_session() as connection:
+        connection.execute(
+            """
+            UPDATE teacher_events SET answer = ?, feedback = ?, answered_at = ?
+            WHERE id = ?
+            """,
+            (request.answer.strip(), feedback.strip(), answered_at, request.event_id),
+        )
+    return {"event_id": request.event_id, "feedback": feedback.strip()}
 
 
 @app.get("/api/health")
