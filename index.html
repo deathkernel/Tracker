@@ -564,10 +564,12 @@ function renderOverviewSchedule(){
  completeButton.addEventListener("click",()=>{
   if(isStudy&&!progress.studyDone){markStudyPlanPhaseComplete(entry);return;}
   if(!isStudy&&!progress.studyDone){notify("Complete Day 1 study before recording Day 2.");return;}
-  if(!isStudy&&!progress.mcqDone){const amount=Number(prompt("How many MCQs did you attempt for this topic?","0"));if(!Number.isInteger(amount)||amount<0||amount>500){notify("Enter a valid MCQ count from 0 to 500.");return;}state.logs[today]=state.logs[today]||{hours:0,mcqs:0,csat:0,notes:""};state.logs[today].mcqs=(Number(state.logs[today].mcqs)||0)+amount;progress.mcqDone=true;progress.mcqCount=amount;}
-  if(!isStudy)progress.revisionDone=true;
+  if(!isStudy&&!progress.mcqDone){const amount=Number(prompt("How many MCQs did you attempt for this topic?","0"));if(!Number.isInteger(amount)||amount<0||amount>500){notify("Enter a valid MCQ count from 0 to 500.");return;}progress.mcqDone=true;progress.mcqCount=amount;}
+  if(!isStudy&&!progress.revisionDone){if(!confirm("Have you revised this same topic?")){notify("Complete the revision before finishing Day 2.");return;}progress.revisionDone=true;}
   state.studyPlanProgress=state.studyPlanProgress||{};state.studyPlanProgress[today]=progress;
   state.studyPlanDone=state.studyPlanDone||{};state.studyPlanDone[today]=!!(progress.mcqDone&&progress.revisionDone);
+  state.logs[today]=state.logs[today]||{hours:0,mcqs:0,csat:0,notes:""};
+  state.logs[today].mcqs=(Number(state.logs[today].mcqs)||0)+(Number(progress.mcqCount)||0);
   persist();renderAll();
  });
  footer.append(status,completeButton);card.append(meta,subject,topicLabel,topicName,phaseDescription,footer);host.append(card);
