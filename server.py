@@ -152,9 +152,10 @@ def save_state(state: TrackerState) -> dict[str, Any]:
             current = json.loads(row[0]) if row else {}
             if not isinstance(current, dict):
                 raise ValueError("Saved tracker state must be a JSON object.")
-            current_version = int(current.get("version", 0))
-            if current_version < 0:
-                raise ValueError("Saved tracker version cannot be negative.")
+            raw_version = current.get("version", 0)
+            if isinstance(raw_version, bool) or not isinstance(raw_version, int) or raw_version < 0:
+                raise ValueError("Saved tracker version must be a non-negative integer.")
+            current_version = raw_version
         except (json.JSONDecodeError, TypeError, ValueError) as exc:
             connection.rollback()
             raise HTTPException(
