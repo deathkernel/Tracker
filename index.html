@@ -421,20 +421,48 @@ const STORE="upsc-dashboard-v2";
 const $=id=>document.getElementById(id);
 const localDate=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-")};
 const isPlanDateOverdue=(dateKey,today=localDate())=>dateKey<today;
-const defaultState=()=>({version:0,topics:{},daily:{},weekly:{},logs:{},studyPlanDone:{},studyPlanProgress:{},revisionDone:{},settings:{targetDate:"2027-05-23",studyGoal:4,theme:"light"},customSubjects:[],customDaily:[]});
+const defaultState=()=>({version:0,topics:{},daily:{},weekly:{},logs:{},studyPlanDone:{},studyPlanProgress:{},studyPlanProgressSchema:2,revisionDone:{},masteryProgress:{},retestSchedule:{},recoveryQueue:[],settings:{targetDate:"2027-05-23",studyGoal:4,theme:"light"},customSubjects:[],customDaily:[]});
 function normalizeProgressState(value){
  const source=value&&typeof value==="object"&&!Array.isArray(value)?value:{};
  const next={...defaultState(),...source};
- next.topicEvidence=source.topicEvidence&&typeof source.topicEvidence==="object"?source.topicEvidence:{};
- next.revisionSchedule=source.revisionSchedule&&typeof source.revisionSchedule==="object"?source.revisionSchedule:{};
+ next.topicEvidence=source.topicEvidence&&typeof source.topicEvidence==="object"&&!Array.isArray(source.topicEvidence)?source.topicEvidence:{};
+ next.revisionSchedule=source.revisionSchedule&&typeof source.revisionSchedule==="object"&&!Array.isArray(source.revisionSchedule)?source.revisionSchedule:{};
  next.testResults=Array.isArray(source.testResults)?source.testResults:[];
  next.errorNotebook=Array.isArray(source.errorNotebook)?source.errorNotebook:[];
  next.pendingTopicEvidence=source.pendingTopicEvidence&&typeof source.pendingTopicEvidence==="object"&&!Array.isArray(source.pendingTopicEvidence)?source.pendingTopicEvidence:{};
- next.studyPlanProgress=Object.fromEntries(Object.entries(source.studyPlanProgress&&typeof source.studyPlanProgress==="object"&&!Array.isArray(source.studyPlanProgress)?source.studyPlanProgress:{}).filter(([key,item])=>/^\d{4}-\d{2}-\d{2}$/.test(key)&&item&&typeof item==="object"&&!Array.isArray(item)).map(([key,item])=>[key,{studyDone:!!item.studyDone,mcqDone:!!item.mcqDone,revisionDone:!!item.revisionDone,mcqCount:Number.isInteger(item.mcqCount)&&item.mcqCount>=0&&item.mcqCount<=500?item.mcqCount:0,mcqLogged:!!item.mcqLogged,studyReset:!!item.studyReset}]));
+ next.masteryProgress=source.masteryProgress&&typeof source.masteryProgress==="object"&&!Array.isArray(source.masteryProgress)?source.masteryProgress:{};
+ next.retestSchedule=source.retestSchedule&&typeof source.retestSchedule==="object"&&!Array.isArray(source.retestSchedule)?source.retestSchedule:{};
+ next.recoveryQueue=Array.isArray(source.recoveryQueue)?source.recoveryQueue:[];
+ next.studyPlanProgress=Object.fromEntries(Object.entries(source.studyPlanProgress&&typeof source.studyPlanProgress==="object"&&!Array.isArray(source.studyPlanProgress)?source.studyPlanProgress:{}).filter(([key,item])=>(/^\d{4}-\d{2}-\d{2}$/.test(key)||/^plan:\d+$/.test(key))&&item&&typeof item==="object"&&!Array.isArray(item)).map(([key,item])=>[key,{studyDone:!!item.studyDone,mcqDone:!!item.mcqDone,revisionDone:!!item.revisionDone,mcqCount:Number.isInteger(item.mcqCount)&&item.mcqCount>=0&&item.mcqCount<=500?item.mcqCount:0,mcqLogged:!!item.mcqLogged,studyReset:!!item.studyReset}]));
  next.customSubjects=(Array.isArray(source.customSubjects)?source.customSubjects:[]).filter(item=>item&&typeof item.name==="string"&&item.name.trim()).map(item=>({name:item.name.trim(),topics:(Array.isArray(item.topics)?item.topics:[]).filter(topic=>Array.isArray(topic)&&typeof topic[0]==="string"&&topic[0].trim()).map(topic=>[topic[0].trim(),Number.isFinite(Number(topic[1]))?Number(topic[1]):null,typeof topic[2]==="string"?topic[2]:"P2"])}));
  next.customDaily=(Array.isArray(source.customDaily)?source.customDaily:[]).filter(item=>Array.isArray(item)&&item.length>=2&&typeof item[0]==="string"&&typeof item[1]==="string"&&item[1].trim()).map(item=>[item[0],item[1].trim(),String(item[2]||""),String(item[3]||"Personal task")]);
- for(const key of ["topics","daily","weekly","logs","studyPlanDone","studyPlanProgress","revisionDone","settings"]){if(!next[key]||typeof next[key]!=="object"||Array.isArray(next[key]))next[key]={};}
+ for(const key of ["topics","daily","weekly","logs","studyPlanDone","revisionDone","settings"]){if(!next[key]||typeof next[key]!=="object"||Array.isArray(next[key]))next[key]={};}
  next.version=Number.isInteger(Number(source.version))&&Number(source.version)>=0?Number(source.version):0;
+
+ if(Number(source.studyPlanProgressSchema)!==2){
+  STUDY_PLAN_TOPICS.forEach((entry,planIndex)=>{
+   const key="plan:"+planIndex;
+   const current=next.studyPlanProgress[key]||{};
+   const oldStudyDate=addDaysToDateKey(LEGACY_CYCLE_START_DATE,planIndex*2);
+   const oldRevisionDate=addDaysToDateKey(LEGACY_CYCLE_START_DATE,planIndex*2+1);
+   const oldStudy=next.studyPlanProgress[oldStudyDate]||{};
+   const oldRevision=next.studyPlanProgress[oldRevisionDate]||{};
+   const legacyStudyDone=!!next.studyPlanDone[oldStudyDate];
+   const legacyRevisionDone=!!next.studyPlanDone[oldRevisionDate];
+   const reset=!!(current.studyReset||oldStudy.studyReset||oldRevision.studyReset);
+   const migrated={
+    studyDone:!reset&&!!(current.studyDone||oldStudy.studyDone||legacyStudyDone),
+    mcqDone:!reset&&!!(current.mcqDone||oldStudy.mcqDone||oldRevision.mcqDone||(legacyStudyDone&&legacyRevisionDone)),
+    revisionDone:!reset&&!!(current.revisionDone||oldStudy.revisionDone||oldRevision.revisionDone||(legacyStudyDone&&legacyRevisionDone)),
+    mcqCount:Number.isInteger(current.mcqCount)?current.mcqCount:(Number.isInteger(oldRevision.mcqCount)?oldRevision.mcqCount:(Number.isInteger(oldStudy.mcqCount)?oldStudy.mcqCount:0)),
+    mcqLogged:!!(current.mcqLogged||oldStudy.mcqLogged||oldRevision.mcqLogged),
+    studyReset:reset
+   };
+   if(migrated.studyDone||migrated.mcqDone||migrated.revisionDone||migrated.mcqCount||migrated.mcqLogged||migrated.studyReset)next.studyPlanProgress[key]=migrated;
+  });
+ }
+ next.studyPlanProgressSchema=2;
+
  const subjects=SUBJECTS.map(subject=>({name:subject.name,topics:[...subject.topics]}));
  next.customSubjects.forEach(custom=>{let group=subjects.find(subject=>subject.name.toLowerCase()===custom.name.toLowerCase());if(!group){group={name:custom.name,topics:[]};subjects.push(group)}custom.topics.forEach(topic=>{if(!group.topics.some(item=>item[0].toLowerCase()===topic[0].toLowerCase()))group.topics.push(topic)})});
  const validKeys=new Set(subjects.flatMap(subject=>subject.topics.map(topic=>subject.name+"::"+topic[0])));
@@ -445,7 +473,7 @@ function normalizeProgressState(value){
 let saveQueue=Promise.resolve(),localMutationVersion=0;
 let state=normalizeProgressState(readState());
 function readState(){const raw=localStorage.getItem(STORE);try{return normalizeProgressState(JSON.parse(raw||"{}"))}catch(error){if(raw){try{if(!localStorage.getItem(STORE+"-recovery"))localStorage.setItem(STORE+"-recovery",JSON.stringify({savedAt:new Date().toISOString(),reason:"The browser progress JSON was corrupt. The original raw value was preserved for recovery.",raw}))}catch{}}return defaultState()}}
-function persist(){try{state=normalizeProgressState(state);const mutation=++localMutationVersion;localStorage.setItem(STORE,JSON.stringify(state));const snapshot=JSON.parse(JSON.stringify(state));saveQueue=saveQueue.then(async()=>{const payload={...snapshot,version:state.version||0};const response=await fetch("/api/state",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});if(response.status===409){notify("Tracker changed on another device. Reload before saving again.");throw new Error("State version conflict")}if(!response.ok)throw new Error("Database sync failed");const result=await response.json();state.version=result.version;if(mutation===localMutationVersion)localStorage.setItem(STORE,JSON.stringify(state));}).catch(error=>{if(error.message!=="State version conflict")notify("Local backup saved, but database sync failed. Keep the app running and retry.");});return saveQueue}catch{notify("Could not save. Export a backup and check browser storage.");return Promise.resolve(false)}}
+function persist(){try{state=normalizeProgressState(state);refreshRecoveryQueue();const mutation=++localMutationVersion;localStorage.setItem(STORE,JSON.stringify(state));const snapshot=JSON.parse(JSON.stringify(state));saveQueue=saveQueue.then(async()=>{const payload={...snapshot,version:state.version||0};const response=await fetch("/api/state",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});if(response.status===409){notify("Tracker changed on another device. Reload before saving again.");throw new Error("State version conflict")}if(!response.ok)throw new Error("Database sync failed");const result=await response.json();state.version=result.version;if(mutation===localMutationVersion)localStorage.setItem(STORE,JSON.stringify(state));}).catch(error=>{if(error.message!=="State version conflict")notify("Local backup saved, but database sync failed. Keep the app running and retry.");});return saveQueue}catch{notify("Could not save. Export a backup and check browser storage.");return Promise.resolve(false)}}
 function notify(message){const el=$("toast");el.textContent=message;el.classList.add("show");clearTimeout(notify.timer);notify.timer=setTimeout(()=>el.classList.remove("show"),2200)}
 const allSubjects=()=>{
  const subjects=SUBJECTS.map(subject=>({name:subject.name,topics:[...subject.topics]}));
@@ -458,7 +486,7 @@ const validTopicKeys=()=>new Set(allSubjects().flatMap(subject=>subject.topics.m
 const doneTopics=()=>{const valid=validTopicKeys();return Object.keys(state.topics||{}).filter(key=>valid.has(key)&&!!state.topics[key]).length};
 const totalDays=()=>Math.max(0,Math.ceil((new Date(((state.settings||{}).targetDate||"2027-05-23")+"T00:00:00")-new Date(localDate()+"T00:00:00"))/86400000));
 const weekIndex=()=>{const start=new Date("2026-11-17T00:00:00"),now=new Date(localDate()+"T00:00:00");return Math.max(0,Math.min(26,Math.floor((now-start)/604800000)))};
-function getStudyPlanCounts(){const today=localDate(),todayDate=new Date(today+"T00:00:00");let completed=0,missed=0,upcoming=0;DAILY_STUDY_PLAN.forEach((entry,index)=>{const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);const key=localDateKey(date);if(isStudyPlanEntryDone({...entry,dateKey:key}))completed++;else if(date<todayDate)missed++;else if(date>todayDate)upcoming++;});return{completed,missed,upcoming}}
+function getStudyPlanCounts(){const today=localDate(),todayDate=new Date(today+"T00:00:00"),missedDates=new Set();let completed=0,upcoming=0;DAILY_STUDY_PLAN.forEach(entry=>{const dateKey=getStudyPlanDateKey(entry),date=new Date(dateKey+"T00:00:00");if(isStudyPlanEntryDone(entry))completed++;else if(date<todayDate)missedDates.add(dateKey);else if(date>todayDate)upcoming++;});return{completed,missed:missedDates.size,upcoming}}
 function localDateKey(date){return [date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-")}
 function daysUntilExam(dateString){const today=new Date(localDate()+"T00:00:00"),exam=new Date(dateString+"T00:00:00");return Math.max(0,Math.ceil((exam-today)/86400000))}
 function renderStats(){const logs=Object.values(state.logs),planCounts=getStudyPlanCounts(),targetDate=(state.settings||{}).targetDate||"2027-05-23";$("daysLeft").textContent=totalDays();$("targetDate").value=targetDate;$("studyGoal").value=(state.settings||{}).studyGoal||4;$("topicsDone").textContent=doneTopics()+"/"+totalTopics();$("topicSub").textContent=(totalTopics()?Math.round(doneTopics()/totalTopics()*100):0)+"% of mapped topics";$("hoursDone").textContent=logs.reduce((n,x)=>n+(Number(x.hours)||0),0).toFixed(1)+"h";$("daysDone").textContent=logs.length;$("missedDays").textContent=planCounts.missed;$("topicCompletion").textContent=doneTopics()+" of "+totalTopics();$("prelimsRemaining").textContent=daysUntilExam(targetDate);const prelimsDate=document.querySelector(".prelims-countdown .exam-countdown-date");if(prelimsDate)prelimsDate.textContent=new Date(targetDate+"T00:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});$("mainsRemaining").textContent=daysUntilExam("2027-08-20");$("todayLabel").textContent=new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short",year:"numeric"})}
@@ -523,36 +551,23 @@ function findMatchingSyllabusTopic(subject,topic){
 function syncSyllabusCompletionToStudyPlan(subject,topic){
  const key=subject+"::"+topic;
  if(!validTopicKeys().has(key))return;
- DAILY_STUDY_PLAN.forEach((entry,index)=>{
+ DAILY_STUDY_PLAN.forEach(entry=>{
   if(entry.phase!=="study")return;
   const keys=findMatchingSyllabusTopics(entry.subject,entry.topic);
   if(!keys.includes(key)||!keys.every(mappedKey=>!!state.topics?.[mappedKey]))return;
-  const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);
-  const dateKey=localDateKey(date),progressKey=getStudyPlanProgressDateKey({...entry,dateKey});
+  const progressKey=getStudyPlanProgressDateKey(entry);
   state.studyPlanProgress=state.studyPlanProgress||{};
-  state.studyPlanProgress[progressKey]={...getStudyPlanProgress({...entry,dateKey}),studyDone:true,studyReset:false};
-  state.studyPlanDone=state.studyPlanDone||{};
-  state.studyPlanDone[dateKey]=true;
+  state.studyPlanProgress[progressKey]={...getStudyPlanProgress(entry),studyDone:true,studyReset:false};
  });
 }
 function syncSyllabusUncompletionToStudyPlan(subject,topic){
  const key=subject+"::"+topic;
- DAILY_STUDY_PLAN.forEach((entry,index)=>{
+ DAILY_STUDY_PLAN.forEach(entry=>{
   if(entry.phase!=="study"||!findMatchingSyllabusTopics(entry.subject,entry.topic).includes(key))return;
-  const studyDate=new Date(CYCLE_START_DATE+"T00:00:00");studyDate.setDate(studyDate.getDate()+index);
-  const studyDateKey=localDateKey(studyDate),studyProgressKey=getStudyPlanProgressDateKey({...entry,dateKey:studyDateKey});
-  const studyProgress={...getStudyPlanProgress({...entry,dateKey:studyDateKey}),studyDone:false,studyReset:true};
+  const progressKey=getStudyPlanProgressDateKey(entry);
+  const progress={...getStudyPlanProgress(entry),studyDone:false,mcqDone:false,revisionDone:false,studyReset:true};
   state.studyPlanProgress=state.studyPlanProgress||{};
-  state.studyPlanProgress[studyProgressKey]=studyProgress;
-  state.studyPlanDone=state.studyPlanDone||{};
-  state.studyPlanDone[studyDateKey]=false;
-  const revisionEntry=DAILY_STUDY_PLAN[index+1];
-  if(revisionEntry?.phase==="mcq_revision"){
-   const revisionDate=new Date(CYCLE_START_DATE+"T00:00:00");revisionDate.setDate(revisionDate.getDate()+index+1);
-   const revisionDateKey=localDateKey(revisionDate);
-   state.studyPlanProgress[revisionDateKey]={...getStudyPlanProgress({...revisionEntry,dateKey:revisionDateKey}),studyDone:false,studyReset:true};
-   state.studyPlanDone[revisionDateKey]=false;
-  }
+  state.studyPlanProgress[progressKey]=progress;
  });
 }
 function syncStudyPlanCompletionToSyllabus(entry){
@@ -562,35 +577,35 @@ function syncStudyPlanCompletionToSyllabus(entry){
  state.topics=state.topics||{};
  state.revisionSchedule=state.revisionSchedule||{};
  keys.forEach(key=>{
-  const contributors=DAILY_STUDY_PLAN.map((planEntry,index)=>({planEntry,index})).filter(({planEntry})=>planEntry.phase==="study"&&findMatchingSyllabusTopics(planEntry.subject,planEntry.topic).includes(key));
-  const allDone=contributors.length>0&&contributors.every(({planEntry,index})=>{
-   const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);
-   return !!getStudyPlanProgress({...planEntry,dateKey:localDateKey(date)}).studyDone;
-  });
+  const contributors=STUDY_PLAN_TOPICS.map((planEntry,planIndex)=>({planEntry,planIndex})).filter(({planEntry})=>findMatchingSyllabusTopics(planEntry.subject,planEntry.topic).includes(key));
+  const allDone=contributors.length>0&&contributors.every(({planIndex})=>!!state.studyPlanProgress?.["plan:"+planIndex]?.studyDone);
   if(!allDone)return;
   state.topics[key]=true;
   if(!state.revisionSchedule[key])state.revisionSchedule[key]={due_date:revisionDateAfter(1),interval_days:1,repetitions:0,ease_factor:2.5,last_reviewed_at:null,last_quality:null};
  });
 }
-async function syncStudyPlanRevisionToSyllabus(entry){
+async function syncStudyPlanRevisionToSyllabus(entry,quality=3){
  const keys=findMatchingSyllabusTopics(entry?.subject,entry?.topic);
- if(!keys.length)return true;
  state.revisionSchedule=state.revisionSchedule||{};
  state.revisionDone=state.revisionDone||{};
+ let trackedCanonical=false;
  try{
   for(const key of keys){
    if(!state.topics?.[key])continue;
    const previous=state.revisionSchedule[key]||{interval_days:1,repetitions:0,ease_factor:2.5};
-   const response=await fetch("/api/revision/next",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({today:localDate(),previous,quality:3})});
+   const response=await fetch("/api/revision/next",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({today:localDate(),previous,quality})});
    if(!response.ok)throw new Error("Revision schedule could not be updated.");
    state.revisionSchedule[key]=await response.json();
    state.revisionDone[key]=true;
+   await recordMasteryProgress(key,quality,false);
+   trackedCanonical=true;
   }
+  if(!trackedCanonical)await recordMasteryProgress("plan:"+entry.planIndex,quality,false);
   return true;
  }catch(error){notify(error.message||"Could not update the revision schedule.");return false;}
 }
 function revisionDateAfter(days){
- const date=new Date();date.setHours(12,0,0,0);date.setDate(date.getDate()+days);return localDateKey(date);
+ return addDaysToDateKey(localDate(),days);
 }
 function completeTopicWithMastery(subject,topic){
  const key=subject+"::"+topic;
@@ -607,20 +622,33 @@ function completeTopicWithMastery(subject,topic){
 async function completeScheduledRevision(subject,topic){
  const key=subject+"::"+topic;
  if(!state.topics?.[key]){notify("Complete the topic before marking its revision done.");renderRevision();return;}
+ const quality=askRecallQuality(topic,"revision");
+ if(quality===null)return;
  state.revisionSchedule=state.revisionSchedule||{};
  const previous=state.revisionSchedule[key]||{interval_days:1,repetitions:0,ease_factor:2.5};
  try{
-  const response=await fetch("/api/revision/next",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({today:localDate(),previous,quality:3})});
+  const response=await fetch("/api/revision/next",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({today:localDate(),previous,quality})});
   if(!response.ok)throw new Error("Revision schedule could not be updated.");
-  const schedule=await response.json();
-  state.revisionSchedule[key]=schedule;
+  state.revisionSchedule[key]=await response.json();
   state.revisionDone=state.revisionDone||{};
   state.revisionDone[key]=true;
+  await recordMasteryProgress(key,quality,false);
   persist();
   renderRevision();
   renderCharts();
  }catch(error){notify(error.message||"Could not update the revision schedule.");}
 }
+async function completeScheduledRetest(subject,topic,progressKey=null){
+ const key=progressKey||subject+"::"+topic,quality=askRecallQuality(topic,"retest");
+ if(quality===null)return;
+ try{
+  await recordMasteryProgress(key,quality,true);
+  persist();
+  renderRevision();
+  renderCharts();
+ }catch(error){notify(error.message||"Could not record the retest.");}
+}
+
 function renderTopics(){
  const host=$("topicChecklist"),q=$("topicSearch").value.trim().toLowerCase(),filter=$("subjectFilter").value,status=$("topicStatus").value;host.innerHTML="";
  const table=document.createElement("table");table.className="data-table topic-table";
@@ -645,26 +673,19 @@ function renderTopics(){
 function renderMissingTopics(){
  const host=$("missingTopicList");if(!host)return;
  const query=$("missingTopicSearch").value.trim().toLowerCase(),subjectFilter=$("missingSubjectFilter").value,phaseFilter=$("missingPriorityFilter").value,today=localDate();
- host.innerHTML="";let shown=0;
- const overdue=[];
- for(let index=0;index<DAILY_STUDY_PLAN.length;index+=2){
-  const studyEntry=DAILY_STUDY_PLAN[index],revisionEntry=DAILY_STUDY_PLAN[index+1];
-  if(!studyEntry||!revisionEntry)continue;
-  const studyDate=new Date(CYCLE_START_DATE+"T00:00:00");studyDate.setDate(studyDate.getDate()+index);
-  const revisionDate=new Date(CYCLE_START_DATE+"T00:00:00");revisionDate.setDate(revisionDate.getDate()+index+1);
-  const studyDateKey=localDateKey(studyDate),revisionDateKey=localDateKey(revisionDate);
-  const studyPast=isPlanDateOverdue(studyDateKey,today),revisionPast=isPlanDateOverdue(revisionDateKey,today);
-  const studyDone=isStudyPlanEntryDone({...studyEntry,dateKey:studyDateKey});
-  const revisionDone=isStudyPlanEntryDone({...revisionEntry,dateKey:revisionDateKey});
+ host.innerHTML="";
+ const overdue=STUDY_PLAN_TOPICS.map((topic,planIndex)=>{
+  const studyEntry=DAILY_STUDY_PLAN[planIndex*2],revisionEntry=DAILY_STUDY_PLAN[planIndex*2+1];
+  const studyDueDate=getStudyPlanDateKey(studyEntry),revisionDueDate=getStudyPlanDateKey(revisionEntry);
   const phases=[];
-  if(studyPast&&!studyDone)phases.push("study");
-  if(revisionPast&&!revisionDone)phases.push("mcq_revision");
-  if(!phases.length)continue;
-  overdue.push({subject:studyEntry.subject,topic:studyEntry.topic,phases,studyDueDate:studyDateKey,revisionDueDate:revisionDateKey});
- }
+  if(studyDueDate<today&&!isStudyPlanEntryDone(studyEntry))phases.push("study");
+  if(revisionDueDate<today&&!isStudyPlanEntryDone(revisionEntry))phases.push("mcq_revision");
+  return phases.length?{subject:topic.subject,topic:topic.topic,planIndex,phases,studyDueDate,revisionDueDate}:null;
+ }).filter(Boolean);
+ refreshRecoveryQueue(today);
  const table=document.createElement("table");table.className="data-table topic-table";
  table.innerHTML="<thead><tr><th>Overdue phase</th><th>Subject</th><th>Missing topic</th><th>Due date</th><th>Action</th></tr></thead>";
- const body=document.createElement("tbody");
+ const body=document.createElement("tbody");let shown=0;
  overdue.forEach(item=>{
   if(subjectFilter!=="all"&&subjectFilter!==item.subject)return;
   if(!item.topic.toLowerCase().includes(query))return;
@@ -675,18 +696,18 @@ function renderMissingTopics(){
   const phaseCell=document.createElement("td");phaseCell.textContent=displayPhases.map(phase=>phase==="study"?"Study pending":"MCQ + Revision pending").join(" · ");
   const subjectCell=document.createElement("td");subjectCell.textContent=item.subject;
   const topicCell=document.createElement("td");topicCell.textContent=item.topic;
-  const dueDate=displayPhases.includes("study")?item.studyDueDate:item.revisionDueDate;
+  const dueDate=displayPhases.map(phase=>phase==="study"?item.studyDueDate:item.revisionDueDate).sort()[0];
   const dateCell=document.createElement("td");dateCell.textContent=new Date(dueDate+"T00:00:00").toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
   const actionCell=document.createElement("td"),button=document.createElement("button");button.type="button";button.className="btn";button.textContent="Open in Roadmap";
-  button.addEventListener("click",()=>{setWorkspaceView("plan");const target=document.getElementById("plan-"+dueDate);target?.scrollIntoView({behavior:"smooth",block:"center"});if(target){target.classList.add("missing-target-row");setTimeout(()=>target.classList.remove("missing-target-row"),2200);}});
+  button.addEventListener("click",()=>{setWorkspaceView("plan");const target=document.getElementById("plan-"+dueDate+"-"+(displayPhases[0]==="study"?"study":"mcq_revision")+"-"+item.planIndex);target?.scrollIntoView({behavior:"smooth",block:"center"});if(target){target.classList.add("missing-target-row");setTimeout(()=>target.classList.remove("missing-target-row"),2200);}});
   actionCell.append(button);row.append(phaseCell,subjectCell,topicCell,dateCell,actionCell);body.append(row);
  });
  table.append(body);const wrap=document.createElement("div");wrap.className="data-table-wrap";wrap.append(table);host.append(wrap);
  if(!shown)host.innerHTML='<div class="empty">No overdue missing topics. Today’s and future topics are not included.</div>';
- $("missingTopicCount").textContent=shown+" overdue";$("missingNavCount").textContent=overdue.length;
+ $("missingTopicCount").textContent=shown+" overdue";$("missingNavCount").textContent=state.recoveryQueue.length;
  const filter=$("missingSubjectFilter"),selected=filter.value;filter.innerHTML='<option value="all">All subjects</option>';
- [...new Set(DAILY_STUDY_PLAN.map(entry=>entry.subject))].forEach(subject=>{const option=document.createElement("option");option.value=subject;option.textContent=subject;filter.append(option)});
- filter.value=[...new Set(DAILY_STUDY_PLAN.map(entry=>entry.subject))].includes(selected)?selected:"all";
+ [...new Set(STUDY_PLAN_TOPICS.map(entry=>entry.subject))].forEach(subject=>{const option=document.createElement("option");option.value=subject;option.textContent=subject;filter.append(option)});
+ filter.value=[...new Set(STUDY_PLAN_TOPICS.map(entry=>entry.subject))].includes(selected)?selected:"all";
 }
 function renderRevision(){
  const host=$("revisionChecklist");if(!host)return;host.innerHTML="";
@@ -698,26 +719,42 @@ function renderRevision(){
   const key=subject.name+"::"+topic;
   if(state.topics[key]){
    const schedule=state.revisionSchedule?.[key]||{};
+   const retest=state.retestSchedule?.[key]||{};
    const dueDate=typeof schedule.due_date==="string"?schedule.due_date:today;
-   completed.push({subject:subject.name,topic,key,dueDate,due:dueDate<=today});
+   const retestDate=typeof retest.due_date==="string"?retest.due_date:"";
+   completed.push({subject:subject.name,topic,key,dueDate,due:dueDate<=today,retestDate,retestDue:!!retestDate&&retestDate<=today,mastery:state.masteryProgress?.[key]||{}});
   }
  }));
+ STUDY_PLAN_TOPICS.forEach((entry,planIndex)=>{
+  if(findMatchingSyllabusTopics(entry.subject,entry.topic).length)return;
+  const key="plan:"+planIndex,retest=state.retestSchedule?.[key]||{},mastery=state.masteryProgress?.[key]||{};
+  if(!mastery.reviews||typeof retest.due_date!=="string")return;
+  completed.push({subject:entry.subject,topic:entry.topic,key,dueDate:today,due:false,retestDate:retest.due_date,retestDue:retest.due_date<=today,mastery,planOnly:true});
+ });
  const dueCount=completed.filter(item=>item.due).length;
- $("revisionCount").textContent=completed.length+" completed topics · "+dueCount+" due";
+ const retestCount=completed.filter(item=>item.retestDue).length;
+ $("revisionCount").textContent=completed.length+" completed topics · "+dueCount+" due · "+retestCount+" retests due";
  const subjectSelect=$("revisionSubject"),selected=subjectSelect.value;
  subjectSelect.innerHTML='<option value="all">All subjects</option>';
  [...new Set(completed.map(item=>item.subject))].forEach(name=>{const option=document.createElement("option");option.value=name;option.textContent=name;subjectSelect.append(option)});
  subjectSelect.value=[...subjectSelect.options].some(option=>option.value===selected)?selected:"all";
  const table=document.createElement("table");table.className="data-table";
- table.innerHTML="<thead><tr><th>Subject</th><th>Completed topic</th><th>Next revision</th><th>Status</th></tr></thead>";
+ table.innerHTML="<thead><tr><th>Subject</th><th>Completed topic</th><th>Next revision</th><th>Mastery</th><th>Retest</th><th>Status</th></tr></thead>";
  const body=document.createElement("tbody");let shown=0;
  completed.filter(item=>(subjectFilter==="all"||item.subject===subjectFilter)&&((item.subject+" "+item.topic).toLowerCase().includes(query))).filter(item=>statusFilter==="all"||(statusFilter==="done"&&!item.due)||(statusFilter==="pending"&&item.due)).forEach(item=>{
-  shown++;const row=document.createElement("tr"),subject=document.createElement("td"),topic=document.createElement("td"),next=document.createElement("td"),status=document.createElement("td"),label=document.createElement("label");
-  subject.textContent=item.subject;topic.textContent=item.topic;next.textContent=item.dueDate<=today?(item.dueDate<today?"Overdue · "+item.dueDate:"Due today"):"Due "+item.dueDate;
+  shown++;
+  const row=document.createElement("tr"),subject=document.createElement("td"),topic=document.createElement("td"),next=document.createElement("td"),mastery=document.createElement("td"),retest=document.createElement("td"),status=document.createElement("td"),label=document.createElement("label");
+  subject.textContent=item.subject;topic.textContent=item.topic;next.textContent=item.planOnly?"Tracked by study plan":(item.dueDate<=today?(item.dueDate<today?"Overdue · "+item.dueDate:"Due today"):"Due "+item.dueDate);
+  mastery.textContent=(Number(item.mastery.masteryLevel)||0)+"/5 · "+(item.mastery.averageQuality==null?"—":item.mastery.averageQuality+"/5");
+  if(item.retestDate){
+   retest.textContent=item.retestDue?"Due · "+item.retestDate:"Due "+item.retestDate;
+   if(item.retestDue){const retestButton=document.createElement("button");retestButton.type="button";retestButton.className="btn";retestButton.textContent="Record retest";retestButton.addEventListener("click",()=>completeScheduledRetest(item.subject,item.topic,item.key));retest.append(document.createElement("br"),retestButton);}
+  }else retest.textContent="Not scheduled";
   label.className="table-status"+(!item.due?" done":"");
-  const check=createAnimatedCheckbox(!item.due,"Mark "+item.topic+" revised"),checkbox=check.input;
-  checkbox.addEventListener("change",()=>{if(checkbox.checked&&item.due){completeScheduledRevision(item.subject,item.topic)}else{notify("This revision is not due yet.");checkbox.checked=true}});
-  const text=document.createElement("span");text.textContent=item.due?"Needs revision":"Scheduled";label.append(check.wrapper,text);status.append(label);row.append(subject,topic,next,status);body.append(row);
+  const text=document.createElement("span");
+  if(item.planOnly){text.textContent="Study plan tracked";label.className="table-status done";}
+  else{const check=createAnimatedCheckbox(!item.due,"Mark "+item.topic+" revised"),checkbox=check.input;checkbox.addEventListener("change",()=>{if(checkbox.checked&&item.due){completeScheduledRevision(item.subject,item.topic)}else{notify("This revision is not due yet.");checkbox.checked=true}});text.textContent=item.due?"Needs revision":"Scheduled";label.append(check.wrapper,text);}
+  if(item.planOnly)label.append(text);status.append(label);row.append(subject,topic,next,mastery,retest,status);body.append(row);
  });
  table.append(body);const wrap=document.createElement("div");wrap.className="data-table-wrap";wrap.append(table);host.append(wrap);
  if(!shown)host.innerHTML='<div class="empty">No completed topics match this filter yet. Complete a topic in Syllabus to add it here.</div>';
@@ -752,105 +789,188 @@ const BASE_STUDY_PLAN=[
 {subject:"Mock Tests",days:["Full GS mock test 5 + analysis","Revise Geography and mapping mistakes","Full GS mock test 6 + analysis","CSAT practice: comprehension and reasoning","Full GS mock test 7 + analysis","Mistake notebook: revise repeated errors","Light revision of short notes and facts"]},
 {subject:"Final Revision",days:["Polity: important Constitutional Articles","Modern History: dates, acts and movements","Economy: key terms, budget and institutions","Environment: species, parks and conventions","Geography: maps, rivers, passes and locations","Art & Culture + Science: quick facts and current links","Final short-note revision; rest and exam readiness"]}
 ];
-const CYCLE_START_DATE="2026-11-17";
-const DAILY_STUDY_PLAN=BASE_STUDY_PLAN.flatMap(week=>week.days.flatMap(topic=>[
- {subject:week.subject,topic,phase:"study",label:"Study"},
- {subject:week.subject,topic,phase:"mcq_revision",label:"MCQ + Revision"}
-]));
+const CYCLE_START_DATE="2026-11-20";
+const LEGACY_CYCLE_START_DATE="2026-11-17";
+const STUDY_PLAN_TOPICS=BASE_STUDY_PLAN.flatMap(week=>week.days.map(topic=>({subject:week.subject,topic})));
+const DAILY_STUDY_PLAN=STUDY_PLAN_TOPICS.flatMap((entry,planIndex)=>[
+ {...entry,planIndex,phase:"study",label:"Study"},
+ {...entry,planIndex,phase:"mcq_revision",label:"MCQ + Revision"}
+]);
+function addDaysToDateKey(dateKey,days){
+ const date=new Date(dateKey+"T00:00:00");
+ date.setDate(date.getDate()+days);
+ return localDateKey(date);
+}
+function studyPlanDateOffset(planIndex){
+ const start=new Date(CYCLE_START_DATE+"T00:00:00");
+ const targetKey=(state.settings||{}).targetDate||"2027-05-23";
+ const target=new Date(targetKey+"T00:00:00");
+ const totalDays=Math.max(1,Math.round((target-start)/86400000));
+ const finalStudyOffset=Math.max(0,totalDays-1);
+ if(STUDY_PLAN_TOPICS.length<=1)return 0;
+ return Math.round(planIndex*finalStudyOffset/(STUDY_PLAN_TOPICS.length-1));
+}
+function getStudyPlanDateKey(entry){
+ const offset=studyPlanDateOffset(entry.planIndex)+(entry.phase==="mcq_revision"?1:0);
+ return addDaysToDateKey(CYCLE_START_DATE,offset);
+}
 function getStudyPlanProgressDateKey(entry){
- if(entry.phase!=="mcq_revision")return entry.dateKey;
- const previousDate=new Date(entry.dateKey+"T00:00:00");
- previousDate.setDate(previousDate.getDate()-1);
- return localDateKey(previousDate);
+ return "plan:"+entry.planIndex;
 }
 function getStudyPlanProgress(entry){
- const progressDateKey=getStudyPlanProgressDateKey(entry);
- const progress=state.studyPlanProgress?.[progressDateKey]||{};
- if(entry.phase!=="mcq_revision"||progressDateKey===entry.dateKey)return progress;
- const legacy=state.studyPlanProgress?.[entry.dateKey]||{};
- return{
-  ...legacy,
-  ...progress,
-  studyDone:!!progress.studyReset?false:!!(progress.studyDone||legacy.studyDone),
-  mcqDone:!!(progress.mcqDone||legacy.mcqDone),
-  revisionDone:!!(progress.revisionDone||legacy.revisionDone),
-  mcqCount:progress.mcqDone?progress.mcqCount:(legacy.mcqCount??progress.mcqCount??0),
-  mcqLogged:!!(progress.mcqLogged||legacy.mcqLogged),
-  studyReset:!!progress.studyReset
- };
+ return state.studyPlanProgress?.[getStudyPlanProgressDateKey(entry)]||{};
+}
+function getStudyPlanEntriesForDate(dateKey,phase){
+ return DAILY_STUDY_PLAN.filter(entry=>getStudyPlanDateKey(entry)===dateKey&&(!phase||entry.phase===phase));
 }
 function getStudyPlanEntry(dateKey=localDate()){
  const start=new Date(CYCLE_START_DATE+"T00:00:00");
  const target=new Date(dateKey+"T00:00:00");
  const dayOffset=Math.round((target-start)/86400000);
- if(!Number.isFinite(dayOffset)||dayOffset<0||dayOffset>=DAILY_STUDY_PLAN.length)return null;
- const entry=DAILY_STUDY_PLAN[dayOffset];
- const progressDateKey=getStudyPlanProgressDateKey({...entry,dateKey});
- const progress=getStudyPlanProgress({...entry,dateKey});
- return{...entry,dayOffset,dateKey,progressDateKey,locked:entry.phase==="mcq_revision"&&!progress.studyDone};
+ return{
+  dateKey,
+  dayOffset,
+  studyEntries:getStudyPlanEntriesForDate(dateKey,"study"),
+  revisionEntries:getStudyPlanEntriesForDate(dateKey,"mcq_revision")
+ };
 }
 function isStudyPlanEntryDone(entry){
  if(!entry)return false;
  const progress=getStudyPlanProgress(entry);
- if(!Object.keys(progress).length){
-  if(entry.phase==="study")return !!state.studyPlanDone?.[entry.dateKey];
-  const previousDate=new Date(entry.dateKey+"T00:00:00");previousDate.setDate(previousDate.getDate()-1);
-  return !!state.studyPlanDone?.[localDateKey(previousDate)]&&!!state.studyPlanDone?.[entry.dateKey];
+ if(entry.phase==="study")return !!progress.studyDone;
+ return !!progress.studyDone&&!!progress.mcqDone&&!!progress.revisionDone;
+}
+function refreshRecoveryQueue(today=localDate()){
+ const queue=DAILY_STUDY_PLAN.filter(entry=>{
+  const dueDate=getStudyPlanDateKey(entry);
+  return dueDate<today&&!isStudyPlanEntryDone(entry);
+ }).map(entry=>({
+  key:"plan:"+entry.planIndex+":"+entry.phase,
+  plan_key:"plan:"+entry.planIndex,
+  planIndex:entry.planIndex,
+  subject:entry.subject,
+  topic:entry.topic,
+  phase:entry.phase,
+  due_date:getStudyPlanDateKey(entry),
+  status:"pending"
+ })).sort((a,b)=>a.due_date.localeCompare(b.due_date)||a.planIndex-b.planIndex||a.phase.localeCompare(b.phase));
+ state.recoveryQueue=queue;
+ return queue;
+}
+async function recordMasteryProgress(key,quality,isRetest=false){
+ const response=await fetch("/api/study/review",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+  today:localDate(),
+  previous_mastery:state.masteryProgress?.[key]||{},
+  previous_retest:state.retestSchedule?.[key]||{},
+  quality,
+  is_retest:isRetest
+ })});
+ if(!response.ok)throw new Error("Mastery and retest progress could not be updated.");
+ const result=await response.json();
+ state.masteryProgress=state.masteryProgress||{};
+ state.masteryProgress[key]={
+  reviews:result.mastery.reviews,
+  qualityTotal:result.mastery.quality_total,
+  averageQuality:result.mastery.average_quality,
+  masteryLevel:result.mastery.mastery_level,
+  consecutiveStrong:result.mastery.consecutive_strong,
+  lastQuality:result.mastery.last_quality,
+  lastReviewedAt:result.mastery.last_reviewed_at
+ };
+ state.retestSchedule=state.retestSchedule||{};
+ state.retestSchedule[key]={
+  due_date:result.retest.due_date,
+  attempts:result.retest.attempts,
+  last_quality:result.retest.last_quality,
+  status:result.retest.status,
+  interval_days:result.retest.interval_days
+ };
+}
+function askRecallQuality(topic,kind="revision"){
+ const raw=prompt("Rate your recall for "+topic+" (0 = no recall, 5 = excellent).", "3");
+ if(raw===null)return null;
+ const quality=Number(raw.trim());
+ if(raw.trim()===""||!Number.isInteger(quality)||quality<0||quality>5){
+  notify("Enter a recall score from 0 to 5.");
+  return null;
  }
- return entry.phase==="study"?!!progress.studyDone:!!progress.studyDone&&!!progress.mcqDone&&!!progress.revisionDone;
+ return quality;
 }
 function markStudyPlanPhaseComplete(entry){
- if(!entry)return;
+ if(!entry||entry.phase!=="study")return;
+ const key=getStudyPlanProgressDateKey(entry);
+ const progress={...getStudyPlanProgress(entry),studyDone:true,studyReset:false};
  state.studyPlanProgress=state.studyPlanProgress||{};
- const progress=getStudyPlanProgress(entry);
- if(entry.phase==="study"){progress.studyDone=true;progress.studyReset=false;}
- state.studyPlanProgress[entry.progressDateKey||getStudyPlanProgressDateKey(entry)]=progress;
- if(entry.phase==="study")syncStudyPlanCompletionToSyllabus(entry);
- state.studyPlanDone=state.studyPlanDone||{};
- state.studyPlanDone[entry.dateKey]=entry.phase==="study"?!!progress.studyDone:!!(progress.studyDone&&progress.mcqDone&&progress.revisionDone);
+ state.studyPlanProgress[key]=progress;
+ syncStudyPlanCompletionToSyllabus(entry);
  persist();
- renderStats();renderSubjectOverview();renderTopics();renderMissingTopics();renderRevision();renderCharts();renderRoadmap();renderOverviewSchedule();
+ renderAll();
+}
+async function completePlanRevision(entry){
+ const key=getStudyPlanProgressDateKey(entry);
+ const progress={...getStudyPlanProgress(entry)};
+ if(!progress.studyDone){notify("Complete this topic's study phase before Day 2 revision.");return;}
+ if(!progress.mcqDone){
+  const rawAmount=prompt("How many MCQs did you attempt for "+entry.topic+"?","0");
+  if(rawAmount===null)return;
+  const amount=Number(rawAmount.trim());
+  if(rawAmount.trim()===""||!Number.isInteger(amount)||amount<0||amount>500){notify("Enter a valid MCQ count from 0 to 500.");return;}
+  progress.mcqDone=true;
+  progress.mcqCount=amount;
+  state.studyPlanProgress[key]=progress;
+  persist();
+ }
+ if(!progress.revisionDone){
+  if(!confirm("Have you revised "+entry.topic+"?")){notify("MCQ count saved. Finish revision when ready.");return;}
+  const quality=askRecallQuality(entry.topic,"revision");
+  if(quality===null)return;
+  if(!await syncStudyPlanRevisionToSyllabus(entry,quality))return;
+  progress.revisionDone=true;
+ }
+ progress.mcqLogged=!!progress.mcqLogged;
+ state.studyPlanProgress[key]=progress;
+ const dateKey=localDate();
+ state.logs[dateKey]=state.logs[dateKey]||{hours:0,mcqs:0,csat:0,notes:""};
+ if(!progress.mcqLogged){
+  state.logs[dateKey].mcqs=(Number(state.logs[dateKey].mcqs)||0)+(Number(progress.mcqCount)||0);
+  progress.mcqLogged=true;
+  state.studyPlanProgress[key]=progress;
+ }
+ state.studyPlanDone=state.studyPlanDone||{};
+ state.studyPlanDone[getStudyPlanDateKey(entry)]=true;
+ persist();
+ renderAll();
 }
 function renderOverviewSchedule(){
  const host=$("overviewDailySchedule");if(!host)return;host.innerHTML="";
- const entry=getStudyPlanEntry(),today=localDate();
- if(!entry){host.textContent="No study topic is scheduled for today.";return;}
- const progress=getStudyPlanProgress(entry);
- const isStudy=entry.phase==="study",done=isStudy?!!progress.studyDone:!!(progress.studyDone&&progress.mcqDone&&progress.revisionDone);
- const date=new Date(today+"T00:00:00");
- const card=document.createElement("div");card.className="today-topic-card"+(done?" is-complete":"");
- const meta=document.createElement("div");meta.className="today-topic-meta";
- const dateLabel=document.createElement("span");dateLabel.textContent=date.toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short",year:"numeric"});
- const dayLabel=document.createElement("span");dayLabel.textContent="Day "+(entry.dayOffset+1)+" · "+(isStudy?"Day 1 of 2":"Day 2 of 2");
- meta.append(dateLabel,dayLabel);
- const subject=document.createElement("div");subject.className="today-topic-subject";subject.textContent=entry.subject;
- const topicLabel=document.createElement("div");topicLabel.className="today-topic-label";topicLabel.textContent=isStudy?"TODAY'S STUDY TOPIC":"TODAY'S MCQ + REVISION";
- const topicName=document.createElement("div");topicName.className="today-topic-name";topicName.textContent=entry.topic;
- const phaseDescription=document.createElement("div");phaseDescription.className="focus-desc";phaseDescription.textContent=isStudy?"Study the topic and complete your notes. MCQ practice is scheduled for tomorrow.":"Attempt and record your MCQ count, then revise the same topic studied yesterday.";
- const footer=document.createElement("div");footer.className="today-topic-footer";
- const status=document.createElement("span");status.className="today-topic-status";status.textContent=done?"Completed":(isStudy?"Study pending":"MCQ + revision pending");
- const completeButton=document.createElement("button");completeButton.type="button";completeButton.className="btn primary study-complete-btn";completeButton.textContent=done?"Completed":(entry.locked?"Locked · finish Day 1 first":(isStudy?"Mark study complete":"Mark MCQ + revision complete"));completeButton.disabled=done||entry.locked;
- completeButton.addEventListener("click",async()=>{
-  if(isStudy&&!progress.studyDone){markStudyPlanPhaseComplete(entry);return;}
-  if(!isStudy&&!progress.studyDone){notify("Complete Day 1 study before recording Day 2.");return;}
-  if(!isStudy&&!progress.mcqDone){
-   const rawAmount=prompt("How many MCQs did you attempt for this topic?","0");
-   if(rawAmount===null)return;
-   const amount=Number(rawAmount.trim());
-   if(rawAmount.trim()===""||!Number.isInteger(amount)||amount<0||amount>500){notify("Enter a valid MCQ count from 0 to 500.");return;}
-   progress.mcqDone=true;progress.mcqCount=amount;
-   state.studyPlanProgress=state.studyPlanProgress||{};
-   state.studyPlanProgress[entry.progressDateKey]=progress;
-   persist();
-  }
-  if(!isStudy&&!progress.revisionDone){if(!confirm("Have you revised this same topic?")){notify("MCQ count saved. Complete the revision before finishing Day 2.");return;}if(!await syncStudyPlanRevisionToSyllabus(entry))return;progress.revisionDone=true;}
-  state.studyPlanProgress=state.studyPlanProgress||{};state.studyPlanProgress[entry.progressDateKey]=progress;
-  state.studyPlanDone=state.studyPlanDone||{};state.studyPlanDone[today]=!!(progress.studyDone&&progress.mcqDone&&progress.revisionDone);
-  state.logs[today]=state.logs[today]||{hours:0,mcqs:0,csat:0,notes:""};
-  if(!progress.mcqLogged){state.logs[today].mcqs=(Number(state.logs[today].mcqs)||0)+(Number(progress.mcqCount)||0);progress.mcqLogged=true;}
-  persist();renderAll();
+ const today=localDate(),schedule=getStudyPlanEntry(today);
+ const activities=[
+  ...schedule.studyEntries.map(entry=>({entry,phase:"study"})),
+  ...schedule.revisionEntries.map(entry=>({entry,phase:"mcq_revision"}))
+ ];
+ if(!activities.length){host.textContent="No study topic is scheduled for today.";return;}
+ activities.forEach(({entry,phase})=>{
+  const progress=getStudyPlanProgress(entry);
+  const done=isStudyPlanEntryDone(entry);
+  const isStudy=phase==="study";
+  const card=document.createElement("div");card.className="today-topic-card"+(done?" is-complete":"");
+  const meta=document.createElement("div");meta.className="today-topic-meta";
+  const dateLabel=document.createElement("span");dateLabel.textContent=new Date(today+"T00:00:00").toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short",year:"numeric"});
+  const dayLabel=document.createElement("span");dayLabel.textContent=isStudy?"Day 1 · New topic":"Day 2 · Previous topic revision";
+  meta.append(dateLabel,dayLabel);
+  const subject=document.createElement("div");subject.className="today-topic-subject";subject.textContent=entry.subject;
+  const topicLabel=document.createElement("div");topicLabel.className="today-topic-label";topicLabel.textContent=isStudy?"TODAY'S STUDY TOPIC":"TODAY'S MCQ + REVISION";
+  const topicName=document.createElement("div");topicName.className="today-topic-name";topicName.textContent=entry.topic;
+  const description=document.createElement("div");description.className="focus-desc";
+  description.textContent=isStudy?"Study this topic and complete your notes. Its MCQ practice and revision are scheduled for tomorrow.":"Attempt and record your MCQ count, then revise the same topic studied on its Day 1.";
+  const footer=document.createElement("div");footer.className="today-topic-footer";
+  const status=document.createElement("span");status.className="today-topic-status";status.textContent=done?"Completed":(isStudy?"Study pending":(!progress.studyDone?"Locked · Day 1 pending":"MCQ + revision pending"));
+  const button=document.createElement("button");button.type="button";button.className="btn primary study-complete-btn";
+  button.textContent=done?"Completed":(isStudy?"Mark study complete":"Record MCQ + revision");
+  button.disabled=done||(!isStudy&&!progress.studyDone);
+  button.addEventListener("click",()=>{if(isStudy)markStudyPlanPhaseComplete(entry);else completePlanRevision(entry)});
+  footer.append(status,button);card.append(meta,subject,topicLabel,topicName,description,footer);host.append(card);
  });
- footer.append(status,completeButton);card.append(meta,subject,topicLabel,topicName,phaseDescription,footer);host.append(card);
 }
 
 function renderRoadmap(){
@@ -858,26 +978,25 @@ function renderRoadmap(){
  const table=document.createElement("table");table.className="data-table daily-plan-table";
  table.innerHTML="<thead><tr><th>Date</th><th>Day</th><th>Subject</th><th>Topic</th><th>Plan</th><th>Status</th><th>Done</th></tr></thead>";
  const body=document.createElement("tbody"),today=localDate();
- DAILY_STUDY_PLAN.forEach((entry,index)=>{
-  const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);
-  const dateKey=localDateKey(date);
-  const done=isStudyPlanEntryDone({...entry,dateKey}),isToday=dateKey===today,isPast=dateKey<today;
-  const row=document.createElement("tr");row.id="plan-"+dateKey;if(isToday)row.className="current-row";else if(isPast&&!done)row.className="missed-plan-row";
+ DAILY_STUDY_PLAN.forEach(entry=>{
+  const dateKey=getStudyPlanDateKey(entry),date=new Date(dateKey+"T00:00:00");
+  const done=isStudyPlanEntryDone(entry),isToday=dateKey===today,isPast=dateKey<today;
+  const row=document.createElement("tr");row.id="plan-"+dateKey+"-"+entry.phase+"-"+entry.planIndex;
+  if(isToday)row.className="current-row";else if(isPast&&!done)row.className="missed-plan-row";
   const dateCell=document.createElement("td");dateCell.textContent=date.toLocaleDateString("en-IN",{day:"2-digit",month:"short"});
   const dayCell=document.createElement("td");dayCell.textContent=date.toLocaleDateString("en-IN",{weekday:"long"});
   const subjectCell=document.createElement("td");subjectCell.textContent=entry.subject;
   const topicCell=document.createElement("td");topicCell.textContent=entry.topic;topicCell.className="single-daily-topic";
   const planCell=document.createElement("td");planCell.textContent=entry.phase==="study"?"Day 1 · Study":"Day 2 · MCQ + Revision";
-  const statusCell=document.createElement("td");const status=document.createElement("span");status.className="table-status"+(done?" done":"");status.textContent=done?"Completed":(isPast?"Missed":(entry.phase==="study"?"Study pending":"MCQ + revision pending"));statusCell.append(status);
-  const doneCell=document.createElement("td"),check=document.createElement("input");check.type="checkbox";check.checked=done;check.disabled=done||!isToday;check.title=done?"Completed":(isToday?"Complete today's phase from the overview card":"Only today's phase can be completed");check.setAttribute("aria-label","Completion status for "+dateKey);
-  if(isToday)check.addEventListener("change",()=>{if(!check.checked){check.checked=true;return;}if(entry.phase==="study"){markStudyPlanPhaseComplete({...entry,dateKey});}else{notify("Use today's overview card to record MCQ count and revision.");check.checked=false;}});
+  const statusCell=document.createElement("td"),status=document.createElement("span");status.className="table-status"+(done?" done":"");status.textContent=done?"Completed":(isPast?"Missed":(entry.phase==="study"?"Study pending":"MCQ + revision pending"));statusCell.append(status);
+  const doneCell=document.createElement("td"),check=document.createElement("input");check.type="checkbox";check.checked=done;check.disabled=done||!isToday||entry.phase!=="study";check.title=done?"Completed":(isToday&&entry.phase==="study"?"Complete today's study phase":"Complete from today's study/revision cards");check.setAttribute("aria-label","Completion status for "+dateKey+" "+entry.phase);
+  if(isToday&&entry.phase==="study")check.addEventListener("change",()=>{if(!check.checked){check.checked=true;return;}markStudyPlanPhaseComplete(entry)});
   doneCell.append(check);row.append(dateCell,dayCell,subjectCell,topicCell,planCell,statusCell,doneCell);body.append(row);
  });
  table.append(body);const wrap=document.createElement("div");wrap.className="data-table-wrap";wrap.append(table);host.append(wrap);
  const todayRow=Array.from(body.rows).find(row=>row.classList.contains("current-row"));
  if(todayRow)setTimeout(()=>todayRow.scrollIntoView({block:"nearest",behavior:"smooth"}),0);
 }
-
 function renderLogs(){
  const host=$("recentLogs"),allLogs=Object.entries(state.logs||{}).sort((a,b)=>b[0].localeCompare(a[0])),logs=allLogs.slice(0,7);
  $("logTotalHours").textContent=allLogs.reduce((n,[,x])=>n+(Number(x.hours)||0),0).toFixed(1)+"h";
@@ -899,17 +1018,17 @@ function renderCharts(){
  const host=$("progressCharts");if(!host)return;host.innerHTML="";
  const total=totalTopics(),completed=doneTopics(),pending=Math.max(0,total-completed);
  const revisionTotal=completed,validKeys=validTopicKeys(),revisionToday=localDate(),revisionPending=Object.keys(state.topics||{}).filter(key=>validKeys.has(key)&&!!state.topics[key]).filter(key=>{const dueDate=state.revisionSchedule?.[key]?.due_date;return typeof dueDate!=="string"||dueDate<=revisionToday}).length,revisionDone=Math.max(0,revisionTotal-revisionPending);
- const validPlanDates=new Set();DAILY_STUDY_PLAN.forEach((entry,index)=>{const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);validPlanDates.add(localDateKey(date));});
- const planTotal=validPlanDates.size,planDone=Object.entries(state.studyPlanDone||{}).filter(([key,value])=>validPlanDates.has(key)&&!!value).length,planPending=Math.max(0,planTotal-planDone);
+ const planTotal=DAILY_STUDY_PLAN.length,planDone=DAILY_STUDY_PLAN.filter(isStudyPlanEntryDone).length,planPending=Math.max(0,planTotal-planDone);
  const today=localDate(),dailyState=state.daily[today]||{},dailyTotal=dailyItems().length,dailyDone=dailyItems().filter(item=>dailyState[item[0]]).length,dailyPending=Math.max(0,dailyTotal-dailyDone);
- const todayDate=new Date(today+"T00:00:00");let pastCompleted=0,missed=0;
- DAILY_STUDY_PLAN.forEach((entry,index)=>{const date=new Date(CYCLE_START_DATE+"T00:00:00");date.setDate(date.getDate()+index);const key=localDateKey(date);if(date<todayDate){if(isStudyPlanEntryDone({...entry,dateKey:key}))pastCompleted++;else missed++;}});
+ const todayDate=new Date(today+"T00:00:00"),pastPlanDates=new Map();
+ DAILY_STUDY_PLAN.forEach(entry=>{const dateKey=getStudyPlanDateKey(entry),date=new Date(dateKey+"T00:00:00");if(date<todayDate){const progress=pastPlanDates.get(dateKey)||{done:0,total:0};progress.total++;if(isStudyPlanEntryDone(entry))progress.done++;pastPlanDates.set(dateKey,progress);}});
+ const pastCompleted=[...pastPlanDates.values()].filter(item=>item.done===item.total).length,missed=[...pastPlanDates.values()].filter(item=>item.done<item.total).length;
  const p1Topics=allSubjects().flatMap(subject=>subject.topics.map(topic=>({subject:subject.name,name:topic[0],priority:topic[2]}))).filter(topic=>topic.priority==="P1");
  const p1Done=p1Topics.filter(topic=>!!state.topics[topic.subject+"::"+topic.name]).length;
  const metrics=[
   {name:"Syllabus completed",done:completed,total,label:"topics",remaining:pending},
   {name:"Revision completed",done:revisionDone,total:revisionTotal,label:"revisions",remaining:revisionPending},
-  {name:"Study plan completed",done:planDone,total:planTotal,label:"days",remaining:planPending},
+  {name:"Study plan completed",done:planDone,total:planTotal,label:"phases",remaining:planPending},
   {name:"Today's checklist",done:dailyDone,total:dailyTotal,label:"tasks",remaining:dailyPending},
   {name:"Missed study days",done:missed,total:missed+pastCompleted,label:"past days",remaining:pastCompleted,doneLabel:"missed"},
   {name:"P1 priority completed",done:p1Done,total:p1Topics.length,label:"topics",remaining:Math.max(0,p1Topics.length-p1Done)}
@@ -978,8 +1097,8 @@ function renderCharts(){
   renderTrend("Study consistency","Active study days · last 14 days",consistency,"","heatmap");
   const revisionBySubject=allSubjects().map(subject=>({label:subject.name.slice(0,8),value:subject.topics.filter(topic=>state.revisionDone?.[subject.name+"::"+topic[0]]).length}));
   renderTrend("Revisions by subject","Completed revision checklists",revisionBySubject,"","lollipop");
-  const planWeekly=[];for(let week=0;week<8;week++){let done=0;for(let day=0;day<7;day++){const date=new Date(2026,10,17);date.setDate(date.getDate()+week*7+day);if(state.studyPlanDone?.[dateKey(date)])done++}planWeekly.push({label:"W"+(week+1),value:done})}
-  renderTrend("Weekly study-plan completion","Completed days · first 8 weeks",planWeekly,"/7");
+  const planWeekly=[];for(let week=0;week<8;week++){const start=new Date(CYCLE_START_DATE+"T00:00:00");start.setDate(start.getDate()+week*7);const end=new Date(start);end.setDate(end.getDate()+6);const startKey=dateKey(start),endKey=dateKey(end);const entries=DAILY_STUDY_PLAN.filter(entry=>{const scheduled=getStudyPlanDateKey(entry);return scheduled>=startKey&&scheduled<=endKey});const done=entries.filter(isStudyPlanEntryDone).length;planWeekly.push({label:"W"+(week+1),value:entries.length?Math.round(done/entries.length*100):0})}
+  renderTrend("Weekly study-plan completion","Completed planned phases · first 8 weeks",planWeekly,"%");
   const prioritySeries=["P1","P2"].map(priority=>({label:priority,value:allSubjects().flatMap(subject=>subject.topics.filter(topic=>topic[2]===priority&&state.topics[subject.name+"::"+topic[0]])).length}));
   renderTrend("Priority topics completed","P1 vs P2 · completed topics",prioritySeries,"","treemap");
  }
@@ -1010,7 +1129,7 @@ $("exportBtn").addEventListener("click",()=>{const blob=new Blob([JSON.stringify
 $("importBtn").addEventListener("click",()=>$("importFile").click());
 async function replaceProgressState(incoming){await saveQueue;let version=Number(state.version)||0;try{const response=await fetch("/api/state");if(response.ok){const remote=await response.json();if(Number.isInteger(Number(remote.version))&&Number(remote.version)>=0)version=Number(remote.version)}}catch{}state=normalizeProgressState({...incoming,version});await persist();renderAll();const response=await fetch("/api/state");if(!response.ok)throw new Error("Backup is saved in this browser, but SQLite could not confirm the import.");const saved=normalizeProgressState(await response.json());const expected={...state,version:0},actual={...saved,version:0};if(JSON.stringify(expected)!==JSON.stringify(actual))throw new Error("Backup is saved locally, but SQLite verification did not match. Keep the browser backup and retry.");state=saved;localStorage.setItem(STORE,JSON.stringify(state));renderAll()}
 $("importFile").addEventListener("change",async e=>{const file=e.target.files[0];if(!file)return;try{if(file.size>10*1024*1024)throw new Error("Backup files must be 10 MB or smaller.");const parsed=JSON.parse(await file.text()),incoming=parsed?.data??parsed;if(!incoming||typeof incoming!=="object"||Array.isArray(incoming)||!incoming.topics||typeof incoming.topics!=="object"||Array.isArray(incoming.topics)||!incoming.logs||typeof incoming.logs!=="object"||Array.isArray(incoming.logs))throw new Error("This file is not a valid UPSC tracker backup.");if(!confirm("Import backup and replace the progress currently saved in this browser?"))return;await replaceProgressState(incoming);notify("Backup imported successfully.")}catch(err){notify(err.message||"Could not import backup.")}finally{e.target.value=""}});
-$("resetBtn").addEventListener("click",async()=>{if(confirm("Reset study progress, logs and revision records? Your custom subjects, daily tasks and settings will be preserved. Export a backup first if you may need the progress.")){const current=state;const reset={...defaultState(),version:current.version,settings:current.settings,customSubjects:current.customSubjects,customDaily:current.customDaily};if(Array.isArray(current.questionBank))reset.questionBank=current.questionBank;await replaceProgressState(reset);$("logHours").value="";$("logMcq").value="";$("logCsat").value="";$("logNotes").value="";notify("Study progress reset. Your custom setup was preserved.")}});
+$("resetBtn").addEventListener("click",async()=>{if(confirm("Reset study progress, logs and revision records? Your custom subjects, daily tasks and settings will be preserved. Export a backup first if you may need the progress.")){const current=state;const reset={...defaultState(),version:current.version,settings:current.settings,customSubjects:current.customSubjects,customDaily:current.customDaily,studyPlanProgressSchema:2};if(Array.isArray(current.questionBank))reset.questionBank=current.questionBank;await replaceProgressState(reset);$("logHours").value="";$("logMcq").value="";$("logCsat").value="";$("logNotes").value="";notify("Study progress reset. Your custom setup was preserved.")}});
 
 // Personal customization
 $("targetDate").addEventListener("change",()=>{const value=$("targetDate").value;if(!/^\d{4}-\d{2}-\d{2}$/.test(value)||Number.isNaN(new Date(value+"T00:00:00").getTime())){notify("Choose a valid target date.");renderStats();return}state.settings=state.settings||{};state.settings.targetDate=value;persist();renderStats();renderCharts()});

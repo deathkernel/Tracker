@@ -11,7 +11,7 @@ from typing import Any
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, Response
 
-from revision_engine import next_revision_schedule
+from revision_engine import next_revision_schedule, next_retest_schedule, update_mastery_progress
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
@@ -145,6 +145,34 @@ class RevisionScheduleRequest(BaseModel):
 def calculate_revision_schedule(request: RevisionScheduleRequest) -> dict[str, Any]:
     try:
         return next_revision_schedule(request.today, request.previous, request.quality)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+
+class StudyReviewRequest(BaseModel):
+    today: str
+    previous_mastery: dict[str, Any] | None = None
+    previous_retest: dict[str, Any] | None = None
+    quality: int = Field(strict=True, ge=0, le=5)
+    is_retest: bool = False
+
+
+@app.post("/api/study/review")
+def update_study_review(request: StudyReviewRequest) -> dict[str, Any]:
+    try:
+        mastery = update_mastery_progress(
+            request.previous_mastery,
+            request.today,
+            request.quality,
+        )
+        retest = next_retest_schedule(
+            request.previous_retest,
+            request.today,
+            request.quality,
+            is_retest=request.is_retest,
+        )
+        return {"mastery": mastery, "retest": retest}
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

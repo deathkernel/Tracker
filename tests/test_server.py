@@ -135,3 +135,54 @@ def test_state_rejects_invalid_saved_version_types(client, invalid_version):
     response = client.put("/api/state", json={"version": 0})
     assert response.status_code == 500
     assert response.json()["detail"] == "Saved tracker data is invalid."
+
+
+def test_study_review_endpoint_updates_mastery_and_retest(client):
+    response = client.post("/api/study/review", json={
+        "today": "2026-11-20",
+        "quality": 5,
+        "previous_mastery": None,
+        "previous_retest": None,
+        "is_retest": False,
+    })
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["mastery"]["mastery_level"] == 1
+    assert payload["mastery"]["average_quality"] == 5
+    assert payload["retest"]["due_date"] == "2026-11-27"
+    assert payload["retest"]["attempts"] == 0
+
+
+def test_study_review_endpoint_validates_recall_quality_and_date(client):
+    invalid_quality = client.post("/api/study/review", json={
+        "today": "2026-11-20",
+        "quality": True,
+    })
+    assert invalid_quality.status_code == 422
+
+    invalid_date = client.post("/api/study/review", json={
+        "today": "20-11-2026",
+        "quality": 3,
+    })
+    assert invalid_date.status_code == 422
+
+
+def test_study_retest_endpoint_counts_attempts_without_resetting_mastery(client):
+    response = client.post("/api/study/review", json={
+        "today": "2026-11-20",
+        "quality": 1,
+        "previous_mastery": {
+            "reviews": 1,
+            "qualityTotal": 5,
+            "masteryLevel": 2,
+            "consecutiveStrong": 1,
+        },
+        "previous_retest": {"attempts": 2},
+        "is_retest": True,
+    })
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["mastery"]["reviews"] == 2
+    assert payload["mastery"]["mastery_level"] == 1
+    assert payload["retest"]["attempts"] == 3
+    assert payload["retest"]["due_date"] == "2026-11-21"

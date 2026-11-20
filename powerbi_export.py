@@ -73,8 +73,12 @@ CSV_COLUMNS = {
     "TopicProgress": ["TopicKey", "Subject", "Topic", "Priority", "IsCompleted", "IsRevised"],
     "StudyLogs": ["Date", "StudyHours", "MCQs", "CSAT", "Notes"],
     "DailyChecklist": ["Date", "TaskID", "Task", "IsCompleted"],
-    "StudyPlan": ["Date", "Week", "Subject", "PlannedTopic", "Phase", "MCQAttempts", "IsCompleted"],
+    "StudyPlan": ["PlanKey", "Date", "Week", "Subject", "PlannedTopic", "Phase", "MCQAttempts", "IsCompleted"],
+    "PlanTopics": ["PlanKey", "Subject", "PlannedTopic"],
     "Calendar": ["Date", "Year", "MonthNumber", "Month", "Weekday", "WeekdayNumber"],
+    "Mastery": ["TopicKey", "PlanKey", "Subject", "Topic", "Reviews", "MasteryLevel", "AverageQuality", "LastQuality"],
+    "RetestSchedule": ["TopicKey", "PlanKey", "Subject", "Topic", "DueDate", "Attempts", "Status", "LastQuality"],
+    "RecoveryQueue": ["PlanKey", "Subject", "Topic", "Phase", "DueDate", "Status"],
 }
 
 
@@ -123,58 +127,89 @@ def build_study_plan_rows(html: str, state: dict[str, Any]) -> list[dict[str, An
     if not groups:
         raise RuntimeError("Could not parse BASE_STUDY_PLAN topics")
 
+    topics: list[tuple[str, str]] = []
+    for subject, raw_topics in groups:
+        topic_names = re.findall(r'"((?:\\.|[^"\\])*)"', raw_topics)
+        topics.extend((subject, topic) for topic in topic_names)
+
+    if not topics:
+        return []
+
     progress_state = state.get("studyPlanProgress", {})
     if not isinstance(progress_state, dict):
         progress_state = {}
     legacy_done = state.get("studyPlanDone", {})
     if not isinstance(legacy_done, dict):
         legacy_done = {}
+    settings = state.get("settings", {})
+    if not isinstance(settings, dict):
+        settings = {}
+
+    start = date(2026, 11, 20)
+    target_text = settings.get("targetDate", "2027-05-23")
+    try:
+        target = date.fromisoformat(target_text) if isinstance(target_text, str) else date(2027, 5, 23)
+    except ValueError:
+        target = date(2027, 5, 23)
+    final_study_offset = max(0, (target - start).days - 1)
 
     rows: list[dict[str, Any]] = []
-    start = date(2026, 11, 17)
-    entry_index = 0
-    for subject, raw_topics in groups:
-        topics = re.findall(r'"((?:\\.|[^"\\])*)"', raw_topics)
-        if not topics:
-            continue
-        for topic in topics:
-            for phase, label in (("study", "Day 1 · Study"), ("mcq_revision", "Day 2 · MCQ + Revision")):
-                planned_date = start + timedelta(days=entry_index)
-                date_key = planned_date.isoformat()
-                progress_date = planned_date - timedelta(days=1) if phase == "mcq_revision" else planned_date
-                progress = progress_state.get(progress_date.isoformat(), {})
-                if not isinstance(progress, dict):
-                    progress = {}
-                if phase == "mcq_revision":
-                    legacy_progress = progress_state.get(date_key, {})
-                    if isinstance(legacy_progress, dict):
-                        current_progress = progress
-                        progress = {
-                            **legacy_progress,
-                            **current_progress,
-                            "studyDone": bool(current_progress.get("studyDone") or legacy_progress.get("studyDone")),
-                            "mcqDone": bool(current_progress.get("mcqDone") or legacy_progress.get("mcqDone")),
-                            "revisionDone": bool(current_progress.get("revisionDone") or legacy_progress.get("revisionDone")),
-                            "mcqLogged": bool(current_progress.get("mcqLogged") or legacy_progress.get("mcqLogged")),
-                        }
-                        if not current_progress.get("mcqDone") and legacy_progress.get("mcqDone"):
-                            progress["mcqCount"] = legacy_progress.get("mcqCount", 0)
-                if phase == "study":
-                    completed = bool(progress.get("studyDone")) or (not progress and bool(legacy_done.get(date_key)))
-                    attempts = ""
-                else:
-                    completed = bool(progress.get("mcqDone") and progress.get("revisionDone")) or (not progress and bool(legacy_done.get(date_key)))
-                    attempts = safe_number(progress.get("mcqCount"), integer=True)
-                rows.append({
-                    "Date": date_key,
-                    "Week": entry_index // 14 + 1,
-                    "Subject": subject,
-                    "PlannedTopic": topic,
-                    "Phase": label,
-                    "MCQAttempts": attempts,
-                    "IsCompleted": completed,
-                })
-                entry_index += 1
+    for plan_index, (subject, topic) in enumerate(topics):
+        if len(topics) > 1:
+            study_offset = round(plan_index * final_study_offset / (len(topics) - 1))
+        else:
+            study_offset = 0
+        study_date = start + timedelta(days=study_offset)
+        revision_date = study_date + timedelta(days=1)
+
+        progress_key = f"plan:{plan_index}"
+        has_new_progress = progress_key in progress_state
+        progress = progress_state.get(progress_key, {})
+        if not isinstance(progress, dict):
+            progress = {}
+
+        study_done = bool(progress.get("studyDone"))
+        mcq_done = bool(progress.get("mcqDone"))
+        revision_done = bool(progress.get("revisionDone"))
+        mcq_count = progress.get("mcqCount", 0)
+
+        # Read legacy date-keyed records only when the new per-topic key is absent.
+        if not has_new_progress:
+            legacy_study_date = date(2026, 11, 17) + timedelta(days=plan_index * 2)
+            legacy_revision_date = legacy_study_date + timedelta(days=1)
+            old_study = progress_state.get(legacy_study_date.isoformat(), {})
+            old_revision = progress_state.get(legacy_revision_date.isoformat(), {})
+            if not isinstance(old_study, dict):
+                old_study = {}
+            if not isinstance(old_revision, dict):
+                old_revision = {}
+            legacy_study_done = bool(old_study.get("studyDone") or legacy_done.get(legacy_study_date.isoformat()))
+            legacy_day_two_done = bool(legacy_done.get(legacy_revision_date.isoformat()))
+            study_done = legacy_study_done and not bool(old_study.get("studyReset"))
+            mcq_done = bool(old_study.get("mcqDone") or old_revision.get("mcqDone") or (study_done and legacy_day_two_done))
+            revision_done = bool(old_study.get("revisionDone") or old_revision.get("revisionDone") or (study_done and legacy_day_two_done))
+            mcq_count = old_revision.get("mcqCount", old_study.get("mcqCount", 0))
+
+        rows.append({
+            "PlanKey": f"plan:{plan_index}",
+            "Date": study_date.isoformat(),
+            "Week": (study_offset // 7) + 1,
+            "Subject": subject,
+            "PlannedTopic": topic,
+            "Phase": "Day 1 · Study",
+            "MCQAttempts": "",
+            "IsCompleted": study_done,
+        })
+        rows.append({
+            "PlanKey": f"plan:{plan_index}",
+            "Date": revision_date.isoformat(),
+            "Week": (study_offset // 7) + 1,
+            "Subject": subject,
+            "PlannedTopic": topic,
+            "Phase": "Day 2 · MCQ + Revision",
+            "MCQAttempts": safe_number(mcq_count, integer=True),
+            "IsCompleted": study_done and mcq_done and revision_done,
+        })
     return rows
 
 
@@ -237,8 +272,83 @@ def main() -> None:
         day = date.fromisoformat(value)
         calendar.append({"Date": value, "Year": day.year, "MonthNumber": day.month, "Month": day.strftime("%B"), "Weekday": day.strftime("%A"), "WeekdayNumber": day.isoweekday()})
 
+    known_topics = {row["TopicKey"]: row for row in topic_rows}
+    plan_topics = {row["PlanKey"]: {"Subject": row["Subject"], "Topic": row["PlannedTopic"]} for row in plan_rows}
+    mastery_rows: list[dict[str, Any]] = []
+    mastery_state = state.get("masteryProgress", {})
+    if isinstance(mastery_state, dict):
+        for key, value in mastery_state.items():
+            topic = known_topics.get(key) or plan_topics.get(key)
+            if not topic or not isinstance(value, dict):
+                continue
+            is_plan_key = key.startswith("plan:")
+            mastery_rows.append({
+                "TopicKey": "" if is_plan_key else key,
+                "PlanKey": key if is_plan_key else "",
+                "Subject": topic["Subject"],
+                "Topic": topic["Topic"],
+                "Reviews": safe_number(value.get("reviews"), integer=True),
+                "MasteryLevel": safe_number(value.get("masteryLevel"), integer=True),
+                "AverageQuality": safe_number(value.get("averageQuality")),
+                "LastQuality": safe_number(value.get("lastQuality"), integer=True),
+            })
+
+    retest_rows: list[dict[str, Any]] = []
+    retest_state = state.get("retestSchedule", {})
+    if isinstance(retest_state, dict):
+        for key, value in retest_state.items():
+            topic = known_topics.get(key) or plan_topics.get(key)
+            if not topic or not isinstance(value, dict):
+                continue
+            due_date = value.get("due_date", "")
+            is_plan_key = key.startswith("plan:")
+            retest_rows.append({
+                "TopicKey": "" if is_plan_key else key,
+                "PlanKey": key if is_plan_key else "",
+                "Subject": topic["Subject"],
+                "Topic": topic["Topic"],
+                "DueDate": due_date if valid_iso_date(due_date) else "",
+                "Attempts": safe_number(value.get("attempts"), integer=True),
+                "Status": str(value.get("status") or ""),
+                "LastQuality": safe_number(value.get("last_quality"), integer=True),
+            })
+
+    recovery_rows: list[dict[str, Any]] = []
+    recovery_state = state.get("recoveryQueue", [])
+    if isinstance(recovery_state, list):
+        for item in recovery_state:
+            if not isinstance(item, dict):
+                continue
+            due_date = item.get("due_date", "")
+            recovery_rows.append({
+                "PlanKey": str(item.get("plan_key") or f"plan:{item.get('planIndex')}"),
+                "Subject": str(item.get("subject") or ""),
+                "Topic": str(item.get("topic") or ""),
+                "Phase": str(item.get("phase") or ""),
+                "DueDate": due_date if valid_iso_date(due_date) else "",
+                "Status": str(item.get("status") or "pending"),
+            })
+
     OUT.mkdir(exist_ok=True)
-    for name, rows in [("Topics", topic_rows), ("TopicProgress", progress_rows), ("StudyLogs", logs), ("DailyChecklist", checklist), ("StudyPlan", plan_rows), ("Calendar", calendar)]:
+    for name, rows in [
+        ("Topics", topic_rows),
+        ("TopicProgress", progress_rows),
+        ("StudyLogs", logs),
+        ("DailyChecklist", checklist),
+        ("StudyPlan", plan_rows),
+        ("PlanTopics", [
+            {
+                "PlanKey": key,
+                "Subject": value["Subject"],
+                "PlannedTopic": value["Topic"],
+            }
+            for key, value in sorted(plan_topics.items())
+        ]),
+        ("Calendar", calendar),
+        ("Mastery", mastery_rows),
+        ("RetestSchedule", retest_rows),
+        ("RecoveryQueue", recovery_rows),
+    ]:
         write_csv(name, rows)
     print(f"Power BI data exported to {OUT}")
 

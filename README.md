@@ -14,7 +14,8 @@ Keep the command window open while using the tracker. Press Ctrl+C to stop the l
 ## Dashboard
 
 - Daily checklist and completion progress.
-- Two-day topic cycle: Day 1 study, Day 2 MCQ attempt count + revision for the same topic.
+- Exam-deadline study cycle: Day 1 starts a topic; the next day records MCQs + revision for that same topic while a new Day 1 topic can begin.
+- The dashboard distributes the 189 planned study units between the cycle start and configured exam target date; final revision is scheduled on the target date.
 - 9 base subjects and 291 curated syllabus topics.
 - Subject-wise progress, topic search and completion filters.
 - Weekly roadmap with date, subject and study focus.
