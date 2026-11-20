@@ -410,7 +410,7 @@ test("overview subject progress uses a dedicated scrollable table wrapper", () =
 
 test("manual syllabus completion updates its mapped Day 1 phase without completing Day 2", () => {
   const start = script.indexOf("function syncSyllabusCompletionToStudyPlan(");
-  const end = script.indexOf("\\nfunction syncSyllabusUncompletionToStudyPlan", start);
+  const end = script.indexOf("\nfunction syncSyllabusUncompletionToStudyPlan", start);
   assert.ok(start >= 0 && end > start);
   const key = "Polity::Constitutional development";
   const entry = {
@@ -430,7 +430,7 @@ test("manual syllabus completion updates its mapped Day 1 phase without completi
     getStudyPlanProgress: () => ({ revisionDone: false, mcqDone: false })
   };
   vm.runInNewContext(
-    script.slice(start, end) + "\\nthis.sync=syncSyllabusCompletionToStudyPlan;",
+    script.slice(start, end) + "\nthis.sync=syncSyllabusCompletionToStudyPlan;",
     sandbox
   );
   sandbox.sync("Polity", "Constitutional development");
