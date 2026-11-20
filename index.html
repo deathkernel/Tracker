@@ -636,8 +636,8 @@ async function completeScheduledRevision(subject,topic){
   renderCharts();
  }catch(error){notify(error.message||"Could not update the revision schedule.");}
 }
-async function completeScheduledRetest(subject,topic){
- const key=subject+"::"+topic,quality=askRecallQuality(topic,"retest");
+async function completeScheduledRetest(subject,topic,progressKey=null){
+ const key=progressKey||subject+"::"+topic,quality=askRecallQuality(topic,"retest");
  if(quality===null)return;
  try{
   await recordMasteryProgress(key,quality,true);
@@ -723,6 +723,12 @@ function renderRevision(){
    completed.push({subject:subject.name,topic,key,dueDate,due:dueDate<=today,retestDate,retestDue:!!retestDate&&retestDate<=today,mastery:state.masteryProgress?.[key]||{}});
   }
  }));
+ STUDY_PLAN_TOPICS.forEach((entry,planIndex)=>{
+  if(findMatchingSyllabusTopics(entry.subject,entry.topic).length)return;
+  const key="plan:"+planIndex,retest=state.retestSchedule?.[key]||{},mastery=state.masteryProgress?.[key]||{};
+  if(!mastery.reviews||typeof retest.due_date!=="string")return;
+  completed.push({subject:entry.subject,topic:entry.topic,key,dueDate:today,due:false,retestDate:retest.due_date,retestDue:retest.due_date<=today,mastery,planOnly:true});
+ });
  const dueCount=completed.filter(item=>item.due).length;
  const retestCount=completed.filter(item=>item.retestDue).length;
  $("revisionCount").textContent=completed.length+" completed topics · "+dueCount+" due · "+retestCount+" retests due";
@@ -736,16 +742,17 @@ function renderRevision(){
  completed.filter(item=>(subjectFilter==="all"||item.subject===subjectFilter)&&((item.subject+" "+item.topic).toLowerCase().includes(query))).filter(item=>statusFilter==="all"||(statusFilter==="done"&&!item.due)||(statusFilter==="pending"&&item.due)).forEach(item=>{
   shown++;
   const row=document.createElement("tr"),subject=document.createElement("td"),topic=document.createElement("td"),next=document.createElement("td"),mastery=document.createElement("td"),retest=document.createElement("td"),status=document.createElement("td"),label=document.createElement("label");
-  subject.textContent=item.subject;topic.textContent=item.topic;next.textContent=item.dueDate<=today?(item.dueDate<today?"Overdue · "+item.dueDate:"Due today"):"Due "+item.dueDate;
+  subject.textContent=item.subject;topic.textContent=item.topic;next.textContent=item.planOnly?"Tracked by study plan":(item.dueDate<=today?(item.dueDate<today?"Overdue · "+item.dueDate:"Due today"):"Due "+item.dueDate);
   mastery.textContent=(Number(item.mastery.masteryLevel)||0)+"/5 · "+(item.mastery.averageQuality==null?"—":item.mastery.averageQuality+"/5");
   if(item.retestDate){
    retest.textContent=item.retestDue?"Due · "+item.retestDate:"Due "+item.retestDate;
-   if(item.retestDue){const retestButton=document.createElement("button");retestButton.type="button";retestButton.className="btn";retestButton.textContent="Record retest";retestButton.addEventListener("click",()=>completeScheduledRetest(item.subject,item.topic));retest.append(document.createElement("br"),retestButton);}
+   if(item.retestDue){const retestButton=document.createElement("button");retestButton.type="button";retestButton.className="btn";retestButton.textContent="Record retest";retestButton.addEventListener("click",()=>completeScheduledRetest(item.subject,item.topic,item.key));retest.append(document.createElement("br"),retestButton);}
   }else retest.textContent="Not scheduled";
   label.className="table-status"+(!item.due?" done":"");
-  const check=createAnimatedCheckbox(!item.due,"Mark "+item.topic+" revised"),checkbox=check.input;
-  checkbox.addEventListener("change",()=>{if(checkbox.checked&&item.due){completeScheduledRevision(item.subject,item.topic)}else{notify("This revision is not due yet.");checkbox.checked=true}});
-  const text=document.createElement("span");text.textContent=item.due?"Needs revision":"Scheduled";label.append(check.wrapper,text);status.append(label);row.append(subject,topic,next,mastery,retest,status);body.append(row);
+  const text=document.createElement("span");
+  if(item.planOnly){text.textContent="Study plan tracked";label.className="table-status done";}
+  else{const check=createAnimatedCheckbox(!item.due,"Mark "+item.topic+" revised"),checkbox=check.input;checkbox.addEventListener("change",()=>{if(checkbox.checked&&item.due){completeScheduledRevision(item.subject,item.topic)}else{notify("This revision is not due yet.");checkbox.checked=true}});text.textContent=item.due?"Needs revision":"Scheduled";label.append(check.wrapper,text);}
+  if(item.planOnly)label.append(text);status.append(label);row.append(subject,topic,next,mastery,retest,status);body.append(row);
  });
  table.append(body);const wrap=document.createElement("div");wrap.className="data-table-wrap";wrap.append(table);host.append(wrap);
  if(!shown)host.innerHTML='<div class="empty">No completed topics match this filter yet. Complete a topic in Syllabus to add it here.</div>';
@@ -1010,9 +1017,9 @@ function renderCharts(){
  const revisionTotal=completed,validKeys=validTopicKeys(),revisionToday=localDate(),revisionPending=Object.keys(state.topics||{}).filter(key=>validKeys.has(key)&&!!state.topics[key]).filter(key=>{const dueDate=state.revisionSchedule?.[key]?.due_date;return typeof dueDate!=="string"||dueDate<=revisionToday}).length,revisionDone=Math.max(0,revisionTotal-revisionPending);
  const planTotal=DAILY_STUDY_PLAN.length,planDone=DAILY_STUDY_PLAN.filter(isStudyPlanEntryDone).length,planPending=Math.max(0,planTotal-planDone);
  const today=localDate(),dailyState=state.daily[today]||{},dailyTotal=dailyItems().length,dailyDone=dailyItems().filter(item=>dailyState[item[0]]).length,dailyPending=Math.max(0,dailyTotal-dailyDone);
- const todayDate=new Date(today+"T00:00:00"),pastCompletedDates=new Set(),missedDates=new Set();
- DAILY_STUDY_PLAN.forEach(entry=>{const dateKey=getStudyPlanDateKey(entry),date=new Date(dateKey+"T00:00:00");if(date<todayDate){if(isStudyPlanEntryDone(entry))pastCompletedDates.add(dateKey);else missedDates.add(dateKey);}});
- const pastCompleted=pastCompletedDates.size,missed=missedDates.size;
+ const todayDate=new Date(today+"T00:00:00"),pastPlanDates=new Map();
+ DAILY_STUDY_PLAN.forEach(entry=>{const dateKey=getStudyPlanDateKey(entry),date=new Date(dateKey+"T00:00:00");if(date<todayDate){const progress=pastPlanDates.get(dateKey)||{done:0,total:0};progress.total++;if(isStudyPlanEntryDone(entry))progress.done++;pastPlanDates.set(dateKey,progress);}});
+ const pastCompleted=[...pastPlanDates.values()].filter(item=>item.done===item.total).length,missed=[...pastPlanDates.values()].filter(item=>item.done<item.total).length;
  const p1Topics=allSubjects().flatMap(subject=>subject.topics.map(topic=>({subject:subject.name,name:topic[0],priority:topic[2]}))).filter(topic=>topic.priority==="P1");
  const p1Done=p1Topics.filter(topic=>!!state.topics[topic.subject+"::"+topic.name]).length;
  const metrics=[
@@ -1087,8 +1094,8 @@ function renderCharts(){
   renderTrend("Study consistency","Active study days · last 14 days",consistency,"","heatmap");
   const revisionBySubject=allSubjects().map(subject=>({label:subject.name.slice(0,8),value:subject.topics.filter(topic=>state.revisionDone?.[subject.name+"::"+topic[0]]).length}));
   renderTrend("Revisions by subject","Completed revision checklists",revisionBySubject,"","lollipop");
-  const planWeekly=[];for(let week=0;week<8;week++){let done=0;for(let day=0;day<7;day++){const date=new Date(2026,10,17);date.setDate(date.getDate()+week*7+day);if(state.studyPlanDone?.[dateKey(date)])done++}planWeekly.push({label:"W"+(week+1),value:done})}
-  renderTrend("Weekly study-plan completion","Completed days · first 8 weeks",planWeekly,"/7");
+  const planWeekly=[];for(let week=0;week<8;week++){const start=new Date(CYCLE_START_DATE+"T00:00:00");start.setDate(start.getDate()+week*7);const end=new Date(start);end.setDate(end.getDate()+6);const startKey=dateKey(start),endKey=dateKey(end);const entries=DAILY_STUDY_PLAN.filter(entry=>{const scheduled=getStudyPlanDateKey(entry);return scheduled>=startKey&&scheduled<=endKey});const done=entries.filter(isStudyPlanEntryDone).length;planWeekly.push({label:"W"+(week+1),value:entries.length?Math.round(done/entries.length*100):0})}
+  renderTrend("Weekly study-plan completion","Completed planned phases · first 8 weeks",planWeekly,"%");
   const prioritySeries=["P1","P2"].map(priority=>({label:priority,value:allSubjects().flatMap(subject=>subject.topics.filter(topic=>topic[2]===priority&&state.topics[subject.name+"::"+topic[0]])).length}));
   renderTrend("Priority topics completed","P1 vs P2 · completed topics",prioritySeries,"","treemap");
  }
