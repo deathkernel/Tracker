@@ -175,6 +175,69 @@ def test_overview_subject_progress_renders_counts_and_contains_mobile_overflow(t
             browser.close()
 
 
+def test_manual_syllabus_completion_updates_overview_subject_progress(tracker_url):
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1365, "height": 900})
+        try:
+            current = page.request.get(tracker_url + "/api/state")
+            assert current.status == 200
+            original_state = current.json()
+            payload = {
+                **original_state,
+                "topics": {},
+                "studyPlanProgress": {},
+            }
+            saved = page.request.put(tracker_url + "/api/state", data=payload)
+            assert saved.status == 200
+
+            page.goto(tracker_url, wait_until="networkidle")
+            page.locator('label[for="nav-syllabus"]').click()
+            page.locator("#subjectFilter").select_option(label="Polity")
+            page.locator("#topicSearch").fill("Constitutional development")
+            topic_checkbox = page.locator(
+                '#topicChecklist input[aria-label="Mark Constitutional development complete"]'
+            )
+            assert topic_checkbox.count() == 1
+            topic_checkbox.check()
+
+            status = page.locator("#topicChecklist tbody tr").inner_text()
+            assert "Completed" in status
+
+            page.wait_for_function("""async () => {
+                const response = await fetch("/api/state");
+                if (!response.ok) return false;
+                const saved = await response.json();
+                return saved.topics?.["Polity::Constitutional development"] === true;
+            }""")
+            persisted = page.request.get(tracker_url + "/api/state").json()
+            plan_progress = persisted["studyPlanProgress"]["plan:0"]
+            assert plan_progress["studyDone"] is True
+            assert all(plan_progress["studyChecklist"].values())
+            assert plan_progress["revisionDone"] is False
+            assert plan_progress["mcqDone"] is False
+
+            page.locator('label[for="nav-overview"]').click()
+            polity_row = page.locator("#subjectOverview tbody tr").filter(
+                has=page.locator("td").first
+            ).filter(has_text="Polity")
+            assert polity_row.count() == 1
+            assert polity_row.locator("td").nth(1).inner_text().startswith("1 /")
+            assert polity_row.locator("td").nth(2).inner_text().endswith("1%") or (
+                "100%" in polity_row.locator("td").nth(2).inner_text()
+            )
+        finally:
+            if "original_state" in locals():
+                latest = page.request.get(tracker_url + "/api/state")
+                if latest.status == 200:
+                    restore = {
+                        **original_state,
+                        "version": latest.json().get("version", original_state["version"]),
+                    }
+                    page.request.put(tracker_url + "/api/state", data=restore)
+            browser.close()
+
+
 def test_qr_fragment_is_removed_from_address_and_sent_as_authorization_header(tracker_url):
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
