@@ -53,7 +53,7 @@ const BASE_STUDY_PLAN=[
     assert rows[1]["Phase"] == "Day 2 · MCQ + Revision"
     assert rows[1]["MCQAttempts"] == 18
     assert rows[1]["IsCompleted"] is True
-    assert rows[2]["Date"] == "2026-11-19"
+    assert rows[2]["Date"] == "2027-02-20"
     assert rows[2]["Subject"] == "Polity"
     assert rows[4]["Subject"] == "History"
 
@@ -62,7 +62,7 @@ def test_real_dashboard_plan_expands_to_two_phases_per_topic():
     html = (Path(__file__).resolve().parents[1] / "index.html").read_text(encoding="utf-8")
     rows = exporter.build_study_plan_rows(html, {})
     assert len(rows) == 378
-    assert rows[0]["Date"] == "2026-11-17"
+    assert rows[0]["Date"] == "2026-11-20"
     assert rows[0]["Phase"] == "Day 1 · Study"
     assert rows[1]["Date"] == "2026-11-21"
     assert rows[1]["Phase"] == "Day 2 · MCQ + Revision"
@@ -82,7 +82,7 @@ const BASE_STUDY_PLAN=[
     }
     rows = exporter.build_study_plan_rows(html, state)
     assert rows[0]["IsCompleted"] is True
-    assert rows[1]["Date"] == "2026-11-18"
+    assert rows[1]["Date"] == "2026-11-21"
     assert rows[1]["MCQAttempts"] == 12
     assert rows[1]["IsCompleted"] is False
 
