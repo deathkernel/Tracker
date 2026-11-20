@@ -138,3 +138,18 @@ test("study history, local backup and SQLite synchronization remain wired", () =
   assert.match(script, /"-recovery"/);
   assert.match(script, /function replaceProgressState\(incoming\)/);
 });
+
+
+
+test("plan-only study activities remain visible for retest", () => {
+  assert.match(script, /if\(findMatchingSyllabusTopics\(entry\.subject,entry\.topic\)\.length\)return/);
+  assert.match(script, /const key="plan:"\+planIndex/);
+  assert.match(script, /planOnly:true/);
+  assert.match(script, /completeScheduledRetest\(item\.subject,item\.topic,item\.key\)/);
+});
+
+test("weekly plan analytics use the new scheduled phase dates", () => {
+  assert.match(script, /const scheduled=getStudyPlanDateKey\(entry\)/);
+  assert.match(script, /Completed planned phases · first 8 weeks/);
+  assert.doesNotMatch(script, /new Date\(2026,10,17\)/);
+});
