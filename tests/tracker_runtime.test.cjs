@@ -622,7 +622,7 @@ test("workspace navigation keeps page content below navigation and scopes dashbo
   const navEnd = html.indexOf("</nav>", navStart);
   const headingStart = html.indexOf('<section class="page-context"');
   const mainStart = html.indexOf("<main>", navEnd);
-  const settingsStart = html.indexOf('<section class="settings-page" data-page="settings">');
+  const settingsStart = html.indexOf('<section class="settings-page" data-page="settings"');
   assert.ok(navStart >= 0 && navEnd > navStart);
   assert.ok(navEnd < headingStart && headingStart < mainStart);
   assert.ok(mainStart < settingsStart);
@@ -631,4 +631,61 @@ test("workspace navigation keeps page content below navigation and scopes dashbo
   assert.match(html, /body\[data-view\]:not\(\[data-view="overview"\]\) \.grid-stats/);
   assert.match(html, /#workspaceNav\.cir-tabs\{[^}]*grid-template-columns:repeat\(8,minmax\(0,1fr\)\)/);
   assert.match(html, /grid-auto-rows:minmax\(40px,auto\)/);
+});
+
+
+test("workspace navigation switches the visible page and updates its heading", () => {
+  const start = script.indexOf("function setWorkspaceView(view){");
+  const end = script.indexOf("\nfunction activeDevice()", start);
+  assert.ok(start >= 0 && end > start);
+  const names = ["overview", "syllabus", "missing", "logs", "plan", "settings", "revision", "charts"];
+  const pages = names.map(name => ({
+    dataset: { page: name },
+    hidden: name !== "overview",
+    attributes: {},
+    setAttribute(key, value) { this.attributes[key] = value; }
+  }));
+  const radios = names.map(value => ({ value, checked: value === "overview" }));
+  const nodes = {
+    pageTitle: { textContent: "Overview" },
+    pageHint: { textContent: "Your daily preparation at a glance." }
+  };
+  const sandbox = {
+    document: {
+      body: { dataset: { view: "overview" } },
+      querySelectorAll(selector) {
+        if (selector === "[data-page]") return pages;
+        if (selector === "#workspaceNav .cir-tabs__r") return radios;
+        return [];
+      }
+    },
+    window: { trackerView: "overview" },
+    $: id => nodes[id]
+  };
+  vm.runInNewContext(script.slice(start, end) + "\nthis.switchView=setWorkspaceView;", sandbox);
+  sandbox.switchView("syllabus");
+  assert.equal(sandbox.document.body.dataset.view, "syllabus");
+  assert.equal(sandbox.window.trackerView, "syllabus");
+  assert.equal(nodes.pageTitle.textContent, "Syllabus");
+  assert.equal(pages.find(page => page.dataset.page === "syllabus").hidden, false);
+  assert.ok(pages.filter(page => page.dataset.page !== "syllabus").every(page => page.hidden));
+  assert.equal(radios.find(radio => radio.value === "syllabus").checked, true);
+  assert.ok(radios.filter(radio => radio.value !== "syllabus").every(radio => !radio.checked));
+  sandbox.switchView("settings");
+  assert.equal(nodes.pageTitle.textContent, "Settings");
+  assert.equal(pages.find(page => page.dataset.page === "settings").hidden, false);
+  assert.ok(pages.filter(page => page.dataset.page !== "settings").every(page => page.hidden));
+});
+
+test("workspace navigation is wired before state initialization and non-Overview pages start hidden", () => {
+  const navHandler = script.indexOf('workspaceNavigation?.addEventListener("click"');
+  const stateInitialization = script.indexOf("let state=normalizeProgressState(readState())");
+  assert.ok(navHandler >= 0 && stateInitialization > navHandler);
+  assert.match(script, /workspaceNavigation\.contains\(label\)/);
+  assert.match(script, /setWorkspaceView\(input\.value\)/);
+  assert.match(html, /<body data-view="overview">/);
+  assert.match(html, /\[data-page\]\[hidden\]\{display:none!important\}/);
+  const pageTags = [...html.matchAll(/<section\b[^>]*\bdata-page="([^"]+)"([^>]*)>/g)];
+  assert.ok(pageTags.some(([, page]) => page === "settings"));
+  assert.ok(pageTags.filter(([, page]) => page !== "overview").every(([, , attributes]) => /\bhidden\b/.test(attributes)));
 });
