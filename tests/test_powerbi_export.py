@@ -156,3 +156,39 @@ const BASE_STUDY_PLAN=[
     assert rows[0]["IsCompleted"] is True
     assert rows[1]["IsCompleted"] is True
     assert rows[1]["MCQAttempts"] == 21
+
+
+
+def test_explicit_plan_progress_reset_wins_over_stale_legacy_done_flags():
+    html = '''
+const BASE_STUDY_PLAN=[
+{subject:"Polity",days:["Constitution"]}
+];
+'''
+    rows = exporter.build_study_plan_rows(html, {
+        "studyPlanProgress": {
+            "plan:0": {
+                "studyDone": False,
+                "mcqDone": False,
+                "revisionDone": False,
+                "mcqCount": 18,
+                "studyReset": True,
+            },
+            "2026-11-17": {"studyDone": True},
+            "2026-11-18": {"mcqDone": True, "revisionDone": True},
+        },
+        "studyPlanDone": {
+            "2026-11-17": True,
+            "2026-11-18": True,
+        },
+    })
+    assert rows[0]["IsCompleted"] is False
+    assert rows[1]["IsCompleted"] is False
+    assert rows[1]["MCQAttempts"] == 18
+
+
+def test_power_bi_schema_includes_mastery_retest_and_recovery_tables():
+    assert "Mastery" in exporter.CSV_COLUMNS
+    assert "RetestSchedule" in exporter.CSV_COLUMNS
+    assert "RecoveryQueue" in exporter.CSV_COLUMNS
+    assert "PlanKey" in exporter.CSV_COLUMNS["StudyPlan"]
