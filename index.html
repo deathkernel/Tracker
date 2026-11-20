@@ -434,6 +434,8 @@ input::placeholder,textarea::placeholder{color:#99a3b2}
 .field{gap:6px}
 .data-table-wrap{width:100%;overflow-x:auto;border:1px solid var(--line);border-radius:10px}
 .data-table{width:100%;min-width:620px;border-collapse:separate;border-spacing:0;font-size:12px}
+.subject-progress-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.subject-progress-table{width:100%;min-width:560px}
 .data-table th{position:sticky;top:0;padding:11px 12px;background:var(--bg);color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.065em;text-transform:uppercase;border-bottom:1px solid var(--line)}
 .data-table td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
 .data-table tr:last-child td{border-bottom:0}
@@ -791,7 +793,7 @@ body.dark #workspaceNav .nav-brand-mark{background:var(--blue);color:#10141d}
  </section>
  <section class="card" data-page="overview">
   <div class="card-head"><h2>Subject progress</h2><span class="chip" id="subjectCount">9 subjects</span></div>
-  <div class="subject-grid" id="subjectOverview"></div>
+  <div class="data-table-wrap subject-progress-wrap" id="subjectOverview" role="region" aria-label="Subject progress table" tabindex="0"></div>
  </section>
  <section class="card" data-page="missing" hidden>
   <div class="card-head"><div><h2>Missing Topics</h2><p class="small-note">Only past scheduled topics with incomplete study or MCQ + revision are shown. Today’s and future topics stay out of this list.</p></div><span class="chip" id="missingTopicCount">0 remaining</span></div>
@@ -1402,7 +1404,7 @@ function renderDaily(){
 }
 function renderSubjectOverview(){
  const host=$("subjectOverview");host.innerHTML="";
- const table=document.createElement("table");table.className="data-table";
+ const table=document.createElement("table");table.className="data-table subject-progress-table";table.setAttribute("aria-label","Subject completion by topic");
  table.innerHTML="<thead><tr><th>Subject</th><th>Topics completed</th><th>Progress</th></tr></thead>";
  const body=document.createElement("tbody");
  allSubjects().forEach(s=>{const done=s.topics.filter(t=>state.topics[s.name+"::"+t[0]]).length,p=s.topics.length?Math.round(done/s.topics.length*100):0;const row=document.createElement("tr");const name=document.createElement("td");name.textContent=s.name;const count=document.createElement("td");count.textContent=done+" / "+s.topics.length;const progress=document.createElement("td");const wrap=document.createElement("div");wrap.className="table-progress";const bar=document.createElement("span");bar.style.width=p+"%";wrap.append(bar);const pct=document.createElement("small");pct.textContent=p+"%";progress.append(wrap,pct);row.append(name,count,progress);body.append(row)});

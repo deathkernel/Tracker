@@ -114,6 +114,67 @@ def test_real_browser_navigation_and_mobile_layout(tracker_url):
             browser.close()
 
 
+def test_overview_subject_progress_renders_counts_and_contains_mobile_overflow(tracker_url):
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        try:
+            page = browser.new_page(viewport={"width": 1365, "height": 900})
+            current = page.request.get(tracker_url + "/api/state")
+            assert current.status == 200
+            original_state = current.json()
+            payload = {
+                **original_state,
+                "topics": {
+                    "Polity::Preamble": True,
+                    "Polity::Fundamental Rights": True,
+                },
+                "customSubjects": [{
+                    "name": "Custom audit subject",
+                    "topics": [["Responsive test topic", 1, "P2"]],
+                }],
+            }
+            saved = page.request.put(tracker_url + "/api/state", data=payload)
+            assert saved.status == 200
+
+            page.goto(tracker_url, wait_until="networkidle")
+            host = page.locator("#subjectOverview")
+            table = host.locator("table")
+            assert table.count() == 1
+            assert table.get_attribute("aria-label") == "Subject completion by topic"
+            assert host.get_attribute("role") == "region"
+            assert host.get_attribute("tabindex") == "0"
+
+            rows = host.locator("tbody tr")
+            assert rows.count() == int(page.locator("#subjectCount").inner_text().split()[0])
+            row_values = rows.evaluate_all(
+                "(items) => items.map(row => Array.from(row.cells, cell => cell.textContent.trim()))"
+            )
+            polity = next(row for row in row_values if row[0] == "Polity")
+            custom = next(row for row in row_values if row[0] == "Custom audit subject")
+            assert polity[1].startswith("2 /")
+            assert custom[1] == "0 / 1"
+            assert custom[2].endswith("0%")
+
+            assert host.evaluate("(element) => getComputedStyle(element).overflowX === 'auto'")
+            assert host.evaluate("(element) => element.scrollWidth <= element.clientWidth + 1")
+
+            page.set_viewport_size({"width": 390, "height": 844})
+            assert host.evaluate("(element) => element.scrollWidth > element.clientWidth")
+            assert page.evaluate(
+                "() => document.documentElement.scrollWidth <= window.innerWidth + 1"
+            )
+        finally:
+            if "original_state" in locals():
+                latest = page.request.get(tracker_url + "/api/state")
+                if latest.status == 200:
+                    restore = {
+                        **original_state,
+                        "version": latest.json().get("version", original_state["version"]),
+                    }
+                    page.request.put(tracker_url + "/api/state", data=restore)
+            browser.close()
+
+
 def test_qr_fragment_is_removed_from_address_and_sent_as_authorization_header(tracker_url):
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)

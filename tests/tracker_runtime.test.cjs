@@ -401,6 +401,13 @@ test("study hour and duration concepts are absent while exam dates and revision 
   assert.ok(html.includes('id="targetDate"'));
 });
 
+test("overview subject progress uses a dedicated scrollable table wrapper", () => {
+  assert.match(html, /class="data-table-wrap subject-progress-wrap" id="subjectOverview"/);
+  assert.match(html, /role="region" aria-label="Subject progress table" tabindex="0"/);
+  assert.match(script, /table\.className="data-table subject-progress-table"/);
+  assert.match(script, /table\.setAttribute\("aria-label","Subject completion by topic"\)/);
+});
+
 test("analytics count phase completion and distinct missed dates", () => {
   assert.match(script, /const planTotal=DAILY_STUDY_PLAN\.length/);
   assert.match(script, /missedDates\.add\(dateKey\)/);
