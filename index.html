@@ -290,6 +290,236 @@ body.dark .topic-completion-value.is-high{color:#61c49b}
 .phase-checklist.is-locked{opacity:.9}
 .phase-checklist-note{margin:0;color:var(--muted);font-size:10px}
 body.dark .phase-check{background:#151b26}
+
+
+
+/* Workspace UI refresh: consistent hierarchy, spacing and responsive navigation */
+:root{
+ --bg:#f4f6fa;
+ --surface:#ffffff;
+ --ink:#1b2738;
+ --muted:#687588;
+ --line:#e3e8ef;
+ --blue:#315b9d;
+ --blue-soft:#edf3fb;
+ --green:#247b59;
+ --green-soft:#edf6f0;
+ --amber:#9b6b2d;
+ --amber-soft:#fbf4e9;
+ --red:#b45b56;
+ --red-soft:#fbefee;
+ --shadow:0 8px 24px rgba(27,43,67,.055);
+}
+body.dark{
+ --bg:#111722;
+ --surface:#1a2330;
+ --ink:#edf2f8;
+ --muted:#a1adbd;
+ --line:#303b4a;
+ --blue:#9ab7e5;
+ --blue-soft:#26354a;
+ --green:#75c39e;
+ --green-soft:#20382f;
+ --amber:#dfb879;
+ --amber-soft:#3b3021;
+ --red:#e19a92;
+ --red-soft:#402b2a;
+ --shadow:0 8px 24px rgba(0,0,0,.16);
+ color-scheme:dark;
+}
+body{background:var(--bg);color:var(--ink);font-size:14px;line-height:1.55}
+.shell{width:min(1400px,100%);max-width:1400px;margin:0 auto;padding:28px 30px 54px}
+.header{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:20px;padding:4px 0 18px;border-bottom:1px solid var(--line)}
+.brand{gap:13px;min-width:0}
+.mark{width:44px;height:44px;border-radius:12px;background:#294c7b;font-size:16px;letter-spacing:-.04em}
+.eyebrow{font-size:10px;letter-spacing:.12em;color:var(--blue);font-weight:800}
+h1{font-size:24px;letter-spacing:-.035em;color:var(--ink)}
+.subtitle{font-size:12px;line-height:1.45;color:var(--muted)}
+.header-right{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.date-chip,.chip{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 10px;font-size:11px;font-weight:650;color:var(--muted)}
+.btn{min-height:38px;padding:8px 13px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);font-size:12px;font-weight:700;transition:background .16s ease,border-color .16s ease,transform .16s ease}
+.btn:hover{border-color:#b9c8dc;background:var(--blue-soft)}
+.btn.primary{background:#315b9d;border-color:#315b9d;color:#fff}
+.btn.primary:hover{background:#254a82;border-color:#254a82}
+.btn.danger{color:var(--red);border-color:#e8cdca;background:var(--surface)}
+body.dark .btn.primary{background:#547eb4;border-color:#547eb4;color:#fff}
+body.dark .btn.danger{border-color:#5a3938}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid color-mix(in srgb,var(--blue) 28%,transparent);outline-offset:2px}
+
+.grid-stats{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:0 0 14px}
+.stat,.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+.stat{min-width:0;padding:16px 17px}
+.stat-label{font-size:11px;font-weight:650;letter-spacing:.015em;color:var(--muted)}
+.stat-value{font-size:28px;line-height:1.2;font-weight:760;letter-spacing:-.045em;color:var(--ink);margin:7px 0 3px;font-variant-numeric:tabular-nums}
+.stat-foot{font-size:10px;color:var(--muted)}
+.stat-completion-track{height:5px;margin-top:10px}
+.exam-countdown-grid{gap:12px;margin:0 0 18px}
+.exam-countdown-card{border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow);padding:15px 18px}
+.exam-countdown-label{font-size:10px;letter-spacing:.1em;font-weight:800;color:var(--muted)}
+.exam-countdown-date{font-size:12px;color:var(--ink);font-weight:650}
+.exam-countdown-remaining{font-size:27px;letter-spacing:-.045em;font-weight:780;color:var(--ink)}
+.exam-countdown-caption{font-size:10px;color:var(--muted)}
+.prelims-countdown{border-left:3px solid var(--blue)}
+.mains-countdown{border-left:3px solid var(--green)}
+body[data-view]:not([data-view="overview"]) .grid-stats,
+body[data-view]:not([data-view="overview"]) .exam-countdown-grid{display:none!important}
+
+.nav-caption{margin:0 0 7px 2px;font-size:10px;letter-spacing:.11em;font-weight:800;color:var(--muted)}
+#workspaceNav.cir-tabs{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:7px;width:100%;max-width:none;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible}
+#workspaceNav .cir-tabs__r{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+#workspaceNav .cir-tabs__t{display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;min-height:46px;height:auto;padding:9px 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--muted);font-size:12px;font-weight:700;white-space:nowrap;transition:background .16s ease,border-color .16s ease,color .16s ease}
+#workspaceNav .cir-tabs__t::before{font-size:15px;line-height:1;color:var(--muted)}
+#workspaceNav .cir-tabs__t[data-view="overview"]::before{content:"⌂"}
+#workspaceNav .cir-tabs__t[data-view="syllabus"]::before{content:"▤"}
+#workspaceNav .cir-tabs__t[data-view="missing"]::before{content:"!"}
+#workspaceNav .cir-tabs__t[data-view="logs"]::before{content:"◷"}
+#workspaceNav .cir-tabs__t[data-view="plan"]::before{content:"▦"}
+#workspaceNav .cir-tabs__t[data-view="settings"]::before{content:"⚙"}
+#workspaceNav .cir-tabs__t[data-view="revision"]::before{content:"↻"}
+#workspaceNav .cir-tabs__t[data-view="charts"]::before{content:"▥"}
+#workspaceNav .cir-tabs__r:checked+.cir-tabs__t{background:var(--blue-soft);border-color:#cbd9ed;color:var(--blue);box-shadow:inset 0 0 0 1px rgba(49,91,157,.04)}
+#workspaceNav .cir-tabs__r:checked+.cir-tabs__t::before{color:var(--blue)}
+#workspaceNav .cir-tabs__r:focus-visible+.cir-tabs__t{outline:3px solid color-mix(in srgb,var(--blue) 28%,transparent);outline-offset:2px}
+.nav-count{min-width:17px;height:17px;margin-left:0;padding:0 4px;background:var(--blue-soft);color:var(--blue);font-size:9px}
+.page-context{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin:20px 2px 14px}
+.page-context .eyebrow{margin-bottom:3px}
+.page-context h2{margin:0;color:var(--ink);font-size:25px;line-height:1.2;letter-spacing:-.04em}
+.page-hint{display:block!important;margin:4px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
+.main-grid.nav-mode{display:block;margin-top:0}
+.main-grid.nav-mode main,.main-grid.nav-mode aside{display:contents}
+.main-grid.nav-mode .card[hidden],.settings-page[hidden]{display:none!important}
+
+.card{padding:21px;margin:0 0 14px;min-width:0}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.card-head h2{font-size:16px;line-height:1.35;font-weight:750;letter-spacing:-.02em}
+.card-head h3{font-size:13px}
+.overall-row{font-size:11px;font-weight:650}
+.today-focus{padding:16px;border:1px solid #dce6f2;border-radius:12px;background:#f3f7fc}
+body.dark .today-focus{background:#202c3d;border-color:#34465c}
+.focus-label{font-size:10px;letter-spacing:.1em;color:var(--blue)}
+.focus-title{font-size:16px;letter-spacing:-.02em}
+.focus-desc{font-size:12px;line-height:1.6;color:var(--muted)}
+.overview-focus-grid{grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);gap:22px}
+.overview-topic-column{border-left:1px solid var(--line);padding-left:22px}
+.today-topic-card{padding:17px;border-radius:12px;box-shadow:none;background:var(--bg)}
+.today-topic-card:hover{transform:none;box-shadow:0 5px 14px rgba(31,48,79,.06)}
+.today-topic-name{font-size:19px;line-height:1.35}
+.daily-topic-work{gap:9px}
+.daily-topic-group{padding:12px;border-radius:10px}
+.phase-check{padding:9px 10px;border-radius:8px;line-height:1.4}
+.task{padding:10px 11px;border:1px solid var(--line);border-radius:9px;background:var(--surface);gap:10px}
+.task+.task{margin-top:7px}
+.task.completed{background:var(--green-soft);border-color:#d5e9dc}
+body.dark .task.completed{background:var(--green-soft);border-color:#345344}
+.task-meta{font-size:10px;color:var(--muted)}
+.task-title{font-size:12px;font-weight:650}
+.subject-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.subject-card{border:1px solid var(--line);border-radius:10px;padding:13px;background:var(--surface)}
+.subject-name{font-size:12px;font-weight:750}
+.subject-count{font-size:10px;color:var(--muted)}
+.toolbar{align-items:center;gap:9px;margin-bottom:15px}
+.toolbar input{min-width:220px;min-height:40px}
+.toolbar select{min-height:40px}
+input,select,textarea{border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);font:inherit;font-size:12px;padding:9px 11px}
+input::placeholder,textarea::placeholder{color:#99a3b2}
+.field label{font-size:11px;font-weight:700;color:var(--muted)}
+.field{gap:6px}
+.data-table-wrap{width:100%;overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+.data-table{width:100%;min-width:620px;border-collapse:separate;border-spacing:0;font-size:12px}
+.data-table th{position:sticky;top:0;padding:11px 12px;background:var(--bg);color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.065em;text-transform:uppercase;border-bottom:1px solid var(--line)}
+.data-table td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+.data-table tr:last-child td{border-bottom:0}
+.data-table tbody tr:hover{background:var(--blue-soft)}
+.topic-subject{border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.topic-subject summary{background:var(--bg);padding:13px 14px}
+.topic-rows{gap:4px 18px;padding:8px 14px 13px}
+.topic{font-size:12px;line-height:1.45;padding:8px 2px}
+.week-item{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:13px}
+.week-item+.week-item{margin-top:8px}
+.settings-page{gap:11px;margin:0 0 14px}
+.settings-intro{padding:1px 2px 8px}
+.settings-intro h2,.settings-intro p{display:none}
+.settings-section{padding:18px 19px;border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:var(--shadow)}
+.settings-section-head{margin-bottom:14px}
+.settings-section-head h3{font-size:13px;font-weight:750}
+.settings-section-head p{font-size:11px}
+.settings-grid{gap:12px}
+.log-entry-grid{gap:12px}
+.log-summary-item{border-radius:10px}
+.chart-card,.analytics-graph-card{border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:none}
+.footer{padding:18px 0 4px;color:var(--muted);font-size:10px}
+.empty{padding:22px 12px;text-align:center;border:1px dashed var(--line);border-radius:10px}
+.toast{z-index:100;color:#fff;background:#22334a;border:1px solid rgba(255,255,255,.12);border-radius:10px;box-shadow:var(--shadow)}
+body.dark .data-table th{background:#202b39}
+body.dark .topic-subject summary{background:#202b39}
+body.dark .today-topic-card{background:#202b39;border-color:var(--line)}
+body.dark .settings-section{background:var(--surface)}
+body.dark .today-topic-card .focus-desc{color:var(--muted)}
+
+@media(max-width:1100px){
+ .grid-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #workspaceNav.cir-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .subject-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:760px){
+ .shell{padding:16px 13px calc(126px + env(safe-area-inset-bottom))}
+ .header{align-items:flex-start;flex-wrap:wrap;gap:11px;margin-bottom:14px;padding-bottom:14px}
+ .brand{width:100%}
+ h1{font-size:21px}
+ .header-right{width:100%;justify-content:flex-start}
+ #phoneAccessBtn{display:none}
+ .grid-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .stat{padding:12px 13px}
+ .stat-value{font-size:23px}
+ .grid-stats .stat:last-child{grid-column:1/-1;display:grid;grid-template-columns:1fr auto;align-items:center;gap:3px 10px}
+ .grid-stats .stat:last-child .stat-value{grid-column:2;grid-row:1/3;margin:0;font-size:21px}
+ .grid-stats .stat:last-child .stat-label{grid-column:1;grid-row:1}
+ .grid-stats .stat:last-child .stat-foot{grid-column:1;grid-row:2}
+ .grid-stats .stat:last-child .stat-completion-track{grid-column:1/-1}
+ .exam-countdown-grid{grid-template-columns:1fr;gap:8px;margin-bottom:13px}
+ .exam-countdown-card{padding:12px 14px}
+ .exam-countdown-remaining{font-size:23px}
+ .nav-caption{display:none}
+ #workspaceNav.cir-tabs{position:fixed;z-index:60;left:10px;right:10px;bottom:calc(8px + env(safe-area-inset-bottom));width:auto;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(40px,auto);gap:4px;margin:0;padding:7px;border:1px solid var(--line);border-radius:16px;background:var(--surface);box-shadow:0 10px 35px rgba(16,30,48,.18);overflow:visible}
+ #workspaceNav .cir-tabs__t{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:42px;height:auto;padding:4px 2px;border-color:transparent;border-radius:9px;font-size:9px;line-height:1.1;white-space:normal;text-align:center}
+ #workspaceNav .cir-tabs__t::before{margin:0;font-size:15px}
+ #workspaceNav .cir-tabs__r:checked+.cir-tabs__t{background:var(--blue-soft);border-color:transparent}
+ #workspaceNav .nav-count{min-width:14px;height:14px;margin-top:1px;font-size:8px}
+ .page-context{margin:16px 2px 12px}
+ .page-context h2{font-size:22px}
+ .page-hint{font-size:11px}
+ .main-grid.nav-mode .card,.card{padding:15px;margin-bottom:11px;border-radius:12px}
+ .card-head{align-items:flex-start;flex-wrap:wrap;margin-bottom:13px}
+ .overview-focus-grid{grid-template-columns:1fr;gap:14px}
+ .overview-topic-column{border:0;border-top:1px solid var(--line);padding:15px 0 0}
+ .subject-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .toolbar{display:grid;grid-template-columns:1fr 1fr}
+ .toolbar input{grid-column:1/-1;min-width:0;width:100%}
+ .toolbar select{min-width:0;width:100%}
+ .data-table{min-width:620px}
+ .log-entry-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .settings-section{padding:14px}
+ .settings-section .settings-grid{grid-template-columns:1fr}
+ .settings-section .form-actions .btn{width:100%}
+ .analytics-metrics-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:420px){
+ .shell{padding-left:10px;padding-right:10px}
+ .header-right .btn{min-height:35px;padding:7px 10px;font-size:11px}
+ .grid-stats{gap:7px}
+ .stat-label{font-size:10px}
+ .stat-value{font-size:21px}
+ .subject-grid{grid-template-columns:1fr}
+ .log-entry-grid{grid-template-columns:1fr 1fr}
+ .log-summary-grid{gap:6px}
+ .log-summary-item{padding:9px}
+ #workspaceNav.cir-tabs{left:7px;right:7px;bottom:calc(7px + env(safe-area-inset-bottom));padding:6px}
+ #workspaceNav .cir-tabs__t{font-size:8.5px}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}
+}
+
 </style>
 </head>
 <body>
@@ -321,13 +551,6 @@ body.dark .phase-check{background:#151b26}
   <div class="exam-countdown-caption">days remaining · 5-day examination</div>
  </article>
 </section>
-<section class="settings-page" data-page="settings">
- <div class="settings-intro"><div><div class="eyebrow">PERSONAL WORKSPACE</div><h2>Settings & customization</h2><p class="subtitle">Manage your study targets, appearance and personal study tools.</p></div><input class="theme-checkbox" type="checkbox" id="themeToggle" aria-label="Toggle color theme"></div>
- <section class="settings-section"><div class="settings-section-head"><span class="settings-icon">◐</span><div><h3>Appearance</h3><p>Choose how Tracker looks on this device.</p></div></div><div class="settings-option-row"><div><strong>Color theme</strong><small>PC and phone themes can be customized independently.</small></div><span class="settings-live-note">Device-specific</span></div></section>
- <section class="settings-section"><div class="settings-section-head"><span class="settings-icon">◎</span><div><h3>Study goals</h3><p>Set the target date and your daily study commitment.</p></div></div><div class="settings-grid"><div class="field"><label for="targetDate">Prelims target date</label><input type="date" id="targetDate" value="2027-05-23"></div><div class="field"><label for="studyGoal">Daily study goal (hours)</label><input type="number" id="studyGoal" min="1" max="16" step="0.5" value="4"></div></div></section>
- <section class="settings-section"><div class="settings-section-head"><span class="settings-icon">＋</span><div><h3>Custom syllabus</h3><p>Add your own subject and topic to the syllabus tracker.</p></div></div><div class="settings-grid"><div class="field"><label for="newSubject">Subject name</label><input id="newSubject" placeholder="e.g. CSAT"></div><div class="field"><label for="newTopic">Topic name</label><input id="newTopic" placeholder="e.g. Reading comprehension"></div></div><div class="form-actions"><button class="btn primary" id="addCustomTopic">Add subject / topic</button></div></section>
- <section class="settings-section"><div class="settings-section-head"><span class="settings-icon">☷</span><div><h3>Daily checklist</h3><p>Create your own recurring daily task.</p></div></div><div class="settings-grid"><div class="field"><label for="newTaskName">Task name</label><input id="newTaskName" placeholder="e.g. Revise yesterday's notes"></div><div class="field"><label for="newTaskTime">Time (optional)</label><input id="newTaskTime" placeholder="e.g. 7:00–7:30 AM"></div></div><div class="form-actions"><button class="btn primary" id="addDailyTask">Add daily task</button></div></section>
-</section>
 <div class="nav-caption">Workspace navigation</div>
 <nav class="cir-tabs" id="workspaceNav" aria-label="Tracker sections">
  <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-overview" value="overview" checked><label class="cir-tabs__t" for="nav-overview" data-view="overview">Overview</label>
@@ -339,9 +562,22 @@ body.dark .phase-check{background:#151b26}
  <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-revision" value="revision"><label class="cir-tabs__t" for="nav-revision" data-view="revision">Revision</label>
  <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-charts" value="charts"><label class="cir-tabs__t" for="nav-charts" data-view="charts">Charts</label>
 </nav>
-<div class="page-hint" id="pageHint">Your daily preparation at a glance.</div>
+<section class="page-context" aria-live="polite">
+ <div class="page-context-copy">
+  <div class="eyebrow">YOUR WORKSPACE</div>
+  <h2 id="pageTitle">Overview</h2>
+  <p class="page-hint" id="pageHint">Your daily preparation at a glance.</p>
+ </div>
+</section>
 <div class="main-grid nav-mode">
 <main>
+ <section class="settings-page" data-page="settings">
+ <div class="settings-intro"><div><div class="eyebrow">PERSONAL WORKSPACE</div><h2>Settings & customization</h2><p class="subtitle">Manage your study targets, appearance and personal study tools.</p></div><input class="theme-checkbox" type="checkbox" id="themeToggle" aria-label="Toggle color theme"></div>
+ <section class="settings-section"><div class="settings-section-head"><span class="settings-icon">◐</span><div><h3>Appearance</h3><p>Choose how Tracker looks on this device.</p></div></div><div class="settings-option-row"><div><strong>Color theme</strong><small>PC and phone themes can be customized independently.</small></div><span class="settings-live-note">Device-specific</span></div></section>
+ <section class="settings-section"><div class="settings-section-head"><span class="settings-icon">◎</span><div><h3>Study goals</h3><p>Set the target date and your daily study commitment.</p></div></div><div class="settings-grid"><div class="field"><label for="targetDate">Prelims target date</label><input type="date" id="targetDate" value="2027-05-23"></div><div class="field"><label for="studyGoal">Daily study goal (hours)</label><input type="number" id="studyGoal" min="1" max="16" step="0.5" value="4"></div></div></section>
+ <section class="settings-section"><div class="settings-section-head"><span class="settings-icon">＋</span><div><h3>Custom syllabus</h3><p>Add your own subject and topic to the syllabus tracker.</p></div></div><div class="settings-grid"><div class="field"><label for="newSubject">Subject name</label><input id="newSubject" placeholder="e.g. CSAT"></div><div class="field"><label for="newTopic">Topic name</label><input id="newTopic" placeholder="e.g. Reading comprehension"></div></div><div class="form-actions"><button class="btn primary" id="addCustomTopic">Add subject / topic</button></div></section>
+ <section class="settings-section"><div class="settings-section-head"><span class="settings-icon">☷</span><div><h3>Daily checklist</h3><p>Create your own recurring daily task.</p></div></div><div class="settings-grid"><div class="field"><label for="newTaskName">Task name</label><input id="newTaskName" placeholder="e.g. Revise yesterday's notes"></div><div class="field"><label for="newTaskTime">Time (optional)</label><input id="newTaskTime" placeholder="e.g. 7:00–7:30 AM"></div></div><div class="form-actions"><button class="btn primary" id="addDailyTask">Add daily task</button></div></section>
+</section>
  <section class="card" data-page="overview">
   <div class="card-head"><h2>Daily routine</h2><span class="chip" id="todayProgress">0/2 done</span></div>
   <div class="overview-focus-grid">
@@ -1478,7 +1714,25 @@ function renderCharts(){
  }
  $("chartsUpdated").textContent="Updated "+new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
 }
-function setWorkspaceView(view){const names={overview:"Your daily preparation at a glance.",syllabus:"Track 291 PYQ-focused topics: 50 priority topics plus 241 curated micro-topics.",logs:"Record focused hours, MCQs and daily study notes.",plan:"Follow the daily two-phase study cycle and full preparation roadmap.",settings:"Personalize your target date, study hours and workspace.",revision:"Revisit every topic you have already completed.",charts:"Visualize your syllabus, revision, study plan and study-time progress.",missing:"Review every syllabus topic that is still pending."};document.querySelectorAll("[data-page]").forEach(card=>{card.hidden=card.dataset.page!==view});document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input=>{input.checked=input.value===view});$("pageHint").textContent=names[view]||names.overview}
+function setWorkspaceView(view){
+ const titles={overview:"Overview",syllabus:"Syllabus",missing:"Missing topics",logs:"Study log",plan:"Study plan",settings:"Settings",revision:"Revision",charts:"Analytics"};
+ const descriptions={
+  overview:"Your daily preparation at a glance.",
+  syllabus:"Track all 291 curated topics, starting with the Top 50 priority list.",
+  missing:"Only past-due, incomplete study phases appear here.",
+  logs:"Record study time, MCQ attempts and CSAT practice.",
+  plan:"Follow the two-phase roadmap through your exam target date.",
+  settings:"Manage your target date, daily goal and personal workspace.",
+  revision:"Review completed topics using spaced revision and retests.",
+  charts:"See how your preparation is progressing over time."
+ };
+ const activeView=titles[view]?view:"overview";
+ document.body.dataset.view=activeView;
+ document.querySelectorAll("[data-page]").forEach(card=>{card.hidden=card.dataset.page!==activeView});
+ document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input=>{input.checked=input.value===activeView});
+ $("pageTitle").textContent=titles[activeView];
+ $("pageHint").textContent=descriptions[activeView];
+}
 function activeDevice(){return window.matchMedia("(max-width: 760px)").matches?"mobile":"desktop"}
 function applyDeviceTheme(){state.settings=state.settings||{};state.settings.deviceThemes=state.settings.deviceThemes||{};const device=activeDevice();const theme=state.settings.deviceThemes[device]||(state.settings.theme||"light");document.body.classList.toggle("dark",theme==="dark");$("themeToggle").checked=theme==="dark"}
 function renderAll(){syncSubjectFilter();applyDeviceTheme();renderStats();renderDaily();renderOverviewSchedule();renderSubjectOverview();renderTopics();renderMissingTopics();renderRevision();renderCharts();renderRoadmap();renderLogs();setWorkspaceView(window.trackerView||"overview")}
