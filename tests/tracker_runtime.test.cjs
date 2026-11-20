@@ -24,7 +24,7 @@ test("Top 50 P1 topics are mapped and scheduled before standard topics", () => {
   const rotationStart = script.indexOf("function getStudyPlanRotationSubject(entry){");
   const rotationEnd = script.indexOf("\nfunction addDaysToDateKey", rotationStart);
   const priorityStart = script.indexOf("const PRELIMS_TOP_50_KEYS=");
-  const priorityEnd = script.indexOf("\nfunction hasCompletedStudyCycleForSyllabusTopic", priorityStart);
+  const priorityEnd = script.indexOf("\nfunction syncSyllabusCompletionToStudyPlan", priorityStart);
   assert.ok(mappingStart >= 0 && mappingEnd > mappingStart);
   assert.ok(planStart >= 0 && planEnd > planStart);
   assert.ok(rotationStart >= 0 && rotationEnd > rotationStart);
@@ -58,7 +58,7 @@ test("schedule rotates subjects within priority tiers and preserves original pro
   const rotationStart = script.indexOf("function getStudyPlanRotationSubject(entry){");
   const rotationEnd = script.indexOf("\nfunction addDaysToDateKey", rotationStart);
   const priorityStart = script.indexOf("const PRELIMS_TOP_50_KEYS=");
-  const priorityEnd = script.indexOf("\nfunction hasCompletedStudyCycleForSyllabusTopic", priorityStart);
+  const priorityEnd = script.indexOf("\nfunction syncSyllabusCompletionToStudyPlan", priorityStart);
   const sandbox = {
     allSubjects:()=>[
       {name:"Polity",topics:[["P1 A",1,"P1"],["P1 B",1,"P1"],["P2 A",1,"P2"],["P2 B",1,"P2"]]},
@@ -211,8 +211,9 @@ test("Day 1 and Day 2 checklists are independent and both gate topic completion"
   assert.match(script, /if\(!canCompleteStudyPlanPhase\(entry,"study"\)\)/);
   assert.match(script, /if\(!canCompleteStudyPlanPhase\(entry,"mcq_revision"\)\)/);
   assert.match(script, /progress\.studyDone&&!!progress\.revisionDone&&isPhaseChecklistComplete\(progress,"study"\)&&isPhaseChecklistComplete\(progress,"mcq_revision"\)/);
-  assert.match(script, /function hasCompletedStudyCycleForSyllabusTopic\(subject,topic\)/);
-  assert.match(script, /if\(!hasCompletedStudyCycleForSyllabusTopic\(subject,topic\)\)/);
+  assert.match(script, /function completeTopicWithMastery\(subject,topic\)/);
+  assert.doesNotMatch(script, /hasCompletedStudyCycleForSyllabusTopic/);
+  assert.doesNotMatch(script, /Complete both Day 1 preparation and Day 2 MCQ \+ revision checklists before completing this topic/);
   assert.doesNotMatch(html, /id="weeklyTasks"/);
   assert.doesNotMatch(html, /<h2>Weekly targets<\/h2>/);
 });
