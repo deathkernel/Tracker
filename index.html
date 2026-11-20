@@ -586,7 +586,7 @@ function syncStudyPlanCompletionToSyllabus(entry){
 }
 async function syncStudyPlanRevisionToSyllabus(entry,quality=3){
  const keys=findMatchingSyllabusTopics(entry?.subject,entry?.topic);
- if(!keys.length)return true;
+ if(!keys.length){await recordMasteryProgress("plan:"+entry.planIndex,quality,false);return true;}
  state.revisionSchedule=state.revisionSchedule||{};
  state.revisionDone=state.revisionDone||{};
  try{
@@ -597,7 +597,7 @@ async function syncStudyPlanRevisionToSyllabus(entry,quality=3){
    if(!response.ok)throw new Error("Revision schedule could not be updated.");
    state.revisionSchedule[key]=await response.json();
    state.revisionDone[key]=true;
-   recordMasteryProgress(key,quality);
+   await recordMasteryProgress(key,quality,false);
   }
   return true;
  }catch(error){notify(error.message||"Could not update the revision schedule.");return false;}
@@ -630,7 +630,7 @@ async function completeScheduledRevision(subject,topic){
   state.revisionSchedule[key]=await response.json();
   state.revisionDone=state.revisionDone||{};
   state.revisionDone[key]=true;
-  recordMasteryProgress(key,quality);
+  await recordMasteryProgress(key,quality,false);
   persist();
   renderRevision();
   renderCharts();
@@ -639,18 +639,12 @@ async function completeScheduledRevision(subject,topic){
 async function completeScheduledRetest(subject,topic){
  const key=subject+"::"+topic,quality=askRecallQuality(topic,"retest");
  if(quality===null)return;
- const previous=state.retestSchedule?.[key]||{};
- state.retestSchedule=state.retestSchedule||{};
- state.retestSchedule[key]={
-  due_date:addDaysToDateKey(localDate(),quality<3?1:quality<4?3:7),
-  attempts:Math.max(0,Number(previous.attempts)||0)+1,
-  last_quality:quality,
-  status:"scheduled"
- };
- recordMasteryProgress(key,quality);
- persist();
- renderRevision();
- renderCharts();
+ try{
+  await recordMasteryProgress(key,quality,true);
+  persist();
+  renderRevision();
+  renderCharts();
+ }catch(error){notify(error.message||"Could not record the retest.");}
 }
 
 function renderTopics(){
@@ -853,30 +847,33 @@ function refreshRecoveryQueue(today=localDate()){
  state.recoveryQueue=queue;
  return queue;
 }
-function recordMasteryProgress(key,quality,today=localDate()){
- const previous=state.masteryProgress?.[key]||{};
- const reviews=Math.max(0,Number(previous.reviews)||0)+1;
- const qualityTotal=Math.max(0,Number(previous.qualityTotal)||0)+quality;
- const masteryLevel=Math.max(0,Math.min(5,(Number(previous.masteryLevel)||0)+(quality>=4?1:quality<3?-1:0)));
- const consecutiveStrong=quality>=4?(Number(previous.consecutiveStrong)||0)+1:0;
+async function recordMasteryProgress(key,quality,isRetest=false){
+ const response=await fetch("/api/study/review",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+  today:localDate(),
+  previous_mastery:state.masteryProgress?.[key]||{},
+  previous_retest:state.retestSchedule?.[key]||{},
+  quality,
+  is_retest:isRetest
+ })});
+ if(!response.ok)throw new Error("Mastery and retest progress could not be updated.");
+ const result=await response.json();
  state.masteryProgress=state.masteryProgress||{};
  state.masteryProgress[key]={
-  reviews,
-  qualityTotal,
-  averageQuality:Number((qualityTotal/reviews).toFixed(2)),
-  masteryLevel,
-  consecutiveStrong,
-  lastQuality:quality,
-  lastReviewedAt:today
+  reviews:result.mastery.reviews,
+  qualityTotal:result.mastery.quality_total,
+  averageQuality:result.mastery.average_quality,
+  masteryLevel:result.mastery.mastery_level,
+  consecutiveStrong:result.mastery.consecutive_strong,
+  lastQuality:result.mastery.last_quality,
+  lastReviewedAt:result.mastery.last_reviewed_at
  };
  state.retestSchedule=state.retestSchedule||{};
- const retestDays=quality<3?1:quality<4?3:7;
- const previousRetest=state.retestSchedule[key]||{};
  state.retestSchedule[key]={
-  due_date:addDaysToDateKey(today,retestDays),
-  attempts:Math.max(0,Number(previousRetest.attempts)||0),
-  last_quality:quality,
-  status:"scheduled"
+  due_date:result.retest.due_date,
+  attempts:result.retest.attempts,
+  last_quality:result.retest.last_quality,
+  status:result.retest.status,
+  interval_days:result.retest.interval_days
  };
 }
 function askRecallQuality(topic,kind="revision"){
@@ -1021,7 +1018,7 @@ function renderCharts(){
  const metrics=[
   {name:"Syllabus completed",done:completed,total,label:"topics",remaining:pending},
   {name:"Revision completed",done:revisionDone,total:revisionTotal,label:"revisions",remaining:revisionPending},
-  {name:"Study plan completed",done:planDone,total:planTotal,label:"days",remaining:planPending},
+  {name:"Study plan completed",done:planDone,total:planTotal,label:"phases",remaining:planPending},
   {name:"Today's checklist",done:dailyDone,total:dailyTotal,label:"tasks",remaining:dailyPending},
   {name:"Missed study days",done:missed,total:missed+pastCompleted,label:"past days",remaining:pastCompleted,doneLabel:"missed"},
   {name:"P1 priority completed",done:p1Done,total:p1Topics.length,label:"topics",remaining:Math.max(0,p1Topics.length-p1Done)}
