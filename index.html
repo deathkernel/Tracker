@@ -452,8 +452,8 @@ function normalizeProgressState(value){
    const reset=!!(current.studyReset||oldStudy.studyReset||oldRevision.studyReset);
    const migrated={
     studyDone:!reset&&!!(current.studyDone||oldStudy.studyDone||legacyStudyDone),
-    mcqDone:!!(current.mcqDone||oldStudy.mcqDone||oldRevision.mcqDone||(legacyStudyDone&&legacyRevisionDone)),
-    revisionDone:!!(current.revisionDone||oldStudy.revisionDone||oldRevision.revisionDone||(legacyStudyDone&&legacyRevisionDone)),
+    mcqDone:!reset&&!!(current.mcqDone||oldStudy.mcqDone||oldRevision.mcqDone||(legacyStudyDone&&legacyRevisionDone)),
+    revisionDone:!reset&&!!(current.revisionDone||oldStudy.revisionDone||oldRevision.revisionDone||(legacyStudyDone&&legacyRevisionDone)),
     mcqCount:Number.isInteger(current.mcqCount)?current.mcqCount:(Number.isInteger(oldRevision.mcqCount)?oldRevision.mcqCount:(Number.isInteger(oldStudy.mcqCount)?oldStudy.mcqCount:0)),
     mcqLogged:!!(current.mcqLogged||oldStudy.mcqLogged||oldRevision.mcqLogged),
     studyReset:reset
