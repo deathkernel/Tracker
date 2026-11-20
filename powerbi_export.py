@@ -161,27 +161,30 @@ def build_study_plan_rows(html: str, state: dict[str, Any]) -> list[dict[str, An
         study_date = start + timedelta(days=study_offset)
         revision_date = study_date + timedelta(days=1)
 
-        progress = progress_state.get(f"plan:{plan_index}", {})
+        progress_key = f"plan:{plan_index}"
+        has_new_progress = progress_key in progress_state
+        progress = progress_state.get(progress_key, {})
         if not isinstance(progress, dict):
             progress = {}
-
-        # Read legacy date-keyed records until the dashboard completes migration.
-        legacy_study_date = date(2026, 11, 17) + timedelta(days=plan_index * 2)
-        legacy_revision_date = legacy_study_date + timedelta(days=1)
-        old_study = progress_state.get(legacy_study_date.isoformat(), {})
-        old_revision = progress_state.get(legacy_revision_date.isoformat(), {})
-        if not isinstance(old_study, dict):
-            old_study = {}
-        if not isinstance(old_revision, dict):
-            old_revision = {}
 
         study_done = bool(progress.get("studyDone"))
         mcq_done = bool(progress.get("mcqDone"))
         revision_done = bool(progress.get("revisionDone"))
         mcq_count = progress.get("mcqCount", 0)
-        if not any((study_done, mcq_done, revision_done, mcq_count)):
-            study_done = bool(old_study.get("studyDone") or legacy_done.get(legacy_study_date.isoformat()))
+
+        # Read legacy date-keyed records only when the new per-topic key is absent.
+        if not has_new_progress:
+            legacy_study_date = date(2026, 11, 17) + timedelta(days=plan_index * 2)
+            legacy_revision_date = legacy_study_date + timedelta(days=1)
+            old_study = progress_state.get(legacy_study_date.isoformat(), {})
+            old_revision = progress_state.get(legacy_revision_date.isoformat(), {})
+            if not isinstance(old_study, dict):
+                old_study = {}
+            if not isinstance(old_revision, dict):
+                old_revision = {}
+            legacy_study_done = bool(old_study.get("studyDone") or legacy_done.get(legacy_study_date.isoformat()))
             legacy_day_two_done = bool(legacy_done.get(legacy_revision_date.isoformat()))
+            study_done = legacy_study_done and not bool(old_study.get("studyReset"))
             mcq_done = bool(old_study.get("mcqDone") or old_revision.get("mcqDone") or (study_done and legacy_day_two_done))
             revision_done = bool(old_study.get("revisionDone") or old_revision.get("revisionDone") or (study_done and legacy_day_two_done))
             mcq_count = old_revision.get("mcqCount", old_study.get("mcqCount", 0))
