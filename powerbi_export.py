@@ -73,10 +73,10 @@ CSV_COLUMNS = {
     "TopicProgress": ["TopicKey", "Subject", "Topic", "Priority", "IsCompleted", "IsRevised"],
     "StudyLogs": ["Date", "StudyHours", "MCQs", "CSAT", "Notes"],
     "DailyChecklist": ["Date", "TaskID", "Task", "IsCompleted"],
-    "StudyPlan": ["Date", "Week", "Subject", "PlannedTopic", "Phase", "MCQAttempts", "IsCompleted"],
+    "StudyPlan": ["PlanKey", "Date", "Week", "Subject", "PlannedTopic", "Phase", "MCQAttempts", "IsCompleted"],
     "Calendar": ["Date", "Year", "MonthNumber", "Month", "Weekday", "WeekdayNumber"],
-    "Mastery": ["TopicKey", "Subject", "Topic", "Reviews", "MasteryLevel", "AverageQuality", "LastQuality"],
-    "RetestSchedule": ["TopicKey", "Subject", "Topic", "DueDate", "Attempts", "Status", "LastQuality"],
+    "Mastery": ["TopicKey", "PlanKey", "Subject", "Topic", "Reviews", "MasteryLevel", "AverageQuality", "LastQuality"],
+    "RetestSchedule": ["TopicKey", "PlanKey", "Subject", "Topic", "DueDate", "Attempts", "Status", "LastQuality"],
     "RecoveryQueue": ["PlanKey", "Subject", "Topic", "Phase", "DueDate", "Status"],
 }
 
@@ -187,6 +187,7 @@ def build_study_plan_rows(html: str, state: dict[str, Any]) -> list[dict[str, An
             mcq_count = old_revision.get("mcqCount", old_study.get("mcqCount", 0))
 
         rows.append({
+            "PlanKey": f"plan:{plan_index}",
             "Date": study_date.isoformat(),
             "Week": (study_offset // 7) + 1,
             "Subject": subject,
@@ -196,6 +197,7 @@ def build_study_plan_rows(html: str, state: dict[str, Any]) -> list[dict[str, An
             "IsCompleted": study_done,
         })
         rows.append({
+            "PlanKey": f"plan:{plan_index}",
             "Date": revision_date.isoformat(),
             "Week": (study_offset // 7) + 1,
             "Subject": subject,
@@ -267,15 +269,18 @@ def main() -> None:
         calendar.append({"Date": value, "Year": day.year, "MonthNumber": day.month, "Month": day.strftime("%B"), "Weekday": day.strftime("%A"), "WeekdayNumber": day.isoweekday()})
 
     known_topics = {row["TopicKey"]: row for row in topic_rows}
+    plan_topics = {row["PlanKey"]: {"Subject": row["Subject"], "Topic": row["PlannedTopic"]} for row in plan_rows}
     mastery_rows: list[dict[str, Any]] = []
     mastery_state = state.get("masteryProgress", {})
     if isinstance(mastery_state, dict):
         for key, value in mastery_state.items():
-            topic = known_topics.get(key)
+            topic = known_topics.get(key) or plan_topics.get(key)
             if not topic or not isinstance(value, dict):
                 continue
+            is_plan_key = key.startswith("plan:")
             mastery_rows.append({
-                "TopicKey": key,
+                "TopicKey": "" if is_plan_key else key,
+                "PlanKey": key if is_plan_key else "",
                 "Subject": topic["Subject"],
                 "Topic": topic["Topic"],
                 "Reviews": safe_number(value.get("reviews"), integer=True),
@@ -288,12 +293,14 @@ def main() -> None:
     retest_state = state.get("retestSchedule", {})
     if isinstance(retest_state, dict):
         for key, value in retest_state.items():
-            topic = known_topics.get(key)
+            topic = known_topics.get(key) or plan_topics.get(key)
             if not topic or not isinstance(value, dict):
                 continue
             due_date = value.get("due_date", "")
+            is_plan_key = key.startswith("plan:")
             retest_rows.append({
-                "TopicKey": key,
+                "TopicKey": "" if is_plan_key else key,
+                "PlanKey": key if is_plan_key else "",
                 "Subject": topic["Subject"],
                 "Topic": topic["Topic"],
                 "DueDate": due_date if valid_iso_date(due_date) else "",
