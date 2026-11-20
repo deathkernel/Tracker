@@ -91,6 +91,29 @@ test("legacy completed phases retain completed checklist ticks after upgrade", (
   assert.match(script, /normalizePhaseChecklist\(item\.revisionChecklist,REVISION_DAY_CHECKLIST,!!item\.revisionDone\)/);
 });
 
+test("checklist completion helper requires every item in the selected phase", () => {
+  const definitionsStart = script.indexOf("const STUDY_DAY_CHECKLIST=");
+  const definitionsEnd = script.indexOf("\\nconst STORE", definitionsStart);
+  const helperStart = script.indexOf("function isPhaseChecklistComplete(progress,phase)");
+  const helperEnd = script.indexOf("\\nfunction getPhaseChecklistCount", helperStart);
+  assert.ok(definitionsStart >= 0 && definitionsEnd > definitionsStart && helperEnd > helperStart);
+  const sandbox = {};
+  vm.runInNewContext(
+    script.slice(definitionsStart, definitionsEnd) +
+      "\\n" + script.slice(helperStart, helperEnd) +
+      "\\nthis.studyItems=STUDY_DAY_CHECKLIST;this.revisionItems=REVISION_DAY_CHECKLIST;this.isComplete=isPhaseChecklistComplete;this.normalize=normalizePhaseChecklist;",
+    sandbox
+  );
+  const allStudy = sandbox.normalize(null, sandbox.studyItems, true);
+  const noStudy = sandbox.normalize(null, sandbox.studyItems, false);
+  assert.equal(sandbox.isComplete({studyChecklist:allStudy},"study"), true);
+  assert.equal(sandbox.isComplete({studyChecklist:noStudy},"study"), false);
+  const partialRevision = sandbox.normalize({mcqs:true},sandbox.revisionItems,false);
+  assert.equal(sandbox.isComplete({revisionChecklist:partialRevision},"mcq_revision"), false);
+  const allRevision = sandbox.normalize(null,sandbox.revisionItems,true);
+  assert.equal(sandbox.isComplete({revisionChecklist:allRevision},"mcq_revision"), true);
+});
+
 test("only overdue study phases enter the recovery queue", () => {
   assert.match(script, /function refreshRecoveryQueue\(today=localDate\(\)\)/);
   assert.match(script, /dueDate<today&&!isStudyPlanEntryDone\(entry\)/);
@@ -112,7 +135,7 @@ test("subject progress synchronization covers mapped syllabus topics", () => {
 
 test("uncompletion invalidates linked study but preserves MCQ history", () => {
   assert.match(script, /function syncSyllabusUncompletionToStudyPlan\(subject,topic\)/);
-  assert.match(script, /const progress=\{\.\.\.getStudyPlanProgress\(entry\),studyDone:false,mcqDone:false,revisionDone:false,studyReset:true\}/);
+  assert.match(script, /const progress=\{\.\.\.getStudyPlanProgress\(entry\),studyDone:false,mcqDone:false,revisionDone:false,studyChecklist:normalizePhaseChecklist\(null,STUDY_DAY_CHECKLIST,false\),revisionChecklist:normalizePhaseChecklist\(null,REVISION_DAY_CHECKLIST,false\),studyReset:true\}/);
   assert.match(script, /mcqCount:Number\.isInteger\(item\.mcqCount\)/);
   assert.match(script, /mcqDone:!reset&&!!\(current\.mcqDone/);
 });
