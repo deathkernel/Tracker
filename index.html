@@ -1698,7 +1698,8 @@ function renderCharts(){
  const ordered=subjects.map((subject,index)=>({ ...subject,y:top+index*plotHeight/Math.max(1,subjects.length-1)}));
  ordered.forEach(subject=>{const label=document.createElementNS("http://www.w3.org/2000/svg","text");label.setAttribute("x",left-12);label.setAttribute("y",subject.y+4);label.setAttribute("text-anchor","end");label.setAttribute("class","analytics-subject-label");label.textContent=subject.name;svg.append(label);const x=left+plotWidth*subject.percent/100;const dot=document.createElementNS("http://www.w3.org/2000/svg","circle");dot.setAttribute("cx",x);dot.setAttribute("cy",subject.y);dot.setAttribute("r","5");dot.setAttribute("class","analytics-subject-dot");dot.setAttribute("aria-label",subject.name+": "+subject.done+" of "+subject.total+" topics, "+subject.percent+"%");svg.append(dot);const value=document.createElementNS("http://www.w3.org/2000/svg","text");value.setAttribute("x",Math.min(graphWidth-32,x+10));value.setAttribute("y",subject.y+4);value.setAttribute("class","analytics-point-value");value.textContent=subject.percent+"%";svg.append(value)});
  subjectHost.append(svg);
- const maxDate=new Date(today+"T00:00:00");
+ const maxDate=new Date(today+"T00:00:00"),days=[];
+ for(let offset=6;offset>=0;offset--){const date=new Date(maxDate);date.setDate(date.getDate()-offset);const key=[date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-");days.push({key,label:date.toLocaleDateString("en-IN",{weekday:"short"})})}
  const extraHost=$("extraAnalyticsCharts");if(extraHost){
   extraHost.innerHTML="";
   const dateKey=date=>[date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-");
