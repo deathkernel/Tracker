@@ -899,9 +899,36 @@ function normalizeProgressState(value){
  next.revisionDone=Object.fromEntries(Object.entries(next.revisionDone).filter(([key,done])=>validKeys.has(key)&&!!done&&!!next.topics[key]));
  return next;
 }
-let saveQueue=Promise.resolve(),localMutationVersion=0;
+let saveQueue=Promise.resolve(),localMutationVersion=0,recoveredLegacyProgress=false;
 let state=defaultState();
-function readState(){const raw=localStorage.getItem(STORE);try{return normalizeProgressState(JSON.parse(raw||"{}"))}catch(error){if(raw){try{if(!localStorage.getItem(STORE+"-recovery"))localStorage.setItem(STORE+"-recovery",JSON.stringify({savedAt:new Date().toISOString(),reason:"The browser progress JSON was corrupt. The original raw value was preserved for recovery.",raw}))}catch{}}return defaultState()}}
+function hasSavedUserData(value){
+ const maps=["topics","daily","weekly","logs","studyPlanDone","studyPlanProgress","revisionDone","revisionSchedule","masteryProgress","retestSchedule","topicEvidence","pendingTopicEvidence","strictRules","examSession"];
+ const arrays=["testResults","errorNotebook","questionBank","recoveryQueue","customSubjects","customDaily"];
+ return maps.some(key=>value?.[key]&&typeof value[key]==="object"&&!Array.isArray(value[key])&&Object.keys(value[key]).length>0)
+  ||arrays.some(key=>Array.isArray(value?.[key])&&value[key].length>0);
+}
+function readState(){
+ const raw=localStorage.getItem(STORE);
+ try{
+  const current=normalizeProgressState(JSON.parse(raw||"{}"));
+  if(Number(current.version)===0&&!hasSavedUserData(current)){
+   const backupRaw=localStorage.getItem(STORE+"-recovery");
+   if(backupRaw){
+    try{
+     const backup=JSON.parse(backupRaw);
+     if(backup.reason==="The browser progress JSON was corrupt. The original raw value was preserved for recovery."&&typeof backup.raw==="string"){
+      const recovered=normalizeProgressState(JSON.parse(backup.raw));
+      if(hasSavedUserData(recovered)){recoveredLegacyProgress=true;return recovered}
+     }
+    }catch{}
+   }
+  }
+  return current;
+ }catch(error){
+  if(raw){try{if(!localStorage.getItem(STORE+"-recovery"))localStorage.setItem(STORE+"-recovery",JSON.stringify({savedAt:new Date().toISOString(),reason:"The browser progress JSON was corrupt. The original raw value was preserved for recovery.",raw}))}catch{}}
+  return defaultState();
+ }
+}
 function persist(){try{state=normalizeProgressState(state);refreshRecoveryQueue();const mutation=++localMutationVersion;localStorage.setItem(STORE,JSON.stringify(state));const snapshot=JSON.parse(JSON.stringify(state));saveQueue=saveQueue.then(async()=>{const payload={...snapshot,version:state.version||0};const response=await fetch("/api/state",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});if(response.status===409){notify("Tracker changed on another device. Reload before saving again.");throw new Error("State version conflict")}if(!response.ok)throw new Error("Database sync failed");const result=await response.json();state.version=result.version;if(mutation===localMutationVersion)localStorage.setItem(STORE,JSON.stringify(state));}).catch(error=>{if(error.message!=="State version conflict")notify("Local backup saved, but database sync failed. Keep the app running and retry.");});return saveQueue}catch{notify("Could not save. Export a backup and check browser storage.");return Promise.resolve(false)}}
 function notify(message){const el=$("toast");el.textContent=message;el.classList.add("show");clearTimeout(notify.timer);notify.timer=setTimeout(()=>el.classList.remove("show"),2200)}
 const allSubjects=()=>{
@@ -1800,7 +1827,7 @@ document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input => {
   setWorkspaceView(window.trackerView);
  });
 });
-initFilters();renderAll();(async()=>{try{const response=await fetch("/api/state");if(!response.ok)throw new Error("API unavailable");const remote=normalizeProgressState(await response.json());if(localMutationVersion!==0){const local=normalizeProgressState(state);localStorage.setItem(STORE+"-recovery",JSON.stringify({savedAt:new Date().toISOString(),reason:"A change was made before SQLite startup synchronization completed. Both copies were preserved for recovery.",data:local,remote}));state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll();notify("SQLite state loaded. Early browser changes were preserved in the recovery backup.");return}const rawLocal=localStorage.getItem(STORE),local=readState(),localVersion=Number(local.version)||0,remoteVersion=Number(remote.version)||0;const sameContent=JSON.stringify({...local,version:0})===JSON.stringify({...remote,version:0});if(!rawLocal){state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll();return}if(remoteVersion>localVersion&&!sameContent){localStorage.setItem(STORE+"-recovery",JSON.stringify({savedAt:new Date().toISOString(),reason:"Server state was newer than this browser copy.",data:local}));state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll();notify("Newer SQLite data loaded. Your previous browser copy was preserved as a recovery backup.");return}if(localVersion>remoteVersion||!sameContent){state=local;state.version=remoteVersion;persist();renderAll();return}state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll()}catch(error){notify("Using browser backup. Start Tracker with run.bat for SQLite sync.")}})();
+initFilters();renderAll();if(recoveredLegacyProgress)notify("Recovered saved progress from your browser recovery copy. Export a backup now.");(async()=>{try{const response=await fetch("/api/state");if(!response.ok)throw new Error("API unavailable");const remote=normalizeProgressState(await response.json());if(localMutationVersion!==0){const local=normalizeProgressState(state);localStorage.setItem(STORE+"-recovery",JSON.stringify({savedAt:new Date().toISOString(),reason:"A change was made before SQLite startup synchronization completed. Both copies were preserved for recovery.",data:local,remote}));state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll();notify("SQLite state loaded. Early browser changes were preserved in the recovery backup.");return}const rawLocal=localStorage.getItem(STORE),local=readState(),localVersion=Number(local.version)||0,remoteVersion=Number(remote.version)||0;const sameContent=JSON.stringify({...local,version:0})===JSON.stringify({...remote,version:0});if(recoveredLegacyProgress&&hasSavedUserData(local)&&!hasSavedUserData(remote)){state=local;state.version=remoteVersion;persist();renderAll();notify("Recovered saved progress from your browser recovery copy. Export a backup now.");return}if(!rawLocal){state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll();return}if(remoteVersion>localVersion&&!sameContent){localStorage.setItem(STORE+"-recovery",JSON.stringify({savedAt:new Date().toISOString(),reason:"Server state was newer than this browser copy.",data:local}));state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll();notify("Newer SQLite data loaded. Your previous browser copy was preserved as a recovery backup.");return}if(localVersion>remoteVersion||!sameContent){state=local;state.version=remoteVersion;persist();renderAll();return}state=remote;localStorage.setItem(STORE,JSON.stringify(state));renderAll()}catch(error){notify("Using browser backup. Start Tracker with run.bat for SQLite sync.")}})();
 </script>
 </body>
 </html>
