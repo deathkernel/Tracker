@@ -679,7 +679,7 @@ test("workspace navigation switches the visible page and updates its heading", (
 
 test("workspace navigation is wired before state initialization and non-Overview pages start hidden", () => {
   const navHandler = script.indexOf('workspaceNavigation?.addEventListener("click"');
-  const stateInitialization = script.indexOf("let state=normalizeProgressState(readState())");
+  const stateInitialization = script.indexOf("let state=defaultState()");
   assert.ok(navHandler >= 0 && stateInitialization > navHandler);
   assert.match(script, /workspaceNavigation\.contains\(label\)/);
   assert.match(script, /setWorkspaceView\(input\.value\)/);
