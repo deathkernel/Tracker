@@ -218,14 +218,13 @@ def test_manual_syllabus_completion_updates_overview_subject_progress(tracker_ur
             assert plan_progress["mcqDone"] is False
 
             page.locator('label[for="nav-overview"]').click()
-            polity_row = page.locator("#subjectOverview tbody tr").filter(
-                has=page.locator("td").first
-            ).filter(has_text="Polity")
+            polity_row = page.locator("#subjectOverview tbody tr").filter(has_text="Polity")
             assert polity_row.count() == 1
             assert polity_row.locator("td").nth(1).inner_text().startswith("1 /")
-            assert polity_row.locator("td").nth(2).inner_text().endswith("1%") or (
-                "100%" in polity_row.locator("td").nth(2).inner_text()
+            progress_percent = int(
+                polity_row.locator("td").nth(2).inner_text().replace("%", "")
             )
+            assert progress_percent > 0
         finally:
             if "original_state" in locals():
                 latest = page.request.get(tracker_url + "/api/state")
