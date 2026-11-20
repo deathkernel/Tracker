@@ -119,7 +119,7 @@ def sanitize_csv_value(value: Any) -> Any:
     """Prevent spreadsheet applications from evaluating untrusted text as a formula."""
     if not isinstance(value, str):
         return value
-    if re.match(r"^[\\s\\x00-\\x1f]*[=+\\-@]", value):
+    if re.match(r"^[\s\x00-\x1f]*[=+\-@]", value):
         return "'" + value
     return value
 
