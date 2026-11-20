@@ -15,34 +15,98 @@ test("dashboard keeps each syllabus topic as a two-phase study unit", () => {
 });
 
 
-test("subject rotation interleaves subjects without changing saved topic indexes", () => {
-  const start = script.indexOf("function getStudyPlanRotationSubject(entry){");
-  const end = script.indexOf("\nconst SHUFFLED_STUDY_PLAN=", start);
-  assert.ok(start >= 0 && end > start);
-  const sandbox = {};
+test("Top 50 P1 topics are mapped and scheduled before standard topics", () => {
+  const subjectData = JSON.parse(script.match(/const SUBJECTS=(\[[\s\S]*?\]);\r?\nconst ROADMAP/)[1]);
+  const mappingStart = script.indexOf("function normalizePlanTopic(");
+  const mappingEnd = script.indexOf("\nconst PRELIMS_TOP_50_KEYS=", mappingStart);
+  const planStart = script.indexOf("const BASE_STUDY_PLAN=");
+  const planEnd = script.indexOf(";\nconst CYCLE_START_DATE", planStart);
+  const rotationStart = script.indexOf("function getStudyPlanRotationSubject(entry){");
+  const rotationEnd = script.indexOf("\nfunction addDaysToDateKey", rotationStart);
+  const priorityStart = script.indexOf("const PRELIMS_TOP_50_KEYS=");
+  const priorityEnd = script.indexOf("\nfunction hasCompletedStudyCycleForSyllabusTopic", priorityStart);
+  assert.ok(mappingStart >= 0 && mappingEnd > mappingStart);
+  assert.ok(planStart >= 0 && planEnd > planStart);
+  assert.ok(rotationStart >= 0 && rotationEnd > rotationStart);
+  assert.ok(priorityStart >= 0 && priorityEnd > priorityStart);
+  const sandbox = { SUBJECTS: subjectData };
   vm.runInNewContext(
-    script.slice(start, end) + "\nthis.rotate=buildSubjectRotatedStudyPlan;",
+    "const allSubjects=()=>SUBJECTS;\n" +
+    script.slice(planStart, planEnd + 1) + "\n" +
+    script.slice(mappingStart, mappingEnd) + "\n" +
+    script.slice(rotationStart, rotationEnd) + "\n" +
+    script.slice(priorityStart, priorityEnd) +
+    "\nthis.units=BASE_STUDY_PLAN.flatMap(group=>group.days.map(topic=>({subject:group.subject,topic})));"+
+    "\nthis.top50=PRELIMS_TOP_50_KEYS;this.ordered=buildSubjectRotatedStudyPlan(units);",
     sandbox
   );
-  const source = [
-    {subject:"Polity",topic:"Polity 1"},
-    {subject:"Polity",topic:"Polity 2"},
-    {subject:"History",topic:"History 1"},
-    {subject:"History",topic:"History 2"},
-    {subject:"Economy",topic:"Economy 1"}
-  ];
-  const rotated = sandbox.rotate(source);
-  assert.deepEqual(Array.from(rotated, entry => entry.planIndex), [0,2,4,1,3]);
-  assert.deepEqual(Array.from(rotated, entry => entry.scheduleIndex), [0,1,2,3,4]);
-  assert.deepEqual(Array.from(rotated.slice(0,3), entry => entry.subject), ["Polity","History","Economy"]);
+  assert.equal(sandbox.top50.size, 50);
+  assert.equal(sandbox.ordered.length, 189);
+  const firstStandard = sandbox.ordered.findIndex(entry => entry.priority !== "P1");
+  assert.equal(firstStandard, 48);
+  assert.ok(Array.from(sandbox.ordered.slice(0, firstStandard)).every(entry => entry.priority === "P1"));
+  assert.ok(Array.from(sandbox.ordered.slice(firstStandard)).every(entry => entry.priority === "P2"));
+  assert.equal(new Set(Array.from(sandbox.ordered, entry => entry.planIndex)).size, 189);
+  const mappedPriority = new Set(Array.from(sandbox.ordered.flatMap(entry => entry.priorityKeys)));
+  assert.deepEqual(Array.from(sandbox.top50).filter(key => !mappedPriority.has(key)), []);
+  assert.deepEqual(Array.from(sandbox.ordered.slice(0,7), entry => entry.rotationSubject), [
+    "Polity","Modern History","Ancient + Medieval History","Economy","Environment","Geography","Science & Technology"
+  ]);
 });
 
-test("first schedule day includes multiple rotated subjects without date gaps", () => {
+test("schedule rotates subjects within priority tiers and preserves original progress indexes", () => {
+  const rotationStart = script.indexOf("function getStudyPlanRotationSubject(entry){");
+  const rotationEnd = script.indexOf("\nfunction addDaysToDateKey", rotationStart);
+  const priorityStart = script.indexOf("const PRELIMS_TOP_50_KEYS=");
+  const priorityEnd = script.indexOf("\nfunction hasCompletedStudyCycleForSyllabusTopic", priorityStart);
+  const sandbox = {
+    allSubjects:()=>[
+      {name:"Polity",topics:[["P1 A",1,"P1"],["P1 B",1,"P1"],["P2 A",1,"P2"],["P2 B",1,"P2"]]},
+      {name:"Economy",topics:[["P1 C",1,"P1"],["P2 C",1,"P2"]]},
+      {name:"History",topics:[["P1 D",1,"P1"],["P2 D",1,"P2"]]}
+    ],
+    findMatchingSyllabusTopics:(subject,topic)=>[subject+"::"+topic]
+  };
+  vm.runInNewContext(
+    script.slice(rotationStart,rotationEnd)+"\n"+
+    script.slice(priorityStart,priorityEnd)+"\nthis.rotate=buildSubjectRotatedStudyPlan;",
+    sandbox
+  );
+  const source=[
+    {subject:"Polity",topic:"P1 A"},
+    {subject:"Polity",topic:"P2 A"},
+    {subject:"Economy",topic:"P1 C"},
+    {subject:"History",topic:"P1 D"},
+    {subject:"Economy",topic:"P2 C"},
+    {subject:"Polity",topic:"P1 B"},
+    {subject:"History",topic:"P2 D"},
+    {subject:"Polity",topic:"P2 B"}
+  ];
+  const ordered=sandbox.rotate(source);
+  assert.deepEqual(Array.from(ordered,entry=>entry.planIndex),[0,2,3,5,4,6,1,7]);
+  assert.equal(ordered[0].priority,"P1");
+  assert.equal(ordered[4].priority,"P2");
+  assert.deepEqual(Array.from(ordered,entry=>entry.scheduleIndex),[0,1,2,3,4,5,6,7]);
+});
+
+test("priority-first scheduling retains compressed 184-day coverage and two-phase dates", () => {
   const start = script.indexOf("function studyPlanDateOffset(entry){");
   const end = script.indexOf("\nfunction getStudyPlanDateKey(entry){", start);
   assert.ok(start >= 0 && end > start);
   const dateOffset = script.slice(start, end);
-  assert.match(dateOffset, /Math\.floor\(scheduleIndex\*finalStudyOffset\/\(STUDY_PLAN_TOPICS\.length-1\)\)/);
+  assert.match(dateOffset, /Math\.round\(scheduleIndex\*finalStudyOffset\/\(STUDY_PLAN_TOPICS\.length-1\)\)/);
+  const offsets = Array.from({length:189}, (_,index) => Math.round(index*183/188));
+  assert.equal(new Set(offsets).size, 184);
+  assert.equal(offsets[0], 0);
+  assert.equal(offsets[1], 1);
+  assert.equal(offsets[offsets.length-1], 183);
+  const counts = new Map();
+  offsets.forEach(offset => counts.set(offset,(counts.get(offset)||0)+1));
+  assert.equal(Array.from(counts.values()).filter(count => count===2).length, 5);
+  assert.ok(Array.from(counts.values()).every(count => count===1||count===2));
+  assert.match(script, /const DAILY_STUDY_PLAN=SHUFFLED_STUDY_PLAN\.flatMap/);
+  assert.match(script, /entry\.phase==="mcq_revision"\?1:0/);
+  assert.match(script, /priority:isPriority\?"P1":"P2"/);
 });
 test("topic checklists render under Daily routine, not Today’s study cycle", () => {
   const routine = script.slice(script.indexOf("function renderDaily(){"), script.indexOf("\nfunction renderSubjectOverview(){"));
