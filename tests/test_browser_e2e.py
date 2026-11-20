@@ -182,8 +182,15 @@ def test_customization_management_and_device_theme_profiles(tracker_url):
             page.locator('#customDailyManager button[data-action="rename-task"]').click()
 
             page.reload(wait_until="networkidle")
-            page.locator("#workspaceNav").scroll_into_view_if_needed()
-            page.locator('label[for="nav-settings"]').click()
+            navigation = page.locator("#workspaceNav")
+            assert navigation.evaluate("(element) => element.scrollWidth > element.clientWidth")
+            navigation.evaluate("(element) => { element.scrollLeft = element.scrollWidth; }")
+
+            settings_label = page.locator('label[for="nav-settings"]')
+            assert settings_label.evaluate(
+                "(element) => { const rect = element.getBoundingClientRect(); return rect.left >= 0 && rect.right <= window.innerWidth; }"
+            )
+            settings_label.click()
             assert page.locator("#targetDate").input_value() == "2027-05-24"
             assert "dark" in page.locator("body").get_attribute("class").split()
             assert page.locator("#customSyllabusManager").get_by_text("Advanced comprehension").count() == 1
