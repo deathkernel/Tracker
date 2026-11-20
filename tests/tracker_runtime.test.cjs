@@ -202,7 +202,7 @@ test("Day 2 cannot finish until its own checklist is complete", () => {
   assert.ok(mcqSave >= 0 && revisionQuality > mcqSave);
   assert.doesNotMatch(completion, /confirm\("Have you revised/);
 });
-test("Day 1 and Day 2 checklists are independent and both gate topic completion", () => {
+test("Day 1 and Day 2 checklists gate their own Study Plan phases, not manual syllabus completion", () => {
   assert.match(script, /const STUDY_DAY_CHECKLIST=/);
   assert.match(script, /const REVISION_DAY_CHECKLIST=/);
   assert.match(script, /studyChecklist:normalizePhaseChecklist\(item\.studyChecklist,STUDY_DAY_CHECKLIST,!!item\.studyDone\)/);
