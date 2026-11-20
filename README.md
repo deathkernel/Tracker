@@ -14,7 +14,7 @@ Keep the command window open while using the tracker. Press Ctrl+C to stop the l
 ## Dashboard
 
 - Daily checklist and completion progress.
-- Exam-deadline study cycle: Day 1 starts a topic; the next day records MCQs + revision for that same topic while a new Day 1 topic can begin.
+- Exam-deadline study cycle: each topic has a Day 1 preparation checklist and a separate Day 2 MCQ + revision checklist; both must be completed before the syllabus topic is marked complete. A new Day 1 topic can overlap with another topic’s Day 2.
 - The dashboard distributes the 189 planned study units between the cycle start and configured exam target date; final revision is scheduled on the target date.
 - 9 base subjects and 291 curated syllabus topics, with every topic explicitly mapped to at least one first-pass study unit. Related topics may share a lesson.
 - Subject-wise progress, topic search and completion filters.

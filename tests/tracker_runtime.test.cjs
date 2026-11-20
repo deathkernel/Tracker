@@ -64,12 +64,54 @@ test("pipelined Day 2 uses the same topic's stable progress record", () => {
   assert.match(script, /revisionEntries:getStudyPlanEntriesForDate/);
 });
 
-test("Day 2 MCQ count is saved before revision confirmation", () => {
-  const completion = script.slice(script.indexOf("async function completePlanRevision"), script.indexOf("function renderOverviewSchedule"));
+test("Day 2 cannot finish until its own checklist is complete", () => {
+  const completion = script.slice(script.indexOf("async function completePlanRevision"), script.indexOf("function renderPhaseChecklist"));
+  assert.match(completion, /if\(!canCompleteStudyPlanPhase\(entry,"mcq_revision"\)\)/);
   const mcqSave = completion.indexOf("progress.mcqDone=true;");
-  const persistAfterMcq = completion.indexOf("state.studyPlanProgress[key]=progress;", mcqSave);
-  const revisionConfirm = completion.indexOf('confirm("Have you revised "+entry.topic+"?")', mcqSave);
-  assert.ok(mcqSave >= 0 && persistAfterMcq > mcqSave && revisionConfirm > persistAfterMcq);
+  const revisionQuality = completion.indexOf('askRecallQuality(entry.topic,"revision")');
+  assert.ok(mcqSave >= 0 && revisionQuality > mcqSave);
+  assert.doesNotMatch(completion, /confirm\("Have you revised/);
+});
+test("Day 1 and Day 2 checklists are independent and both gate topic completion", () => {
+  assert.match(script, /const STUDY_DAY_CHECKLIST=/);
+  assert.match(script, /const REVISION_DAY_CHECKLIST=/);
+  assert.match(script, /studyChecklist:normalizePhaseChecklist\(item\.studyChecklist,STUDY_DAY_CHECKLIST,!!item\.studyDone\)/);
+  assert.match(script, /revisionChecklist:normalizePhaseChecklist\(item\.revisionChecklist,REVISION_DAY_CHECKLIST,!!item\.revisionDone\)/);
+  assert.match(script, /function canCompleteStudyPlanPhase\(entry,phase\)/);
+  assert.match(script, /if\(!canCompleteStudyPlanPhase\(entry,"study"\)\)/);
+  assert.match(script, /if\(!canCompleteStudyPlanPhase\(entry,"mcq_revision"\)\)/);
+  assert.match(script, /progress\.studyDone&&!!progress\.revisionDone&&isPhaseChecklistComplete\(progress,"study"\)&&isPhaseChecklistComplete\(progress,"mcq_revision"\)/);
+  assert.match(script, /function hasCompletedStudyCycleForSyllabusTopic\(subject,topic\)/);
+  assert.match(script, /if\(!hasCompletedStudyCycleForSyllabusTopic\(subject,topic\)\)/);
+  assert.doesNotMatch(html, /id="weeklyTasks"/);
+  assert.doesNotMatch(html, /<h2>Weekly targets<\/h2>/);
+});
+test("legacy completed phases retain completed checklist ticks after upgrade", () => {
+  assert.match(script, /normalizePhaseChecklist\(item\.studyChecklist,STUDY_DAY_CHECKLIST,!!item\.studyDone\)/);
+  assert.match(script, /normalizePhaseChecklist\(item\.revisionChecklist,REVISION_DAY_CHECKLIST,!!item\.revisionDone\)/);
+});
+
+test("checklist completion helper requires every item in the selected phase", () => {
+  const definitionsStart = script.indexOf("const STUDY_DAY_CHECKLIST=");
+  const definitionsEnd = script.indexOf("const STORE=", definitionsStart);
+  const helperStart = script.indexOf("function isPhaseChecklistComplete(progress,phase)");
+  const helperEnd = script.indexOf("function getPhaseChecklistCount", helperStart);
+  assert.ok(definitionsStart >= 0 && definitionsEnd > definitionsStart && helperEnd > helperStart);
+  const sandbox = {};
+  vm.runInNewContext(
+    script.slice(definitionsStart, definitionsEnd) +
+      "\n" + script.slice(helperStart, helperEnd) +
+      "\nthis.studyItems=STUDY_DAY_CHECKLIST;this.revisionItems=REVISION_DAY_CHECKLIST;this.isComplete=isPhaseChecklistComplete;this.normalize=normalizePhaseChecklist;",
+    sandbox
+  );
+  const allStudy = sandbox.normalize(null, sandbox.studyItems, true);
+  const noStudy = sandbox.normalize(null, sandbox.studyItems, false);
+  assert.equal(sandbox.isComplete({studyChecklist:allStudy},"study"), true);
+  assert.equal(sandbox.isComplete({studyChecklist:noStudy},"study"), false);
+  const partialRevision = sandbox.normalize({mcqs:true},sandbox.revisionItems,false);
+  assert.equal(sandbox.isComplete({revisionChecklist:partialRevision},"mcq_revision"), false);
+  const allRevision = sandbox.normalize(null,sandbox.revisionItems,true);
+  assert.equal(sandbox.isComplete({revisionChecklist:allRevision},"mcq_revision"), true);
 });
 
 test("only overdue study phases enter the recovery queue", () => {
@@ -93,7 +135,7 @@ test("subject progress synchronization covers mapped syllabus topics", () => {
 
 test("uncompletion invalidates linked study but preserves MCQ history", () => {
   assert.match(script, /function syncSyllabusUncompletionToStudyPlan\(subject,topic\)/);
-  assert.match(script, /const progress=\{\.\.\.getStudyPlanProgress\(entry\),studyDone:false,mcqDone:false,revisionDone:false,studyReset:true\}/);
+  assert.match(script, /const progress=\{\.\.\.getStudyPlanProgress\(entry\),studyDone:false,mcqDone:false,revisionDone:false,studyChecklist:normalizePhaseChecklist\(null,STUDY_DAY_CHECKLIST,false\),revisionChecklist:normalizePhaseChecklist\(null,REVISION_DAY_CHECKLIST,false\),studyReset:true\}/);
   assert.match(script, /mcqCount:Number\.isInteger\(item\.mcqCount\)/);
   assert.match(script, /mcqDone:!reset&&!!\(current\.mcqDone/);
 });
@@ -218,7 +260,7 @@ test("study-plan recall always has a planner mastery fallback for unmapped or in
   const end = script.indexOf("\nfunction revisionDateAfter", start);
   const sync = script.slice(start, end);
   assert.match(sync, /let trackedCanonical=false/);
-  assert.match(sync, /if\(!state\.topics\?\.\[key\]\)continue/);
+  assert.doesNotMatch(sync, /if\(!state\.topics\?\.\[key\]\)continue/);
   assert.match(sync, /if\(!trackedCanonical\)await recordMasteryProgress\("plan:"\+entry\.planIndex,quality,false\)/);
 });
 
