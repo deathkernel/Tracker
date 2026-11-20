@@ -636,7 +636,7 @@ test("workspace navigation keeps page content below navigation and scopes dashbo
 
 test("workspace navigation switches the visible page and updates its heading", () => {
   const start = script.indexOf("function setWorkspaceView(view){");
-  const end = script.indexOf("\\nfunction activeDevice()", start);
+  const end = script.indexOf("\nfunction activeDevice()", start);
   assert.ok(start >= 0 && end > start);
   const names = ["overview", "syllabus", "missing", "logs", "plan", "settings", "revision", "charts"];
   const pages = names.map(name => ({
@@ -662,7 +662,7 @@ test("workspace navigation switches the visible page and updates its heading", (
     window: { trackerView: "overview" },
     $: id => nodes[id]
   };
-  vm.runInNewContext(script.slice(start, end) + "\\nthis.switchView=setWorkspaceView;", sandbox);
+  vm.runInNewContext(script.slice(start, end) + "\nthis.switchView=setWorkspaceView;", sandbox);
   sandbox.switchView("syllabus");
   assert.equal(sandbox.document.body.dataset.view, "syllabus");
   assert.equal(sandbox.window.trackerView, "syllabus");
@@ -684,8 +684,8 @@ test("workspace navigation is wired before state initialization and non-Overview
   assert.match(script, /workspaceNavigation\.contains\(label\)/);
   assert.match(script, /setWorkspaceView\(input\.value\)/);
   assert.match(html, /<body data-view="overview">/);
-  assert.match(html, /\\[data-page\\]\\[hidden\\]\\{display:none!important\\}/);
-  const pageTags = [...html.matchAll(/<section\\b[^>]*\\bdata-page="([^"]+)"([^>]*)>/g)];
+  assert.match(html, /\[data-page\]\[hidden\]\{display:none!important\}/);
+  const pageTags = [...html.matchAll(/<section\b[^>]*\bdata-page="([^"]+)"([^>]*)>/g)];
   assert.ok(pageTags.some(([, page]) => page === "settings"));
-  assert.ok(pageTags.filter(([, page]) => page !== "overview").every(([, , attributes]) => /\\bhidden\\b/.test(attributes)));
+  assert.ok(pageTags.filter(([, page]) => page !== "overview").every(([, , attributes]) => /\bhidden\b/.test(attributes)));
 });
