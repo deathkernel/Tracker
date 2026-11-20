@@ -160,7 +160,7 @@ def health() -> dict[str, str]:
 class RevisionScheduleRequest(BaseModel):
     today: str
     previous: dict[str, Any] | None = None
-    quality: int = Field(ge=0, le=5)
+    quality: int = Field(strict=True, ge=0, le=5)
 
 
 @app.post("/api/revision/next")
