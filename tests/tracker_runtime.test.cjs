@@ -679,7 +679,7 @@ test("workspace navigation switches the visible page and updates its heading", (
 
 test("workspace navigation is wired before state initialization and non-Overview pages start hidden", () => {
   const navHandler = script.indexOf('workspaceNavigation?.addEventListener("click"');
-  const stateInitialization = script.indexOf("let state=normalizeProgressState(readState())");
+  const stateInitialization = script.indexOf("let state=defaultState()");
   assert.ok(navHandler >= 0 && stateInitialization > navHandler);
   assert.match(script, /workspaceNavigation\.contains\(label\)/);
   assert.match(script, /setWorkspaceView\(input\.value\)/);
@@ -688,4 +688,82 @@ test("workspace navigation is wired before state initialization and non-Overview
   const pageTags = [...html.matchAll(/<section\b[^>]*\bdata-page="([^"]+)"([^>]*)>/g)];
   assert.ok(pageTags.some(([, page]) => page === "settings"));
   assert.ok(pageTags.filter(([, page]) => page !== "overview").every(([, , attributes]) => /\bhidden\b/.test(attributes)));
+});
+
+
+test("saved-state hydration runs only after study-plan migration dependencies initialize", () => {
+  const defaultStateInit = script.indexOf("let state=defaultState()");
+  const allSubjects = script.indexOf("const allSubjects=");
+  const top50 = script.indexOf("const PRELIMS_TOP_50_KEYS=");
+  const planTopics = script.indexOf("const STUDY_PLAN_TOPICS=");
+  const dailyPlan = script.indexOf("const DAILY_STUDY_PLAN=");
+  const savedStateHydration = script.indexOf("state=normalizeProgressState(readState())");
+  assert.ok(defaultStateInit >= 0);
+  assert.ok(defaultStateInit < allSubjects);
+  assert.ok(allSubjects < top50);
+  assert.ok(top50 < planTopics);
+  assert.ok(planTopics < dailyPlan);
+  assert.ok(dailyPlan < savedStateHydration);
+  assert.equal(script.includes("let state=normalizeProgressState(readState())"), false);
+});
+
+
+test("legacy browser recovery snapshots restore saved progress after the primary state was blanked", () => {
+  const start = script.indexOf("function hasSavedUserData(value){");
+  const end = script.indexOf("\nfunction persist()", start);
+  assert.ok(start >= 0 && end > start);
+  const legacy = {
+    version: 0,
+    topics: { "Polity::Fundamental Rights": true },
+    logs: { "2026-11-19": { hours: 3, mcqs: 20, csat: 0, notes: "saved notes" } },
+    studyPlanProgress: { "plan:0": { studyDone: true } },
+    studyPlanProgressSchema: 1
+  };
+  const storage = new Map([
+    ["upsc-dashboard-v2", JSON.stringify({ version: 0, topics: {}, logs: {}, studyPlanProgress: {} })],
+    ["upsc-dashboard-v2-recovery", JSON.stringify({
+      reason: "The browser progress JSON was corrupt. The original raw value was preserved for recovery.",
+      raw: JSON.stringify(legacy)
+    })]
+  ]);
+  const sandbox = {
+    STORE: "upsc-dashboard-v2",
+    recoveredLegacyProgress: false,
+    localStorage: {
+      getItem(key) { return storage.get(key) ?? null; },
+      setItem(key, value) { storage.set(key, value); }
+    },
+    normalizeProgressState: value => value,
+    defaultState: () => ({ version: 0, topics: {}, logs: {}, studyPlanProgress: {} })
+  };
+  vm.runInNewContext(script.slice(start, end) + "\nthis.loadState=readState;", sandbox);
+  const recovered = sandbox.loadState();
+  assert.equal(recovered.topics["Polity::Fundamental Rights"], true);
+  assert.equal(recovered.logs["2026-11-19"].notes, "saved notes");
+  assert.equal(sandbox.recoveredLegacyProgress, true);
+});
+
+test("legacy recovery never overrides a deliberate versioned empty progress reset", () => {
+  const start = script.indexOf("function hasSavedUserData(value){");
+  const end = script.indexOf("\nfunction persist()", start);
+  assert.ok(start >= 0 && end > start);
+  const storage = new Map([
+    ["upsc-dashboard-v2", JSON.stringify({ version: 8, topics: {}, logs: {}, studyPlanProgress: {} })],
+    ["upsc-dashboard-v2-recovery", JSON.stringify({
+      reason: "The browser progress JSON was corrupt. The original raw value was preserved for recovery.",
+      raw: JSON.stringify({ version: 2, topics: { "Polity::Fundamental Rights": true } })
+    })]
+  ]);
+  const sandbox = {
+    STORE: "upsc-dashboard-v2",
+    recoveredLegacyProgress: false,
+    localStorage: { getItem: key => storage.get(key) ?? null },
+    normalizeProgressState: value => value,
+    defaultState: () => ({ version: 0, topics: {}, logs: {}, studyPlanProgress: {} })
+  };
+  vm.runInNewContext(script.slice(start, end) + "\nthis.loadState=readState;", sandbox);
+  const current = sandbox.loadState();
+  assert.equal(current.version, 8);
+  assert.equal(Object.keys(current.topics).length, 0);
+  assert.equal(sandbox.recoveredLegacyProgress, false);
 });
