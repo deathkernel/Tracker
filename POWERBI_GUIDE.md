@@ -6,7 +6,7 @@
 3. Run: python powerbi_export.py
 4. In Power BI Desktop, import all CSV files from powerbi_data.
 
-The exporter reads the SQLite saved state and syllabus/planner definitions. It never modifies tracker.db.
+The exporter reads the SQLite saved state and syllabus/planner definitions. StudyPlan dates and priority order match the dashboard's P1-first, subject-rotated schedule while preserving original plan keys. RecoveryQueue is rebuilt from currently overdue, incomplete phases at export time rather than trusting a stale saved snapshot. The exporter never modifies tracker.db.
 
 ## Relationships
 - Topics[TopicKey] → TopicProgress[TopicKey]
