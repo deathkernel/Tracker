@@ -24,7 +24,7 @@ test("Top 50 P1 topics are mapped and scheduled before standard topics", () => {
   const rotationStart = script.indexOf("function getStudyPlanRotationSubject(entry){");
   const rotationEnd = script.indexOf("\nfunction addDaysToDateKey", rotationStart);
   const priorityStart = script.indexOf("const PRELIMS_TOP_50_KEYS=");
-  const priorityEnd = script.indexOf("\nfunction hasCompletedStudyCycleForSyllabusTopic", priorityStart);
+  const priorityEnd = script.indexOf("\nfunction syncSyllabusCompletionToStudyPlan", priorityStart);
   assert.ok(mappingStart >= 0 && mappingEnd > mappingStart);
   assert.ok(planStart >= 0 && planEnd > planStart);
   assert.ok(rotationStart >= 0 && rotationEnd > rotationStart);
@@ -58,7 +58,7 @@ test("schedule rotates subjects within priority tiers and preserves original pro
   const rotationStart = script.indexOf("function getStudyPlanRotationSubject(entry){");
   const rotationEnd = script.indexOf("\nfunction addDaysToDateKey", rotationStart);
   const priorityStart = script.indexOf("const PRELIMS_TOP_50_KEYS=");
-  const priorityEnd = script.indexOf("\nfunction hasCompletedStudyCycleForSyllabusTopic", priorityStart);
+  const priorityEnd = script.indexOf("\nfunction syncSyllabusCompletionToStudyPlan", priorityStart);
   const sandbox = {
     allSubjects:()=>[
       {name:"Polity",topics:[["P1 A",1,"P1"],["P1 B",1,"P1"],["P2 A",1,"P2"],["P2 B",1,"P2"]]},
@@ -202,7 +202,7 @@ test("Day 2 cannot finish until its own checklist is complete", () => {
   assert.ok(mcqSave >= 0 && revisionQuality > mcqSave);
   assert.doesNotMatch(completion, /confirm\("Have you revised/);
 });
-test("Day 1 and Day 2 checklists are independent and both gate topic completion", () => {
+test("Day 1 and Day 2 checklists gate their own Study Plan phases, not manual syllabus completion", () => {
   assert.match(script, /const STUDY_DAY_CHECKLIST=/);
   assert.match(script, /const REVISION_DAY_CHECKLIST=/);
   assert.match(script, /studyChecklist:normalizePhaseChecklist\(item\.studyChecklist,STUDY_DAY_CHECKLIST,!!item\.studyDone\)/);
@@ -211,8 +211,9 @@ test("Day 1 and Day 2 checklists are independent and both gate topic completion"
   assert.match(script, /if\(!canCompleteStudyPlanPhase\(entry,"study"\)\)/);
   assert.match(script, /if\(!canCompleteStudyPlanPhase\(entry,"mcq_revision"\)\)/);
   assert.match(script, /progress\.studyDone&&!!progress\.revisionDone&&isPhaseChecklistComplete\(progress,"study"\)&&isPhaseChecklistComplete\(progress,"mcq_revision"\)/);
-  assert.match(script, /function hasCompletedStudyCycleForSyllabusTopic\(subject,topic\)/);
-  assert.match(script, /if\(!hasCompletedStudyCycleForSyllabusTopic\(subject,topic\)\)/);
+  assert.match(script, /function completeTopicWithMastery\(subject,topic\)/);
+  assert.doesNotMatch(script, /hasCompletedStudyCycleForSyllabusTopic/);
+  assert.doesNotMatch(script, /Complete both Day 1 preparation and Day 2 MCQ \+ revision checklists before completing this topic/);
   assert.doesNotMatch(html, /id="weeklyTasks"/);
   assert.doesNotMatch(html, /<h2>Weekly targets<\/h2>/);
 });
@@ -406,6 +407,42 @@ test("overview subject progress uses a dedicated scrollable table wrapper", () =
   assert.match(html, /role="region" aria-label="Subject progress table" tabindex="0"/);
   assert.match(script, /table\.className="data-table subject-progress-table"/);
   assert.match(script, /table\.setAttribute\("aria-label","Subject completion by topic"\)/);
+});
+
+test("manual syllabus completion updates its mapped Day 1 phase without completing Day 2", () => {
+  const start = script.indexOf("function syncSyllabusCompletionToStudyPlan(");
+  const end = script.indexOf("\nfunction syncSyllabusUncompletionToStudyPlan", start);
+  assert.ok(start >= 0 && end > start);
+  const key = "Polity::Constitutional development";
+  const entry = {
+    subject: "Polity",
+    topic: "Constitutional development and historical background",
+    phase: "study",
+    planIndex: 0
+  };
+  const items = [["source", "Read"], ["concepts", "Understand"], ["notes", "Notes"], ["recall", "Recall"]];
+  const sandbox = {
+    state: { topics: { [key]: true }, studyPlanProgress: {} },
+    DAILY_STUDY_PLAN: [entry, { ...entry, phase: "mcq_revision" }],
+    STUDY_DAY_CHECKLIST: items,
+    validTopicKeys: () => new Set([key]),
+    findMatchingSyllabusTopics: () => [key],
+    getStudyPlanProgressDateKey: item => "plan:" + item.planIndex,
+    getStudyPlanProgress: () => ({ revisionDone: false, mcqDone: false })
+  };
+  vm.runInNewContext(
+    script.slice(start, end) + "\nthis.sync=syncSyllabusCompletionToStudyPlan;",
+    sandbox
+  );
+  sandbox.sync("Polity", "Constitutional development");
+  const progress = sandbox.state.studyPlanProgress["plan:0"];
+  assert.equal(progress.studyDone, true);
+  assert.equal(progress.studyReset, false);
+  assert.deepEqual(JSON.parse(JSON.stringify(progress.studyChecklist)), {
+    source: true, concepts: true, notes: true, recall: true
+  });
+  assert.equal(progress.revisionDone, false);
+  assert.equal(progress.mcqDone, false);
 });
 
 test("analytics count phase completion and distinct missed dates", () => {
