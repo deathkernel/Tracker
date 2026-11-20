@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import csv
+import json
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -205,3 +207,89 @@ const BASE_STUDY_PLAN=[
     rows = exporter.build_study_plan_rows(html, {})
     assert rows[0]["PlanKey"] == "plan:0"
     assert rows[1]["PlanKey"] == "plan:0"
+
+
+def test_full_export_writes_consistent_plan_mastery_retest_and_recovery_keys(tmp_path, monkeypatch):
+    html = '''
+const SUBJECTS=[{"name":"Polity","topics":[["Constitution",1,"P1"]]}];
+const DAILY=[["reading","Main topic study","7:00–8:15 AM","Read concepts"]];
+const BASE_STUDY_PLAN=[
+{subject:"Polity",days:["Constitution"]}
+];
+'''
+    database = tmp_path / "tracker.db"
+    with sqlite3.connect(database) as db:
+        db.execute(
+            "CREATE TABLE app_state (id INTEGER PRIMARY KEY, payload TEXT NOT NULL)"
+        )
+        state = {
+            "version": 1,
+            "topics": {"Polity::Constitution": True},
+            "daily": {},
+            "logs": {},
+            "studyPlanProgress": {
+                "plan:0": {
+                    "studyDone": True,
+                    "mcqDone": True,
+                    "revisionDone": True,
+                    "mcqCount": 14,
+                }
+            },
+            "masteryProgress": {
+                "plan:0": {
+                    "reviews": 1,
+                    "masteryLevel": 2,
+                    "averageQuality": 4,
+                    "lastQuality": 4,
+                }
+            },
+            "retestSchedule": {
+                "plan:0": {
+                    "due_date": "2026-11-24",
+                    "attempts": 1,
+                    "status": "scheduled",
+                    "last_quality": 4,
+                }
+            },
+            "recoveryQueue": [{
+                "key": "plan:0:study",
+                "plan_key": "plan:0",
+                "planIndex": 0,
+                "subject": "Polity",
+                "topic": "Constitution",
+                "phase": "study",
+                "due_date": "2026-11-19",
+                "status": "pending",
+            }],
+            "settings": {"targetDate": "2026-11-25"},
+            "customSubjects": [],
+            "customDaily": [],
+        }
+        db.execute(
+            "INSERT INTO app_state (id, payload) VALUES (1, ?)",
+            (json.dumps(state),),
+        )
+
+    html_path = tmp_path / "index.html"
+    html_path.write_text(html, encoding="utf-8")
+    output = tmp_path / "powerbi_data"
+    monkeypatch.setattr(exporter, "DB_PATH", database)
+    monkeypatch.setattr(exporter, "HTML_PATH", html_path)
+    monkeypatch.setattr(exporter, "OUT", output)
+
+    exporter.main()
+
+    with (output / "PlanTopics.csv").open(encoding="utf-8-sig", newline="") as file:
+        plan_topics = list(csv.DictReader(file))
+    with (output / "Mastery.csv").open(encoding="utf-8-sig", newline="") as file:
+        mastery = list(csv.DictReader(file))
+    with (output / "RetestSchedule.csv").open(encoding="utf-8-sig", newline="") as file:
+        retests = list(csv.DictReader(file))
+    with (output / "RecoveryQueue.csv").open(encoding="utf-8-sig", newline="") as file:
+        recovery = list(csv.DictReader(file))
+
+    assert plan_topics == [{"PlanKey": "plan:0", "Subject": "Polity", "PlannedTopic": "Constitution"}]
+    assert mastery[0]["PlanKey"] == "plan:0"
+    assert retests[0]["PlanKey"] == "plan:0"
+    assert recovery[0]["PlanKey"] == "plan:0"
+    assert recovery[0]["Phase"] == "study"
