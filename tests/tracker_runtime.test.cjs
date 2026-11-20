@@ -8,9 +8,49 @@ const script = html.match(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/i)
 
 test("dashboard keeps each syllabus topic as a two-phase study unit", () => {
   assert.match(script, /const STUDY_PLAN_TOPICS=BASE_STUDY_PLAN\.flatMap/);
-  assert.match(script, /const DAILY_STUDY_PLAN=STUDY_PLAN_TOPICS\.flatMap/);
+  assert.match(script, /const SHUFFLED_STUDY_PLAN=buildSubjectRotatedStudyPlan\(STUDY_PLAN_TOPICS\)/);
+  assert.match(script, /const DAILY_STUDY_PLAN=SHUFFLED_STUDY_PLAN\.flatMap/);
   assert.match(script, /phase:"study"/);
   assert.match(script, /phase:"mcq_revision"/);
+});
+
+
+test("subject rotation interleaves subjects without changing saved topic indexes", () => {
+  const start = script.indexOf("function getStudyPlanRotationSubject(entry){");
+  const end = script.indexOf("\nconst SHUFFLED_STUDY_PLAN=", start);
+  assert.ok(start >= 0 && end > start);
+  const sandbox = {};
+  vm.runInNewContext(
+    script.slice(start, end) + "\nthis.rotate=buildSubjectRotatedStudyPlan;",
+    sandbox
+  );
+  const source = [
+    {subject:"Polity",topic:"Polity 1"},
+    {subject:"Polity",topic:"Polity 2"},
+    {subject:"History",topic:"History 1"},
+    {subject:"History",topic:"History 2"},
+    {subject:"Economy",topic:"Economy 1"}
+  ];
+  const rotated = sandbox.rotate(source);
+  assert.deepEqual(Array.from(rotated, entry => entry.planIndex), [0,2,4,1,3]);
+  assert.deepEqual(Array.from(rotated, entry => entry.scheduleIndex), [0,1,2,3,4]);
+  assert.deepEqual(Array.from(rotated.slice(0,3), entry => entry.subject), ["Polity","History","Economy"]);
+});
+
+test("first schedule day includes multiple rotated subjects without date gaps", () => {
+  const start = script.indexOf("function studyPlanDateOffset(entry){");
+  const end = script.indexOf("\nfunction getStudyPlanDateKey(entry){", start);
+  assert.ok(start >= 0 && end > start);
+  const dateOffset = script.slice(start, end);
+  assert.match(dateOffset, /Math\.floor\(scheduleIndex\*finalStudyOffset\/\(STUDY_PLAN_TOPICS\.length-1\)\)/);
+});
+test("topic checklists render under Daily routine, not Today’s study cycle", () => {
+  const routine = script.slice(script.indexOf("function renderDaily(){"), script.indexOf("\nfunction renderSubjectOverview(){"));
+  const cycle = script.slice(script.indexOf("function renderOverviewSchedule(){"), script.indexOf("\nfunction renderRoadmap(){"));
+  assert.match(routine, /renderPhaseChecklist\(entry,phase,getStudyPlanProgress\(entry\)\)/);
+  assert.doesNotMatch(cycle, /renderPhaseChecklist/);
+  assert.match(cycle, /Complete its Day 1 preparation tasks in Daily routine/);
+  assert.match(script, /const scheduleIndex=Number\.isInteger\(entry\?\.scheduleIndex\)\?entry\.scheduleIndex:entry\.planIndex/);
 });
 
 test("PYQ completion indicator color follows completed-topic percentage", () => {
