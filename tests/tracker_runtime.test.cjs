@@ -136,6 +136,32 @@ test("PYQ completion indicator color follows completed-topic percentage", () => 
   assert.equal(sandbox.getColorClass(-10), "is-low");
 });
 
+test("target date validation protects the two-phase schedule capacity", () => {
+  const start = script.indexOf("function isValidTargetDate(value){");
+  const end = script.indexOf("\\nfunction getMinimumTargetDateKey", start);
+  assert.ok(start >= 0 && end > start);
+  const sandbox = {
+    CYCLE_START_DATE: "2026-11-20",
+    STUDY_PLAN_TOPICS: Array.from({ length: 189 }, () => ({})),
+    localDateKey: date => [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, "0"),
+      String(date.getDate()).padStart(2, "0")
+    ].join("-")
+  };
+  vm.runInNewContext(
+    script.slice(start, end) + "\\nthis.valid=isValidTargetDate;",
+    sandbox
+  );
+  assert.equal(sandbox.valid("2027-02-22"), false);
+  assert.equal(sandbox.valid("2027-02-23"), true);
+  assert.equal(sandbox.valid("2026-02-30"), false);
+  assert.equal(sandbox.valid("23-02-2027"), false);
+  assert.match(script, /state\.settings\.targetDate=value;persist\(\);renderAll\(\)/);
+  assert.match(script, /next\.settings\.targetDate="2027-05-23"/);
+  assert.match(script, /incoming\.settings\?\.targetDate!==undefined&&!isValidTargetDate/);
+});
+
 test("exam-deadline schedule finishes the final review by the configured target date", () => {
   const start = script.indexOf("function addDaysToDateKey(dateKey,days){");
   const end = script.indexOf("function getStudyPlanProgressDateKey(entry){", start);
@@ -216,6 +242,29 @@ test("checklist completion helper requires every item in the selected phase", ()
   assert.equal(sandbox.isComplete({revisionChecklist:partialRevision},"mcq_revision"), false);
   const allRevision = sandbox.normalize(null,sandbox.revisionItems,true);
   assert.equal(sandbox.isComplete({revisionChecklist:allRevision},"mcq_revision"), true);
+});
+
+test("Missing Topics resolves shuffled schedule rows by stable original plan index", () => {
+  const start = script.indexOf("function getStudyPlanEntryByPlanIndex(planIndex,phase){");
+  const end = script.indexOf("\\nfunction studyPlanDateOffset", start);
+  assert.ok(start >= 0 && end > start);
+  const entries = [
+    { planIndex: 1, phase: "study", topic: "second" },
+    { planIndex: 0, phase: "mcq_revision", topic: "first revision" },
+    { planIndex: 0, phase: "study", topic: "first" },
+    { planIndex: 1, phase: "mcq_revision", topic: "second revision" }
+  ];
+  const sandbox = { DAILY_STUDY_PLAN: entries };
+  vm.runInNewContext(
+    script.slice(start, end) + "\\nthis.lookup=getStudyPlanEntryByPlanIndex;",
+    sandbox
+  );
+  assert.equal(sandbox.lookup(0, "study").topic, "first");
+  assert.equal(sandbox.lookup(1, "mcq_revision").topic, "second revision");
+  const missing = script.slice(script.indexOf("function renderMissingTopics()"), script.indexOf("\\nfunction renderRevision()", script.indexOf("function renderMissingTopics()")));
+  assert.match(missing, /getStudyPlanEntryByPlanIndex\(planIndex,"study"\)/);
+  assert.match(missing, /getStudyPlanEntryByPlanIndex\(planIndex,"mcq_revision"\)/);
+  assert.doesNotMatch(missing, /DAILY_STUDY_PLAN\[planIndex\*2/);
 });
 
 test("only overdue study phases enter the recovery queue", () => {
