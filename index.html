@@ -846,6 +846,7 @@ function refreshRecoveryQueue(today=localDate()){
   return dueDate<today&&!isStudyPlanEntryDone(entry);
  }).map(entry=>({
   key:"plan:"+entry.planIndex+":"+entry.phase,
+  plan_key:"plan:"+entry.planIndex,
   planIndex:entry.planIndex,
   subject:entry.subject,
   topic:entry.topic,
