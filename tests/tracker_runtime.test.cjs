@@ -21,17 +21,21 @@ test("Top 50 P1 topics are mapped and scheduled before standard topics", () => {
   const mappingEnd = script.indexOf("\nconst PRELIMS_TOP_50_KEYS=", mappingStart);
   const planStart = script.indexOf("const BASE_STUDY_PLAN=");
   const planEnd = script.indexOf(";\nconst CYCLE_START_DATE", planStart);
-  const schedulerStart = script.indexOf("function getStudyPlanRotationSubject(entry){");
-  const schedulerEnd = script.indexOf("\nfunction addDaysToDateKey", schedulerStart);
+  const rotationStart = script.indexOf("function getStudyPlanRotationSubject(entry){");
+  const rotationEnd = script.indexOf("\nfunction addDaysToDateKey", rotationStart);
+  const priorityStart = script.indexOf("const PRELIMS_TOP_50_KEYS=");
+  const priorityEnd = script.indexOf("\nfunction hasCompletedStudyCycleForSyllabusTopic", priorityStart);
   assert.ok(mappingStart >= 0 && mappingEnd > mappingStart);
   assert.ok(planStart >= 0 && planEnd > planStart);
-  assert.ok(schedulerStart >= 0 && schedulerEnd > schedulerStart);
+  assert.ok(rotationStart >= 0 && rotationEnd > rotationStart);
+  assert.ok(priorityStart >= 0 && priorityEnd > priorityStart);
   const sandbox = { SUBJECTS: subjectData };
   vm.runInNewContext(
     "const allSubjects=()=>SUBJECTS;\n" +
     script.slice(planStart, planEnd + 1) + "\n" +
     script.slice(mappingStart, mappingEnd) + "\n" +
-    script.slice(schedulerStart, schedulerEnd) +
+    script.slice(rotationStart, rotationEnd) + "\n" +
+    script.slice(priorityStart, priorityEnd) +
     "\nthis.units=BASE_STUDY_PLAN.flatMap(group=>group.days.map(topic=>({subject:group.subject,topic})));"+
     "\nthis.top50=PRELIMS_TOP_50_KEYS;this.ordered=buildSubjectRotatedStudyPlan(units);",
     sandbox
@@ -51,10 +55,10 @@ test("Top 50 P1 topics are mapped and scheduled before standard topics", () => {
 });
 
 test("schedule rotates subjects within priority tiers and preserves original progress indexes", () => {
-  const schedulerStart = script.indexOf("function getStudyPlanRotationSubject(entry){");
-  const schedulerEnd = script.indexOf("\nfunction addDaysToDateKey", schedulerStart);
-  const mappingStart = script.indexOf("function normalizePlanTopic(");
-  const mappingEnd = script.indexOf("\nconst PRELIMS_TOP_50_KEYS=", mappingStart);
+  const rotationStart = script.indexOf("function getStudyPlanRotationSubject(entry){");
+  const rotationEnd = script.indexOf("\nfunction addDaysToDateKey", rotationStart);
+  const priorityStart = script.indexOf("const PRELIMS_TOP_50_KEYS=");
+  const priorityEnd = script.indexOf("\nfunction hasCompletedStudyCycleForSyllabusTopic", priorityStart);
   const sandbox = {
     allSubjects:()=>[
       {name:"Polity",topics:[["P1 A",1,"P1"],["P1 B",1,"P1"],["P2 A",1,"P2"],["P2 B",1,"P2"]]},
@@ -64,7 +68,8 @@ test("schedule rotates subjects within priority tiers and preserves original pro
     findMatchingSyllabusTopics:(subject,topic)=>[subject+"::"+topic]
   };
   vm.runInNewContext(
-    script.slice(schedulerStart,schedulerEnd)+"\nthis.rotate=buildSubjectRotatedStudyPlan;",
+    script.slice(rotationStart,rotationEnd)+"\n"+
+    script.slice(priorityStart,priorityEnd)+"\nthis.rotate=buildSubjectRotatedStudyPlan;",
     sandbox
   );
   const source=[
@@ -78,7 +83,7 @@ test("schedule rotates subjects within priority tiers and preserves original pro
     {subject:"Polity",topic:"P2 B"}
   ];
   const ordered=sandbox.rotate(source);
-  assert.deepEqual(Array.from(ordered,entry=>entry.planIndex),[0,2,3,5,4,6,7,1]);
+  assert.deepEqual(Array.from(ordered,entry=>entry.planIndex),[0,2,3,5,4,6,1,7]);
   assert.equal(ordered[0].priority,"P1");
   assert.equal(ordered[4].priority,"P2");
   assert.deepEqual(Array.from(ordered,entry=>entry.scheduleIndex),[0,1,2,3,4,5,6,7]);
