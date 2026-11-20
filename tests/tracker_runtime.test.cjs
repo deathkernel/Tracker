@@ -309,7 +309,7 @@ test("revision scheduling remains delegated to one backend batch calculation", (
 
 test("revision review batches do not mutate any topic when the backend batch fails", async () => {
   const start = script.indexOf("async function recordStudyReviewBatch(");
-  const end = script.indexOf("\nasync function syncStudyPlanRevisionToSyllabus", start);
+  const end = script.indexOf("async function syncStudyPlanRevisionToSyllabus", start);
   assert.ok(start >= 0 && end > start);
   const initial = {
     revisionSchedule: { "Polity::Rights": { due_date: "2026-11-21" } },
@@ -332,7 +332,7 @@ test("revision review batches do not mutate any topic when the backend batch fai
 
 test("revision review batch commits all topic results only after a complete response", async () => {
   const start = script.indexOf("async function recordStudyReviewBatch(");
-  const end = script.indexOf("\nasync function syncStudyPlanRevisionToSyllabus", start);
+  const end = script.indexOf("async function syncStudyPlanRevisionToSyllabus", start);
   assert.ok(start >= 0 && end > start);
   const sandbox = {
     state: { revisionSchedule: {}, revisionDone: {}, masteryProgress: {}, retestSchedule: {} },
@@ -362,7 +362,7 @@ test("revision review batch commits all topic results only after a complete resp
 
 test("nested backup log validation rejects null, malformed date and invalid numeric records", () => {
   const start = script.indexOf("function isValidDateKey(value){");
-  const end = script.indexOf("\nconst STORE=", start);
+  const end = script.indexOf("const STORE=", start);
   assert.ok(start >= 0 && end > start);
   const sandbox = {
     localDateKey: date => [date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-")
