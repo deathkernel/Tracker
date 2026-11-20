@@ -78,6 +78,22 @@ def test_state_accepts_minimum_target_date_that_fits_the_two_day_plan(client):
     assert response.status_code == 200
 
 
+def test_state_keeps_legacy_target_dates_readable(client):
+    legacy_state = {
+        "version": 0,
+        "settings": {"targetDate": "2026-12-01"},
+    }
+    with sqlite3.connect(server.DB_PATH) as db:
+        db.execute(
+            "UPDATE app_state SET payload = ? WHERE id = 1",
+            (json.dumps(legacy_state),),
+        )
+
+    response = client.get("/api/state")
+    assert response.status_code == 200
+    assert response.json()["settings"]["targetDate"] == "2026-12-01"
+
+
 def test_revision_schedule_endpoint_uses_shared_sm2_policy(client):
     response = client.post("/api/revision/next", json={
         "today": "2026-11-19",
