@@ -294,7 +294,7 @@ test("uncompletion invalidates linked study but preserves MCQ history", () => {
 });
 
 test("revision quality updates shared mastery and retest state through a batch endpoint", () => {
-  assert.match(script, /fetch\("\/api\/study\/review-batch"/);
+  assert.match(script, /apiFetch\("\/api\/study\/review-batch"/);
   assert.match(script, /previous_mastery:state\.masteryProgress/);
   assert.match(script, /previous_retest:state\.retestSchedule/);
   assert.match(script, /async function completeScheduledRetest\(subject,topic,progressKey=null\)/);
@@ -320,7 +320,7 @@ test("revision review batches do not mutate any topic when the backend batch fai
   const sandbox = {
     state: structuredClone(initial),
     localDate: () => "2026-11-20",
-    fetch: async () => ({ ok: false, status: 422, json: async () => ({}) })
+    apiFetch: async () => ({ ok: false, status: 422, json: async () => ({}) })
   };
   vm.runInNewContext(script.slice(start, end) + "\nthis.run=recordStudyReviewBatch;", sandbox);
   await assert.rejects(
@@ -337,7 +337,7 @@ test("revision review batch commits all topic results only after a complete resp
   const sandbox = {
     state: { revisionSchedule: {}, revisionDone: {}, masteryProgress: {}, retestSchedule: {} },
     localDate: () => "2026-11-20",
-    fetch: async (_url, options) => {
+    apiFetch: async (_url, options) => {
       const body = JSON.parse(options.body);
       return {
         ok: true,
@@ -455,7 +455,7 @@ test("removed MCQ question content and AI study interfaces stay absent", () => {
 test("study history, local backup and SQLite synchronization remain wired", () => {
   assert.match(script, /function renderLogs\(\)/);
   assert.match(script, /function persist\(\)/);
-  assert.match(script, /fetch\("\/api\/state"/);
+  assert.match(script, /apiFetch\("\/api\/state"/);
   assert.match(script, /"-recovery"/);
   assert.match(script, /function replaceProgressState\(incoming\)/);
 });
@@ -766,4 +766,14 @@ test("legacy recovery never overrides a deliberate versioned empty progress rese
   assert.equal(current.version, 8);
   assert.equal(Object.keys(current.topics).length, 0);
   assert.equal(sandbox.recoveredLegacyProgress, false);
+});
+
+
+
+test("LAN API calls use a per-tab bearer token captured from the QR URL fragment", () => {
+  assert.match(script, /const LAN_ACCESS_TOKEN_KEY="tracker-lan-access-token"/);
+  assert.match(script, /new URLSearchParams\(window\.location\.hash\.slice\(1\)\)\.get\("access_token"\)/);
+  assert.match(script, /window\.history\.replaceState\(null,"",window\.location\.pathname\+window\.location\.search\)/);
+  assert.match(script, /headers\.set\("Authorization","Bearer "\+token\)/);
+  assert.doesNotMatch(script, /fetch\("\/api\/(?:state|study\/review-batch|network-info)"/);
 });

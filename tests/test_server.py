@@ -15,7 +15,7 @@ import server
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(server, "DB_PATH", tmp_path / "tracker.db")
-    with TestClient(server.app) as test_client:
+    with TestClient(server.app, client=("127.0.0.1", 50123)) as test_client:
         yield test_client
 
 
@@ -291,3 +291,80 @@ def test_legacy_revision_endpoint_accepts_strict_integer_quality(client):
         "quality": 3,
     })
     assert response.status_code == 200
+
+
+
+@pytest.fixture
+def lan_client(tmp_path, monkeypatch):
+    monkeypatch.setattr(server, "DB_PATH", tmp_path / "tracker-lan.db")
+    monkeypatch.setattr(server, "LAN_ACCESS_TOKEN", "test-lan-access-token")
+    with TestClient(server.app, client=("192.168.1.45", 50124)) as test_client:
+        yield test_client
+
+
+def test_remote_lan_api_rejects_missing_and_invalid_bearer_tokens(lan_client):
+    unauthenticated = lan_client.get("/api/state")
+    assert unauthenticated.status_code == 401
+    assert unauthenticated.headers["www-authenticate"] == "Bearer"
+
+    invalid = lan_client.get(
+        "/api/state",
+        headers={"Authorization": "Bearer incorrect-token"},
+    )
+    assert invalid.status_code == 401
+
+    authorized = lan_client.get(
+        "/api/state",
+        headers={"Authorization": "Bearer test-lan-access-token"},
+    )
+    assert authorized.status_code == 200
+
+
+def test_remote_lan_api_protects_revision_and_state_endpoints(lan_client):
+    revision = lan_client.post(
+        "/api/revision/next",
+        json={"today": "2026-11-20", "quality": 4},
+    )
+    batch = lan_client.post(
+        "/api/study/review-batch",
+        json={
+            "today": "2026-11-20",
+            "reviews": [{"key": "Polity::Rights", "quality": 4}],
+        },
+    )
+    assert revision.status_code == 401
+    assert batch.status_code == 401
+
+
+def test_qr_endpoint_is_loopback_only_and_never_puts_token_in_request_url(
+    client, monkeypatch
+):
+    import qrcode
+
+    monkeypatch.setattr(server, "LAN_ACCESS_TOKEN", "qr-secret-test-token")
+    captured = {}
+
+    class FakeQrCode:
+        def save(self, output):
+            output.write(b"<svg></svg>")
+
+    def capture_qr_payload(value, **_kwargs):
+        captured["value"] = value
+        return FakeQrCode()
+
+    monkeypatch.setattr(qrcode, "make", capture_qr_payload)
+    base_url = "http://192.168.1.45:8000"
+    response = client.get("/api/qr-code", params={"url": base_url})
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("image/svg+xml")
+    assert captured["value"] == base_url + "#access_token=qr-secret-test-token"
+    assert "qr-secret-test-token" not in str(response.request.url)
+
+
+def test_remote_clients_cannot_generate_phone_access_qr_codes(lan_client):
+    response = lan_client.get(
+        "/api/qr-code",
+        params={"url": "http://192.168.1.45:8000"},
+    )
+    assert response.status_code == 403
