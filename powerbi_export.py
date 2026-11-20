@@ -57,7 +57,7 @@ def extract_object(source: str, declaration: str) -> dict[str, Any]:
         if in_string:
             if escaped:
                 escaped = False
-            elif ch == "\\\\":
+            elif ch == "\\":
                 escaped = True
             elif ch == quote:
                 in_string = False
@@ -151,12 +151,12 @@ def safe_number(value: Any, *, integer: bool = False) -> int | float | str:
 def normalize_plan_topic(value: Any) -> str:
     text = str(value or "").lower()
     text = re.sub(
-        r"\\b(the|and|of|its|for|with|from|overview|key|important|major|core|basics|introduction|revision|test|pyqs|pyq|practice|analysis)\\b",
+        r"\b(the|and|of|its|for|with|from|overview|key|important|major|core|basics|introduction|revision|test|pyqs|pyq|practice|analysis)\b",
         " ",
         text,
     )
     text = re.sub(r"[^a-z0-9 ]", " ", text)
-    return re.sub(r"\\s+", " ", text).strip()
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def syllabus_subject_for_plan(subject: str) -> str:
@@ -248,13 +248,13 @@ def build_scheduled_study_plan_topics(html: str, subjects: list[dict[str, Any]] 
     if plan_end < 0:
         raise RuntimeError("Could not locate the end of BASE_STUDY_PLAN")
     plan_source = html[plan_start:plan_end + 1]
-    groups = re.findall(r'\\{subject:"([^"]+)",days:\\[(.*?)\\]\\}', plan_source, re.S)
+    groups = re.findall(r'\{subject:"([^"]+)",days:\[(.*?)\]\}', plan_source, re.S)
     if not groups:
         raise RuntimeError("Could not parse BASE_STUDY_PLAN topics")
 
     topics: list[dict[str, Any]] = []
     for subject, raw_topics in groups:
-        topic_names = re.findall(r'"((?:\\\\.|[^"\\\\])*)"', raw_topics)
+        topic_names = re.findall(r'"((?:\\.|[^"\\])*)"', raw_topics)
         topics.extend(
             {"subject": subject, "topic": topic}
             for topic in topic_names
