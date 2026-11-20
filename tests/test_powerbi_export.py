@@ -41,15 +41,15 @@ const BASE_STUDY_PLAN=[
 '''
     state = {
         "studyPlanProgress": {
-            "2026-11-17": {"studyDone": True, "mcqDone": True, "revisionDone": True, "mcqCount": 18},
+            "plan:0": {"studyDone": True, "mcqDone": True, "revisionDone": True, "mcqCount": 18},
         }
     }
     rows = exporter.build_study_plan_rows(html, state)
     assert len(rows) == 6
-    assert rows[0]["Date"] == "2026-11-17"
+    assert rows[0]["Date"] == "2026-11-20"
     assert rows[0]["Phase"] == "Day 1 · Study"
     assert rows[0]["IsCompleted"] is True
-    assert rows[1]["Date"] == "2026-11-18"
+    assert rows[1]["Date"] == "2026-11-21"
     assert rows[1]["Phase"] == "Day 2 · MCQ + Revision"
     assert rows[1]["MCQAttempts"] == 18
     assert rows[1]["IsCompleted"] is True
@@ -64,9 +64,9 @@ def test_real_dashboard_plan_expands_to_two_phases_per_topic():
     assert len(rows) == 378
     assert rows[0]["Date"] == "2026-11-17"
     assert rows[0]["Phase"] == "Day 1 · Study"
-    assert rows[1]["Date"] == "2026-11-18"
+    assert rows[1]["Date"] == "2026-11-21"
     assert rows[1]["Phase"] == "Day 2 · MCQ + Revision"
-    assert rows[-1]["Date"] == "2027-11-29"
+    assert rows[-1]["Date"] == "2027-05-23"
 
 
 def test_day_two_export_reads_progress_from_previous_study_date():
@@ -77,7 +77,7 @@ const BASE_STUDY_PLAN=[
 '''
     state = {
         "studyPlanProgress": {
-            "2026-11-17": {"studyDone": True, "mcqDone": True, "revisionDone": False, "mcqCount": 12},
+            "plan:0": {"studyDone": True, "mcqDone": True, "revisionDone": False, "mcqCount": 12},
         }
     }
     rows = exporter.build_study_plan_rows(html, state)
@@ -120,3 +120,39 @@ const BASE_STUDY_PLAN=[
     assert rows[0]["IsCompleted"] is True
     assert rows[1]["MCQAttempts"] == 13
     assert rows[1]["IsCompleted"] is True
+
+
+
+def test_study_plan_export_places_two_phase_cycle_inside_exam_window():
+    html = '''
+const BASE_STUDY_PLAN=[
+{subject:"Polity",days:["Constitution","Parliament","Judiciary"]}
+];
+'''
+    rows = exporter.build_study_plan_rows(html, {"settings": {"targetDate": "2026-11-25"}})
+    assert len(rows) == 6
+    assert rows[0]["Date"] == "2026-11-20"
+    assert rows[-1]["Date"] == "2026-11-25"
+    assert rows[0]["Phase"] == "Day 1 · Study"
+    assert rows[-1]["Phase"] == "Day 2 · MCQ + Revision"
+
+
+def test_study_plan_export_prefers_new_per_topic_progress_keys():
+    html = '''
+const BASE_STUDY_PLAN=[
+{subject:"Polity",days:["Constitution"]}
+];
+'''
+    rows = exporter.build_study_plan_rows(html, {
+        "studyPlanProgress": {
+            "plan:0": {
+                "studyDone": True,
+                "mcqDone": True,
+                "revisionDone": True,
+                "mcqCount": 21,
+            }
+        }
+    })
+    assert rows[0]["IsCompleted"] is True
+    assert rows[1]["IsCompleted"] is True
+    assert rows[1]["MCQAttempts"] == 21
