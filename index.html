@@ -565,7 +565,7 @@ function syncSyllabusUncompletionToStudyPlan(subject,topic){
  DAILY_STUDY_PLAN.forEach(entry=>{
   if(entry.phase!=="study"||!findMatchingSyllabusTopics(entry.subject,entry.topic).includes(key))return;
   const progressKey=getStudyPlanProgressDateKey(entry);
-  const progress={...getStudyPlanProgress(entry),studyDone:false,studyReset:true};
+  const progress={...getStudyPlanProgress(entry),studyDone:false,mcqDone:false,revisionDone:false,studyReset:true};
   state.studyPlanProgress=state.studyPlanProgress||{};
   state.studyPlanProgress[progressKey]=progress;
  });
