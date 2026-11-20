@@ -569,6 +569,63 @@ body.dark .today-topic-card .focus-desc{color:var(--muted)}
  .btn::after,.progress>span::after,.table-progress span::after{display:none!important}
 }
 
+
+/* Premium minimal interaction layer — Uiverse-inspired, adapted for Tracker */
+:root{
+ --surface-raised:var(--surface);
+ --surface-hover:color-mix(in srgb,var(--surface) 94%,var(--blue) 6%);
+ --focus-ring:0 0 0 3px color-mix(in srgb,var(--blue) 20%,transparent);
+ --motion-standard:cubic-bezier(.2,.8,.2,1);
+ --shadow-card:0 1px 2px rgba(16,24,40,.025),0 8px 24px rgba(16,24,40,.035);
+ --shadow-hover:0 8px 24px rgba(16,24,40,.075),0 2px 6px rgba(16,24,40,.035)
+}
+body{background-image:radial-gradient(ellipse at 12% 0%,color-mix(in srgb,var(--blue-soft) 44%,transparent),transparent 34rem)}
+.stat,.card,.exam-countdown-card,.analytics-metric-card,.today-topic-card,.subject-card,.log-item{
+ transition:border-color .22s var(--motion-standard),box-shadow .22s var(--motion-standard),transform .22s var(--motion-standard),background-color .22s var(--motion-standard)
+}
+.stat,.card{box-shadow:var(--shadow-card)}
+.stat{position:relative;overflow:hidden;border-top:1px solid var(--line)}
+.stat:before{content:"";position:absolute;inset:0 auto 0 0;width:2px;background:var(--blue);opacity:.45;transform:scaleY(.35);transform-origin:center;transition:transform .22s var(--motion-standard),opacity .22s}
+.stat:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover);border-color:color-mix(in srgb,var(--blue) 24%,var(--line))}
+.stat:hover:before{transform:scaleY(1);opacity:.9}
+.card:hover{border-color:color-mix(in srgb,var(--blue) 16%,var(--line));box-shadow:var(--shadow-hover)}
+.btn{position:relative;overflow:hidden;transition:transform .18s var(--motion-standard),box-shadow .18s var(--motion-standard),border-color .18s,color .18s,background-color .18s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(16,24,40,.07)}
+.btn:active{transform:translateY(0) scale(.985);box-shadow:none}
+.btn.primary{box-shadow:0 2px 5px color-mix(in srgb,var(--blue) 18%,transparent)}
+.btn.primary:hover{box-shadow:0 5px 14px color-mix(in srgb,var(--blue) 22%,transparent)}
+.btn:focus-visible,.tab:focus-visible,.cir-tabs__t:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;box-shadow:var(--focus-ring)}
+.cir-tabs{padding:5px;gap:3px;border-radius:13px;box-shadow:0 2px 8px rgba(16,24,40,.035)}
+.cir-tabs__t{height:35px;border-radius:9px;font-size:13px;font-weight:600;transition:background-color .2s var(--motion-standard),color .2s var(--motion-standard),transform .2s var(--motion-standard)}
+.cir-tabs__t:hover{transform:translateY(-1px)}
+.cir-tabs__r:checked+.cir-tabs__t{background:var(--blue);color:#fff;box-shadow:0 2px 7px color-mix(in srgb,var(--blue) 24%,transparent)}
+.progress{background:color-mix(in srgb,var(--line) 72%,var(--surface))}
+.progress>span{position:relative;overflow:hidden}
+.progress>span:after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.28) 48%,transparent 66%);transform:translateX(-110%);animation:tracker-progress-sheen 3.8s ease-in-out infinite}
+@keyframes tracker-progress-sheen{0%,58%{transform:translateX(-110%)}82%,100%{transform:translateX(110%)}}
+.topic-subject{transition:border-color .2s var(--motion-standard),box-shadow .2s var(--motion-standard)}
+.topic-subject[open]{border-color:color-mix(in srgb,var(--blue) 28%,var(--line));box-shadow:0 3px 12px rgba(16,24,40,.035)}
+.topic-subject summary{transition:background-color .2s,color .2s}
+.topic-subject summary:hover{background:var(--surface-hover)}
+.topic-subject summary:after{content:"";width:7px;height:7px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(45deg);transition:transform .2s var(--motion-standard);flex:none;margin:0 3px 4px 0}
+.topic-subject[open] summary:after{transform:rotate(225deg);margin-bottom:0}
+.task,.log-item,.subject-card{transition:background-color .18s,border-color .18s,transform .18s var(--motion-standard)}
+.task:hover,.log-item:hover,.subject-card:hover{border-color:color-mix(in srgb,var(--blue) 22%,var(--line))}
+.task input,.topic input,.weekly-check input,.table-status input{accent-color:var(--green);cursor:pointer}
+.today-topic-card{box-shadow:var(--shadow-card)}
+.today-topic-card:hover,.exam-countdown-card:hover,.analytics-metric-card:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--blue) 26%,var(--line));box-shadow:var(--shadow-hover)}
+.toast{box-shadow:0 8px 30px rgba(0,0,0,.16);backdrop-filter:blur(12px)}
+body.dark{background-image:radial-gradient(ellipse at 12% 0%,rgba(91,115,190,.10),transparent 34rem)}
+body.dark .stat,body.dark .card{box-shadow:0 1px 2px rgba(0,0,0,.12),0 8px 24px rgba(0,0,0,.08)}
+body.dark .btn:hover{box-shadow:0 4px 14px rgba(0,0,0,.22)}
+body.dark .topic-subject summary:hover{background:#263247}
+body.dark .progress>span:after{background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.18) 48%,transparent 66%)}
+@media(max-width:700px){.cir-tabs{display:flex;width:100%;border-radius:12px}.cir-tabs__t{flex:1;padding:0 10px;font-size:12px}.stat:hover,.today-topic-card:hover,.exam-countdown-card:hover,.analytics-metric-card:hover{transform:none}}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+ .stat:hover,.today-topic-card:hover,.exam-countdown-card:hover,.analytics-metric-card:hover,.btn:hover{transform:none}
+}
+
 </style>
 </head>
 <body data-view="overview">
