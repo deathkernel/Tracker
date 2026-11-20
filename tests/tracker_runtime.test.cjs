@@ -309,7 +309,7 @@ test("revision scheduling remains delegated to one backend batch calculation", (
 
 test("revision review batches do not mutate any topic when the backend batch fails", async () => {
   const start = script.indexOf("async function recordStudyReviewBatch(");
-  const end = script.indexOf("\\nasync function syncStudyPlanRevisionToSyllabus", start);
+  const end = script.indexOf("\nasync function syncStudyPlanRevisionToSyllabus", start);
   assert.ok(start >= 0 && end > start);
   const initial = {
     revisionSchedule: { "Polity::Rights": { due_date: "2026-11-21" } },
@@ -322,7 +322,7 @@ test("revision review batches do not mutate any topic when the backend batch fai
     localDate: () => "2026-11-20",
     fetch: async () => ({ ok: false, status: 422, json: async () => ({}) })
   };
-  vm.runInNewContext(script.slice(start, end) + "\\nthis.run=recordStudyReviewBatch;", sandbox);
+  vm.runInNewContext(script.slice(start, end) + "\nthis.run=recordStudyReviewBatch;", sandbox);
   await assert.rejects(
     sandbox.run(["Polity::Rights", "Polity::Basic Structure"], 4, { updateRevision: true }),
     /could not be updated/
@@ -332,7 +332,7 @@ test("revision review batches do not mutate any topic when the backend batch fai
 
 test("revision review batch commits all topic results only after a complete response", async () => {
   const start = script.indexOf("async function recordStudyReviewBatch(");
-  const end = script.indexOf("\\nasync function syncStudyPlanRevisionToSyllabus", start);
+  const end = script.indexOf("\nasync function syncStudyPlanRevisionToSyllabus", start);
   assert.ok(start >= 0 && end > start);
   const sandbox = {
     state: { revisionSchedule: {}, revisionDone: {}, masteryProgress: {}, retestSchedule: {} },
@@ -352,7 +352,7 @@ test("revision review batch commits all topic results only after a complete resp
       };
     }
   };
-  vm.runInNewContext(script.slice(start, end) + "\\nthis.run=recordStudyReviewBatch;", sandbox);
+  vm.runInNewContext(script.slice(start, end) + "\nthis.run=recordStudyReviewBatch;", sandbox);
   await sandbox.run(["Polity::Rights", "Polity::Basic Structure"], 4, { updateRevision: true });
   assert.deepEqual(Object.keys(sandbox.state.masteryProgress).sort(), ["Polity::Basic Structure", "Polity::Rights"]);
   assert.equal(sandbox.state.revisionSchedule["Polity::Rights"].due_date, "2026-11-21");
@@ -362,12 +362,12 @@ test("revision review batch commits all topic results only after a complete resp
 
 test("nested backup log validation rejects null, malformed date and invalid numeric records", () => {
   const start = script.indexOf("function isValidDateKey(value){");
-  const end = script.indexOf("\\nconst STORE=", start);
+  const end = script.indexOf("\nconst STORE=", start);
   assert.ok(start >= 0 && end > start);
   const sandbox = {
     localDateKey: date => [date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-")
   };
-  vm.runInNewContext(script.slice(start, end) + "\\nthis.validate=validateBackupLogs;this.normalize=normalizeStudyLogs;", sandbox);
+  vm.runInNewContext(script.slice(start, end) + "\nthis.validate=validateBackupLogs;this.normalize=normalizeStudyLogs;", sandbox);
   assert.throws(() => sandbox.validate({ "2026-11-20": null }), /invalid study log entry/);
   assert.throws(() => sandbox.validate({ "2026-02-30": { hours: 1 } }), /invalid study log entry/);
   assert.throws(() => sandbox.validate({ "2026-11-20": { hours: 25 } }), /invalid hours value/);
