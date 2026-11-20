@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
-const css = html.match(/<style>([\\s\\S]*?)<\\/style>/)?.[1] || "";
+const css = html.match(/<style>([\s\S]*?)<\/style>/)?.[1] || "";
 
 function inspectCss(source) {
   let depth = 0;
@@ -30,7 +30,7 @@ function inspectCss(source) {
         escaped = false;
         continue;
       }
-      if (current === "\\\\") {
+      if (current === "\\") {
         escaped = true;
         continue;
       }
@@ -81,14 +81,14 @@ test("UI stylesheet has balanced blocks and top-level responsive media queries",
   const result = inspectCss(css);
   assert.equal(result.depth, 0, "Every CSS rule must be closed");
   assert.deepEqual(result.nestedMedia, [], "Responsive media queries must not be nested inside selectors");
-  assert.match(css, /@media\\s*\\(max-width:\\s*1100px\\)/);
-  assert.match(css, /@media\\s*\\(max-width:\\s*760px\\)/);
+  assert.match(css, /@media\s*\(max-width:\s*1100px\)/);
+  assert.match(css, /@media\s*\(max-width:\s*760px\)/);
 });
 
 test("every workspace view is inside the main content landmark", () => {
-  assert.equal((html.match(/<main\\b/g) || []).length, 1);
-  assert.equal((html.match(/<\\/main>/g) || []).length, 1);
-  assert.doesNotMatch(html, /<aside\\b|<\\/aside>/);
+  assert.equal((html.match(/<main\b/g) || []).length, 1);
+  assert.equal((html.match(/<\/main>/g) || []).length, 1);
+  assert.doesNotMatch(html, /<aside\b|<\/aside>/);
   const mainStart = html.indexOf("<main>");
   const mainEnd = html.indexOf("</main>", mainStart);
   for (const page of ["overview", "syllabus", "missing", "logs", "plan", "settings", "revision", "charts"]) {
@@ -112,7 +112,7 @@ test("search and filter controls expose accessible names", () => {
   ];
 
   for (const id of ids) {
-    const tag = html.match(new RegExp(`<(?:input|select)\\\\b[^>]*\\\\bid="${id}"[^>]*>`))?.[0];
+    const tag = html.match(new RegExp(`<(?:input|select)\\b[^>]*\\bid="${id}"[^>]*>`))?.[0];
     assert.ok(tag, `Control ${id} exists`);
     assert.match(tag, /aria-label="[^"]+"/, `Control ${id} needs an accessible label`);
   }
@@ -120,14 +120,14 @@ test("search and filter controls expose accessible names", () => {
 
 test("dashboard KPI describes all syllabus topics and starts with the correct base total", () => {
   assert.match(html, /class="stat-label">Syllabus topics completed/);
-  assert.match(html, /id="topicsDone">0\\/291/);
+  assert.match(html, /id="topicsDone">0\/291/);
 });
 
 test("toast notifications are announced and mobile tables remain touch-scrollable", () => {
   assert.match(html, /id="toast"[^>]*role="status"[^>]*aria-live="polite"[^>]*aria-atomic="true"/);
-  assert.match(css, /\\.data-table-wrap[^}]*overflow-x:auto/);
+  assert.match(css, /\.data-table-wrap[^}]*overflow-x:auto/);
   assert.match(css, /-webkit-overflow-scrolling:touch/);
-  assert.match(css, /\\.daily-plan-table\\{min-width:680px\\}/);
+  assert.match(css, /\.daily-plan-table\{min-width:680px\}/);
 });
 
 test("completed and missed labels meet WCAG AA contrast for normal text", () => {
