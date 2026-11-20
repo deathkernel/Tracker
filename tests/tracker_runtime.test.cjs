@@ -391,6 +391,9 @@ test("study hour and duration concepts are absent while exam dates and revision 
   for (const marker of ["Focused study time", "Daily study goal (hours)", "Study hours — last 7 days", "Total study hours", "CSAT minutes", "30 min", "10 min", "CSAT timed practice"]) {
     assert.equal(html.includes(marker), false, marker);
   }
+  for (const marker of ["studyHoursTotal", "hours-line-graph", "Study hours over the last seven days", "hoursHost"]) {
+    assert.equal(script.includes(marker), false, marker);
+  }
   assert.match(script, /delete next\.settings\.studyGoal/);
   assert.match(script, /function normalizeStudyLogs\(value\)/);
   assert.match(script, /function normalizeRevisionSchedule\(value\)/);
