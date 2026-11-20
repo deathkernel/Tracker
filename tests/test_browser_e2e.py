@@ -182,7 +182,7 @@ def test_customization_management_and_device_theme_profiles(tracker_url):
             page.locator('#customDailyManager button[data-action="rename-task"]').click()
 
             page.reload(wait_until="networkidle")
-            page.locator('label[for="nav-settings"]').click()
+            page.locator("#nav-settings").check(force=True)
             assert page.locator("#targetDate").input_value() == "2027-05-24"
             assert "dark" in page.locator("body").get_attribute("class").split()
             assert page.locator("#customSyllabusManager").get_by_text("Advanced comprehension").count() == 1
