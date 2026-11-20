@@ -4,6 +4,7 @@ import csv
 import json
 import sqlite3
 import sys
+from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -315,7 +316,7 @@ def test_real_dashboard_export_matches_priority_first_schedule_and_stable_plan_k
     ]
     assert all(
         date.fromisoformat(day_two[index]["Date"])
-        == date.fromisoformat(day_one[index]["Date"]) + __import__("datetime").timedelta(days=1)
+        == date.fromisoformat(day_one[index]["Date"]) + timedelta(days=1)
         for index in range(189)
     )
     offsets = [date.fromisoformat(item["Date"]) for item in day_one]
