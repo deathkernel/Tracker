@@ -14,9 +14,6 @@ env/
 *.db-shm
 *.db-wal
 
-# Generated exports may contain personal study notes and progress
-powerbi_data/
-
 # Environment and local secrets
 .env
 .env.*
