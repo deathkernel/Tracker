@@ -495,6 +495,7 @@ function normalizeProgressState(value){
  next.customSubjects=(Array.isArray(source.customSubjects)?source.customSubjects:[]).filter(item=>item&&typeof item.name==="string"&&item.name.trim()).map(item=>({name:item.name.trim(),topics:(Array.isArray(item.topics)?item.topics:[]).filter(topic=>Array.isArray(topic)&&typeof topic[0]==="string"&&topic[0].trim()).map(topic=>[topic[0].trim(),Number.isFinite(Number(topic[1]))?Number(topic[1]):null,typeof topic[2]==="string"?topic[2]:"P2"])}));
  next.customDaily=(Array.isArray(source.customDaily)?source.customDaily:[]).filter(item=>Array.isArray(item)&&item.length>=2&&typeof item[0]==="string"&&typeof item[1]==="string"&&item[1].trim()).map(item=>[item[0],item[1].trim(),String(item[2]||""),String(item[3]||"Personal task")]);
  for(const key of ["topics","daily","weekly","logs","studyPlanDone","revisionDone","settings"]){if(!next[key]||typeof next[key]!=="object"||Array.isArray(next[key]))next[key]={};}
+ if(!isValidTargetDate(next.settings.targetDate))next.settings.targetDate="2027-05-23";
  next.version=Number.isInteger(Number(source.version))&&Number(source.version)>=0?Number(source.version):0;
 
  if(Number(source.studyPlanProgressSchema)!==2){
@@ -554,7 +555,7 @@ function completionColorClass(percent){
  if(value>=40)return "is-medium";
  return "is-low";
 }
-function renderStats(){const logs=Object.values(state.logs),planCounts=getStudyPlanCounts(),targetDate=(state.settings||{}).targetDate||"2027-05-23";$("daysLeft").textContent=totalDays();$("targetDate").value=targetDate;$("studyGoal").value=(state.settings||{}).studyGoal||4;$("topicsDone").textContent=doneTopics()+"/"+totalTopics();const topicPercent=totalTopics()?Math.round(doneTopics()/totalTopics()*100):0;const topicLevel=completionColorClass(topicPercent);const topicSub=$("topicSub");topicSub.textContent=topicPercent+"% of mapped topics";topicSub.className="stat-foot topic-completion-value "+topicLevel;const topicTrack=$("topicProgressTrack"),topicFill=$("topicProgressFill");if(topicTrack&&topicFill){topicFill.style.width=topicPercent+"%";topicTrack.className="stat-completion-track "+topicLevel;topicTrack.setAttribute("aria-valuenow",String(topicPercent));topicTrack.setAttribute("aria-valuetext",topicPercent+"% of mapped topics completed")}$("hoursDone").textContent=logs.reduce((n,x)=>n+(Number(x.hours)||0),0).toFixed(1)+"h";$("daysDone").textContent=logs.length;$("missedDays").textContent=planCounts.missed;$("topicCompletion").textContent=doneTopics()+" of "+totalTopics();$("prelimsRemaining").textContent=daysUntilExam(targetDate);const prelimsDate=document.querySelector(".prelims-countdown .exam-countdown-date");if(prelimsDate)prelimsDate.textContent=new Date(targetDate+"T00:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});$("mainsRemaining").textContent=daysUntilExam("2027-08-20");$("todayLabel").textContent=new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short",year:"numeric"})}
+function renderStats(){const logs=Object.values(state.logs),planCounts=getStudyPlanCounts(),targetDate=(state.settings||{}).targetDate||"2027-05-23";$("daysLeft").textContent=totalDays();$("targetDate").value=targetDate;$("targetDate").min=addDaysToDateKey(CYCLE_START_DATE,Math.ceil(STUDY_PLAN_TOPICS.length/2));$("studyGoal").value=(state.settings||{}).studyGoal||4;$("topicsDone").textContent=doneTopics()+"/"+totalTopics();const topicPercent=totalTopics()?Math.round(doneTopics()/totalTopics()*100):0;const topicLevel=completionColorClass(topicPercent);const topicSub=$("topicSub");topicSub.textContent=topicPercent+"% of mapped topics";topicSub.className="stat-foot topic-completion-value "+topicLevel;const topicTrack=$("topicProgressTrack"),topicFill=$("topicProgressFill");if(topicTrack&&topicFill){topicFill.style.width=topicPercent+"%";topicTrack.className="stat-completion-track "+topicLevel;topicTrack.setAttribute("aria-valuenow",String(topicPercent));topicTrack.setAttribute("aria-valuetext",topicPercent+"% of mapped topics completed")}$("hoursDone").textContent=logs.reduce((n,x)=>n+(Number(x.hours)||0),0).toFixed(1)+"h";$("daysDone").textContent=logs.length;$("missedDays").textContent=planCounts.missed;$("topicCompletion").textContent=doneTopics()+" of "+totalTopics();$("prelimsRemaining").textContent=daysUntilExam(targetDate);const prelimsDate=document.querySelector(".prelims-countdown .exam-countdown-date");if(prelimsDate)prelimsDate.textContent=new Date(targetDate+"T00:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});$("mainsRemaining").textContent=daysUntilExam("2027-08-20");$("todayLabel").textContent=new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short",year:"numeric"})}
 function createAnimatedCheckbox(checked=false,ariaLabel="Toggle checkbox"){
  const wrapper=document.createElement("span");wrapper.className="checkbox-wrapper-12";
  const cbx=document.createElement("span");cbx.className="cbx";
@@ -842,7 +843,8 @@ function renderMissingTopics(){
  const query=$("missingTopicSearch").value.trim().toLowerCase(),subjectFilter=$("missingSubjectFilter").value,phaseFilter=$("missingPriorityFilter").value,today=localDate();
  host.innerHTML="";
  const overdue=STUDY_PLAN_TOPICS.map((topic,planIndex)=>{
-  const studyEntry=DAILY_STUDY_PLAN[planIndex*2],revisionEntry=DAILY_STUDY_PLAN[planIndex*2+1];
+  const studyEntry=getStudyPlanEntryByPlanIndex(planIndex,"study"),revisionEntry=getStudyPlanEntryByPlanIndex(planIndex,"mcq_revision");
+  if(!studyEntry||!revisionEntry)return null;
   const studyDueDate=getStudyPlanDateKey(studyEntry),revisionDueDate=getStudyPlanDateKey(revisionEntry);
   const phases=[];
   if(studyDueDate<today&&!isStudyPlanEntryDone(studyEntry))phases.push("study");
@@ -871,7 +873,7 @@ function renderMissingTopics(){
  });
  table.append(body);const wrap=document.createElement("div");wrap.className="data-table-wrap";wrap.append(table);host.append(wrap);
  if(!shown)host.innerHTML='<div class="empty">No overdue missing topics. Today’s and future topics are not included.</div>';
- $("missingTopicCount").textContent=shown+" overdue";$("missingNavCount").textContent=state.recoveryQueue.length;
+ $("missingTopicCount").textContent=shown+" overdue";$("missingNavCount").textContent=new Set((state.recoveryQueue||[]).map(item=>item.plan_key||("plan:"+item.planIndex))).size;
  const filter=$("missingSubjectFilter"),selected=filter.value;filter.innerHTML='<option value="all">All subjects</option>';
  [...new Set(STUDY_PLAN_TOPICS.map(entry=>entry.subject))].forEach(subject=>{const option=document.createElement("option");option.value=subject;option.textContent=subject;filter.append(option)});
  filter.value=[...new Set(STUDY_PLAN_TOPICS.map(entry=>entry.subject))].includes(selected)?selected:"all";
@@ -974,9 +976,24 @@ function addDaysToDateKey(dateKey,days){
  date.setDate(date.getDate()+days);
  return localDateKey(date);
 }
+function isValidTargetDate(value){
+ if(typeof value!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;
+ const target=new Date(value+"T00:00:00");
+ if(Number.isNaN(target.getTime())||localDateKey(target)!==value)return false;
+ const start=new Date(CYCLE_START_DATE+"T00:00:00");
+ const availableDays=Math.round((target-start)/86400000);
+ return availableDays>=Math.ceil(STUDY_PLAN_TOPICS.length/2);
+}
+function getMinimumTargetDateKey(){
+ return addDaysToDateKey(CYCLE_START_DATE,Math.ceil(STUDY_PLAN_TOPICS.length/2));
+}
+function getStudyPlanEntryByPlanIndex(planIndex,phase){
+ return DAILY_STUDY_PLAN.find(entry=>entry.planIndex===planIndex&&entry.phase===phase)||null;
+}
 function studyPlanDateOffset(entry){
  const start=new Date(CYCLE_START_DATE+"T00:00:00");
- const targetKey=(state.settings||{}).targetDate||"2027-05-23";
+ const configuredTarget=(state.settings||{}).targetDate||"2027-05-23";
+  const targetKey=isValidTargetDate(configuredTarget)?configuredTarget:"2027-05-23";
  const target=new Date(targetKey+"T00:00:00");
  const totalDays=Math.max(1,Math.round((target-start)/86400000));
  const finalStudyOffset=Math.max(0,totalDays-1);
@@ -1354,12 +1371,12 @@ $("saveLog").addEventListener("click",()=>{const date=$("logDate").value;if(!/^\
 $("clearLog").addEventListener("click",()=>{["logHours","logMcq","logCsat","logNotes"].forEach(id=>$(id).value="")});
 $("exportBtn").addEventListener("click",()=>{const blob=new Blob([JSON.stringify({version:2,exportedAt:new Date().toISOString(),data:state},null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="upsc-2027-progress-backup.json";a.click();URL.revokeObjectURL(url);notify("Backup exported.")});
 $("importBtn").addEventListener("click",()=>$("importFile").click());
-async function replaceProgressState(incoming){await saveQueue;let version=Number(state.version)||0;try{const response=await fetch("/api/state");if(response.ok){const remote=await response.json();if(Number.isInteger(Number(remote.version))&&Number(remote.version)>=0)version=Number(remote.version)}}catch{}state=normalizeProgressState({...incoming,version});await persist();renderAll();const response=await fetch("/api/state");if(!response.ok)throw new Error("Backup is saved in this browser, but SQLite could not confirm the import.");const saved=normalizeProgressState(await response.json());const expected={...state,version:0},actual={...saved,version:0};if(JSON.stringify(expected)!==JSON.stringify(actual))throw new Error("Backup is saved locally, but SQLite verification did not match. Keep the browser backup and retry.");state=saved;localStorage.setItem(STORE,JSON.stringify(state));renderAll()}
-$("importFile").addEventListener("change",async e=>{const file=e.target.files[0];if(!file)return;try{if(file.size>10*1024*1024)throw new Error("Backup files must be 10 MB or smaller.");const parsed=JSON.parse(await file.text()),incoming=parsed?.data??parsed;if(!incoming||typeof incoming!=="object"||Array.isArray(incoming)||!incoming.topics||typeof incoming.topics!=="object"||Array.isArray(incoming.topics)||!incoming.logs||typeof incoming.logs!=="object"||Array.isArray(incoming.logs))throw new Error("This file is not a valid UPSC tracker backup.");if(!confirm("Import backup and replace the progress currently saved in this browser?"))return;await replaceProgressState(incoming);notify("Backup imported successfully.")}catch(err){notify(err.message||"Could not import backup.")}finally{e.target.value=""}});
+async function replaceProgressState(incoming){if(incoming?.settings?.targetDate!==undefined&&!isValidTargetDate(incoming.settings.targetDate))throw new Error("The backup target date must leave enough days for the complete two-day study plan.");await saveQueue;let version=Number(state.version)||0;try{const response=await fetch("/api/state");if(response.ok){const remote=await response.json();if(Number.isInteger(Number(remote.version))&&Number(remote.version)>=0)version=Number(remote.version)}}catch{}state=normalizeProgressState({...incoming,version});await persist();renderAll();const response=await fetch("/api/state");if(!response.ok)throw new Error("Backup is saved in this browser, but SQLite could not confirm the import.");const saved=normalizeProgressState(await response.json());const expected={...state,version:0},actual={...saved,version:0};if(JSON.stringify(expected)!==JSON.stringify(actual))throw new Error("Backup is saved locally, but SQLite verification did not match. Keep the browser backup and retry.");state=saved;localStorage.setItem(STORE,JSON.stringify(state));renderAll()}
+$("importFile").addEventListener("change",async e=>{const file=e.target.files[0];if(!file)return;try{if(file.size>10*1024*1024)throw new Error("Backup files must be 10 MB or smaller.");const parsed=JSON.parse(await file.text()),incoming=parsed?.data??parsed;if(!incoming||typeof incoming!=="object"||Array.isArray(incoming)||!incoming.topics||typeof incoming.topics!=="object"||Array.isArray(incoming.topics)||!incoming.logs||typeof incoming.logs!=="object"||Array.isArray(incoming.logs))throw new Error("This file is not a valid UPSC tracker backup.");if(incoming.settings?.targetDate!==undefined&&!isValidTargetDate(incoming.settings.targetDate))throw new Error("The backup target date must leave enough days for the complete two-day study plan.");if(!confirm("Import backup and replace the progress currently saved in this browser?"))return;await replaceProgressState(incoming);notify("Backup imported successfully.")}catch(err){notify(err.message||"Could not import backup.")}finally{e.target.value=""}});
 $("resetBtn").addEventListener("click",async()=>{if(confirm("Reset study progress, logs and revision records? Your custom subjects, daily tasks and settings will be preserved. Export a backup first if you may need the progress.")){const current=state;const reset={...defaultState(),version:current.version,settings:current.settings,customSubjects:current.customSubjects,customDaily:current.customDaily,studyPlanProgressSchema:2};if(Array.isArray(current.questionBank))reset.questionBank=current.questionBank;await replaceProgressState(reset);$("logHours").value="";$("logMcq").value="";$("logCsat").value="";$("logNotes").value="";notify("Study progress reset. Your custom setup was preserved.")}});
 
 // Personal customization
-$("targetDate").addEventListener("change",()=>{const value=$("targetDate").value;if(!/^\d{4}-\d{2}-\d{2}$/.test(value)||Number.isNaN(new Date(value+"T00:00:00").getTime())){notify("Choose a valid target date.");renderStats();return}state.settings=state.settings||{};state.settings.targetDate=value;persist();renderStats();renderCharts()});
+$("targetDate").addEventListener("change",()=>{const value=$("targetDate").value;if(!isValidTargetDate(value)){notify("Choose a valid date that allows at least "+Math.ceil(STUDY_PLAN_TOPICS.length/2)+" study days for the complete two-day plan.");renderStats();return}state.settings=state.settings||{};state.settings.targetDate=value;persist();renderAll()});
 $("studyGoal").addEventListener("change",()=>{state.settings=state.settings||{};state.settings.studyGoal=Math.max(1,Math.min(16,Number($("studyGoal").value)||4));$("studyGoal").value=state.settings.studyGoal;persist()});
 $("themeToggle").addEventListener("change",()=>{state.settings=state.settings||{};state.settings.deviceThemes=state.settings.deviceThemes||{};const device=activeDevice();state.settings.deviceThemes[device]=$("themeToggle").checked?"dark":"light";persist();renderAll()});
 window.matchMedia("(max-width: 760px)").addEventListener("change",applyDeviceTheme);

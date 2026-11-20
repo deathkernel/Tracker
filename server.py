@@ -5,6 +5,7 @@ import os
 import socket
 from contextlib import asynccontextmanager, contextmanager
 import sqlite3
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -12,12 +13,34 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, Response
 
 from revision_engine import next_revision_schedule, next_retest_schedule, update_mastery_progress
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "tracker.db"
 INDEX_PATH = BASE_DIR / "index.html"
+STUDY_CYCLE_START_DATE = date(2026, 11, 20)
+MIN_STUDY_WINDOW_DAYS = 95  # 189 planned units, with at most two new topics per day.
+
+def validate_target_date_settings(settings: dict[str, Any]) -> None:
+    target = settings.get("targetDate")
+    if target is None:
+        return
+    if not isinstance(target, str):
+        raise ValueError("The target date must use YYYY-MM-DD.")
+    try:
+        target_date = date.fromisoformat(target)
+    except ValueError as exc:
+        raise ValueError("The target date must use YYYY-MM-DD.") from exc
+    if target_date.isoformat() != target:
+        raise ValueError("The target date must use YYYY-MM-DD.")
+    minimum_date = STUDY_CYCLE_START_DATE + timedelta(days=MIN_STUDY_WINDOW_DAYS)
+    if target_date < minimum_date:
+        raise ValueError(
+            f"The target date must be on or after {minimum_date.isoformat()} "
+            "to fit the complete two-day study plan."
+        )
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -91,7 +114,6 @@ class TrackerState(BaseModel):
     recoveryQueue: list[dict[str, Any]] = Field(default_factory=list)
     examSession: dict[str, Any] | None = None
     pendingTopicEvidence: dict[str, Any] = Field(default_factory=dict)
-
 
 def get_lan_ip() -> str:
     probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -195,6 +217,10 @@ def get_state() -> dict[str, Any]:
 
 @app.put("/api/state")
 def save_state(state: TrackerState) -> dict[str, Any]:
+    try:
+        validate_target_date_settings(state.settings)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     initialize_database()
     with database_session() as connection:
         connection.execute("BEGIN IMMEDIATE")

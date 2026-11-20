@@ -4,6 +4,7 @@ import csv
 import json
 import sqlite3
 import sys
+from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -56,8 +57,10 @@ const BASE_STUDY_PLAN=[
     assert rows[1]["MCQAttempts"] == 18
     assert rows[1]["IsCompleted"] is True
     assert rows[2]["Date"] == "2027-02-20"
-    assert rows[2]["Subject"] == "Polity"
-    assert rows[4]["Subject"] == "History"
+    assert rows[2]["Subject"] == "History"
+    assert rows[2]["PlanKey"] == "plan:2"
+    assert rows[4]["Subject"] == "Polity"
+    assert rows[4]["PlanKey"] == "plan:1"
 
 
 def test_real_dashboard_plan_expands_to_two_phases_per_topic():
@@ -291,5 +294,117 @@ const BASE_STUDY_PLAN=[
     assert plan_topics == [{"PlanKey": "plan:0", "Subject": "Polity", "PlannedTopic": "Constitution"}]
     assert mastery[0]["PlanKey"] == "plan:0"
     assert retests[0]["PlanKey"] == "plan:0"
-    assert recovery[0]["PlanKey"] == "plan:0"
-    assert recovery[0]["Phase"] == "study"
+    assert recovery == []  # Current schedule has no overdue incomplete phases.
+
+
+def test_real_dashboard_export_matches_priority_first_schedule_and_stable_plan_keys():
+    html = (Path(__file__).resolve().parents[1] / "index.html").read_text(encoding="utf-8")
+    scheduled = exporter.build_scheduled_study_plan_topics(html)
+
+    assert len(scheduled) == 189
+    assert [item["scheduleIndex"] for item in scheduled] == list(range(189))
+    assert len({item["planIndex"] for item in scheduled}) == 189
+    assert all(item["priority"] == "P1" for item in scheduled[:48])
+    assert all(item["priority"] == "P2" for item in scheduled[48:])
+    assert len({key for item in scheduled for key in item["priorityKeys"]}) == 50
+
+    rows = exporter.build_study_plan_rows(html, {})
+    day_one = rows[0::2]
+    day_two = rows[1::2]
+    assert [item["PlanKey"] for item in day_one] == [
+        f"plan:{item['planIndex']}" for item in scheduled
+    ]
+    assert all(
+        date.fromisoformat(day_two[index]["Date"])
+        == date.fromisoformat(day_one[index]["Date"]) + timedelta(days=1)
+        for index in range(189)
+    )
+    offsets = [date.fromisoformat(item["Date"]) for item in day_one]
+    from collections import Counter
+    counts = Counter(offsets)
+    assert len(counts) == 184
+    assert sum(count == 2 for count in counts.values()) == 5
+    assert max(counts.values()) == 2
+    assert day_two[-1]["Date"] == "2027-05-23"
+
+
+def test_export_uses_javascript_rounding_for_half_day_schedule_offsets():
+    html = '''
+const BASE_STUDY_PLAN=[
+{subject:"Polity",days:["One","Two","Three"]}
+];
+'''
+    rows = exporter.build_study_plan_rows(html, {
+        "settings": {"targetDate": "2026-11-26"},
+    })
+    # For schedule index 1, JS Math.round(2.5) gives 3 (not Python's banker's round 2).
+    assert rows[2]["Date"] == "2026-11-23"
+
+
+def test_export_rejects_invalid_or_too_short_target_dates():
+    html = '''
+const BASE_STUDY_PLAN=[
+{subject:"Polity",days:["One","Two","Three"]}
+];
+'''
+    for target in ("2026-02-30", "20-11-2026", "2026-11-21"):
+        try:
+            exporter.build_study_plan_rows(html, {"settings": {"targetDate": target}})
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"Invalid target date was accepted: {target}")
+
+
+def test_recovery_export_is_derived_from_due_plan_phases_not_saved_queue_snapshot():
+    html = '''
+const BASE_STUDY_PLAN=[
+{subject:"Polity",days:["One","Two"]}
+];
+'''
+    state = {
+        "settings": {"targetDate": "2026-11-24"},
+        "studyPlanProgress": {
+            "plan:0": {
+                "studyDone": True,
+                "mcqDone": False,
+                "revisionDone": False,
+            }
+        },
+        "recoveryQueue": [{
+            "plan_key": "plan:999",
+            "subject": "Wrong",
+            "topic": "Stale snapshot",
+            "phase": "study",
+            "due_date": "2026-11-19",
+        }],
+    }
+    rows = exporter.build_study_plan_rows(html, state)
+    recovery = exporter.build_recovery_queue_rows(rows, date.fromisoformat("2026-11-25"))
+
+    assert recovery == [
+        {
+            "PlanKey": "plan:0",
+            "Subject": "Polity",
+            "Topic": "One",
+            "Phase": "mcq_revision",
+            "DueDate": "2026-11-21",
+            "Status": "pending",
+        },
+        {
+            "PlanKey": "plan:1",
+            "Subject": "Polity",
+            "Topic": "Two",
+            "Phase": "study",
+            "DueDate": "2026-11-23",
+            "Status": "pending",
+        },
+        {
+            "PlanKey": "plan:1",
+            "Subject": "Polity",
+            "Topic": "Two",
+            "Phase": "mcq_revision",
+            "DueDate": "2026-11-24",
+            "Status": "pending",
+        },
+    ]

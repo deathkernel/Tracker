@@ -63,6 +63,37 @@ def test_state_round_trip_preserves_strict_exam_data(client):
     assert restored["aiSchedule"] == payload["aiSchedule"]
 
 
+@pytest.mark.parametrize("target_date", ["2026-02-30", "20-11-2026", "2027-02-22"])
+def test_state_rejects_invalid_or_too_early_target_dates(client, target_date):
+    payload = client.get("/api/state").json()
+    payload["settings"] = {"targetDate": target_date}
+    response = client.put("/api/state", json=payload)
+    assert response.status_code == 422
+
+
+def test_state_accepts_minimum_target_date_that_fits_the_two_day_plan(client):
+    payload = client.get("/api/state").json()
+    payload["settings"] = {"targetDate": "2027-02-23"}
+    response = client.put("/api/state", json=payload)
+    assert response.status_code == 200
+
+
+def test_state_keeps_legacy_target_dates_readable(client):
+    legacy_state = {
+        "version": 0,
+        "settings": {"targetDate": "2026-12-01"},
+    }
+    with sqlite3.connect(server.DB_PATH) as db:
+        db.execute(
+            "UPDATE app_state SET payload = ? WHERE id = 1",
+            (json.dumps(legacy_state),),
+        )
+
+    response = client.get("/api/state")
+    assert response.status_code == 200
+    assert response.json()["settings"]["targetDate"] == "2026-12-01"
+
+
 def test_revision_schedule_endpoint_uses_shared_sm2_policy(client):
     response = client.post("/api/revision/next", json={
         "today": "2026-11-19",

@@ -42,6 +42,39 @@ def extract_array(source: str, declaration: str) -> list[Any]:
     raise RuntimeError(f"Could not parse {declaration}")
 
 
+def extract_object(source: str, declaration: str) -> dict[str, Any]:
+    pos = source.find(declaration)
+    if pos < 0:
+        raise RuntimeError(f"Missing {declaration} in index.html")
+    start = source.find("{", pos + len(declaration))
+    if start < 0:
+        raise RuntimeError(f"Missing object for {declaration}")
+    depth = 0
+    in_string = escaped = False
+    quote = ""
+    for i in range(start, len(source)):
+        ch = source[i]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == quote:
+                in_string = False
+        elif ch in ("'", '"', "`"):
+            in_string, quote = True, ch
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                value = json.loads(source[start : i + 1])
+                if not isinstance(value, dict):
+                    raise RuntimeError(f"{declaration} must be an object")
+                return value
+    raise RuntimeError(f"Could not parse {declaration}")
+
+
 def merge_subjects(base: list[dict[str, Any]], custom: list[dict[str, Any]]) -> list[dict[str, Any]]:
     merged = [{"name": item["name"], "topics": list(item.get("topics", []))} for item in base]
     for item in custom:
@@ -115,7 +148,99 @@ def safe_number(value: Any, *, integer: bool = False) -> int | float | str:
         return ""
 
 
-def build_study_plan_rows(html: str, state: dict[str, Any]) -> list[dict[str, Any]]:
+def normalize_plan_topic(value: Any) -> str:
+    text = str(value or "").lower()
+    text = re.sub(
+        r"\b(the|and|of|its|for|with|from|overview|key|important|major|core|basics|introduction|revision|test|pyqs|pyq|practice|analysis)\b",
+        " ",
+        text,
+    )
+    text = re.sub(r"[^a-z0-9 ]", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def syllabus_subject_for_plan(subject: str) -> str:
+    name = subject.lower()
+    if "history" in name:
+        return "History"
+    if name in {"polity", "economy", "environment", "geography", "science & technology", "art & culture"}:
+        return {
+            "polity": "Polity",
+            "economy": "Economy",
+            "environment": "Environment",
+            "geography": "Geography",
+            "science & technology": "Science & Technology",
+            "art & culture": "Art & Culture",
+        }[name]
+    return ""
+
+
+def find_matching_syllabus_topics(
+    subject: str,
+    topic: str,
+    subjects: list[dict[str, Any]],
+    aliases: dict[str, Any],
+) -> list[str]:
+    syllabus_subject = syllabus_subject_for_plan(subject)
+    group = next((item for item in subjects if item.get("name") == syllabus_subject), None)
+    if not group:
+        return []
+    plan_name = normalize_plan_topic(topic)
+    if not plan_name:
+        return []
+
+    subject_aliases = aliases.get(subject.lower(), {})
+    matches = [
+        targets
+        for alias_name, targets in subject_aliases.items()
+        if normalize_plan_topic(alias_name) == plan_name
+    ]
+    if len(matches) > 1:
+        return []
+    if len(matches) == 1:
+        keys = matches[0]
+    else:
+        exact = [
+            f"{syllabus_subject}::{item[0]}"
+            for item in group.get("topics", [])
+            if isinstance(item, (list, tuple)) and item
+            and normalize_plan_topic(item[0]) == plan_name
+        ]
+        if len(exact) != 1:
+            return []
+        keys = exact
+
+    valid_keys = {
+        f"{item.get('name')}::{topic_item[0]}"
+        for item in subjects
+        for topic_item in item.get("topics", [])
+        if isinstance(topic_item, (list, tuple)) and topic_item
+    }
+    unique = list(dict.fromkeys(keys))
+    return unique if len(unique) == len(keys) and unique and all(key in valid_keys for key in unique) else []
+
+
+def get_rotation_subject(subject: str, topic: str) -> str:
+    prefixes = [
+        "Science & Technology",
+        "Ancient + Medieval History",
+        "Modern History",
+        "Ancient History",
+        "Medieval History",
+        "Art & Culture",
+        "Polity",
+        "Economy",
+        "Environment",
+        "Geography",
+    ]
+    lowered = topic.lower()
+    return next(
+        (prefix for prefix in prefixes if lowered.startswith(prefix.lower() + ":")),
+        subject,
+    )
+
+
+def build_scheduled_study_plan_topics(html: str, subjects: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     plan_start = html.find("const BASE_STUDY_PLAN=")
     if plan_start < 0:
         raise RuntimeError("Could not locate BASE_STUDY_PLAN")
@@ -127,38 +252,126 @@ def build_study_plan_rows(html: str, state: dict[str, Any]) -> list[dict[str, An
     if not groups:
         raise RuntimeError("Could not parse BASE_STUDY_PLAN topics")
 
-    topics: list[tuple[str, str]] = []
+    topics: list[dict[str, Any]] = []
     for subject, raw_topics in groups:
         topic_names = re.findall(r'"((?:\\.|[^"\\])*)"', raw_topics)
-        topics.extend((subject, topic) for topic in topic_names)
-
+        topics.extend(
+            {"subject": subject, "topic": topic}
+            for topic in topic_names
+        )
     if not topics:
         return []
 
+    if subjects is None:
+        base_subjects = extract_array(html, "const SUBJECTS=") if "const SUBJECTS=" in html else []
+        subjects = merge_subjects(base_subjects, [])
+
+    aliases = (
+        extract_object(html, "const STUDY_PLAN_TOPIC_ALIASES=")
+        if "const STUDY_PLAN_TOPIC_ALIASES=" in html
+        else {}
+    )
+    priority_keys = {
+        f"{subject.get('name')}::{topic[0]}"
+        for subject in subjects
+        for topic in subject.get("topics", [])
+        if isinstance(topic, (list, tuple)) and len(topic) > 2 and topic[2] == "P1"
+    }
+
+    tiers: dict[str, dict[str, list[dict[str, Any]]]] = {
+        "priority": {},
+        "standard": {},
+    }
+    for plan_index, entry in enumerate(topics):
+        matched = find_matching_syllabus_topics(
+            entry["subject"], entry["topic"], subjects, aliases
+        )
+        is_priority = any(key in priority_keys for key in matched)
+        rotation_subject = get_rotation_subject(entry["subject"], entry["topic"])
+        tier = "priority" if is_priority else "standard"
+        queues = tiers[tier]
+        queues.setdefault(rotation_subject, []).append({
+            **entry,
+            "planIndex": plan_index,
+            "rotationSubject": rotation_subject,
+            "priority": "P1" if is_priority else "P2",
+            "priorityKeys": [key for key in matched if key in priority_keys],
+        })
+
+    ordered: list[dict[str, Any]] = []
+    last_subject = ""
+    for tier in ("priority", "standard"):
+        queues = tiers[tier]
+        rotation_subjects = list(queues)
+        if len(rotation_subjects) > 1 and rotation_subjects[0] == last_subject:
+            next_different = next(
+                (index for index, name in enumerate(rotation_subjects) if name != last_subject),
+                0,
+            )
+            rotation_subjects = rotation_subjects[next_different:] + rotation_subjects[:next_different]
+
+        round_index = 0
+        while True:
+            has_more = False
+            for subject in rotation_subjects:
+                queue = queues[subject]
+                if round_index >= len(queue):
+                    continue
+                ordered.append({
+                    **queue[round_index],
+                    "scheduleIndex": len(ordered),
+                })
+                last_subject = subject
+                has_more = True
+            if not has_more:
+                break
+            round_index += 1
+    return ordered
+
+
+def build_study_plan_rows(html: str, state: dict[str, Any]) -> list[dict[str, Any]]:
+    settings = state.get("settings", {})
+    if not isinstance(settings, dict):
+        settings = {}
     progress_state = state.get("studyPlanProgress", {})
     if not isinstance(progress_state, dict):
         progress_state = {}
     legacy_done = state.get("studyPlanDone", {})
     if not isinstance(legacy_done, dict):
         legacy_done = {}
-    settings = state.get("settings", {})
-    if not isinstance(settings, dict):
-        settings = {}
+
+    base_subjects = extract_array(html, "const SUBJECTS=") if "const SUBJECTS=" in html else []
+    subjects = merge_subjects(
+        base_subjects,
+        state.get("customSubjects", []) if isinstance(state.get("customSubjects", []), list) else [],
+    )
+    topics = build_scheduled_study_plan_topics(html, subjects)
+    if not topics:
+        return []
 
     start = date(2026, 11, 20)
     target_text = settings.get("targetDate", "2027-05-23")
-    try:
-        target = date.fromisoformat(target_text) if isinstance(target_text, str) else date(2027, 5, 23)
-    except ValueError:
-        target = date(2027, 5, 23)
-    final_study_offset = max(0, (target - start).days - 1)
+    if not valid_iso_date(target_text):
+        raise ValueError("The saved target date must use YYYY-MM-DD.")
+    target = date.fromisoformat(target_text)
+    minimum_days = max(1, (len(topics) + 1) // 2)
+    if (target - start).days < minimum_days:
+        minimum_target = start + timedelta(days=minimum_days)
+        raise ValueError(
+            f"The saved target date must be on or after {minimum_target.isoformat()} "
+            "to fit the complete two-day study plan."
+        )
+    final_study_offset = (target - start).days - 1
 
     rows: list[dict[str, Any]] = []
-    for plan_index, (subject, topic) in enumerate(topics):
-        if len(topics) > 1:
-            study_offset = round(plan_index * final_study_offset / (len(topics) - 1))
-        else:
-            study_offset = 0
+    for entry in topics:
+        plan_index = entry["planIndex"]
+        schedule_index = entry["scheduleIndex"]
+        study_offset = (
+            int(schedule_index * final_study_offset / (len(topics) - 1) + 0.5)
+            if len(topics) > 1
+            else 0
+        )
         study_date = start + timedelta(days=study_offset)
         revision_date = study_date + timedelta(days=1)
 
@@ -173,7 +386,7 @@ def build_study_plan_rows(html: str, state: dict[str, Any]) -> list[dict[str, An
         revision_done = bool(progress.get("revisionDone"))
         mcq_count = progress.get("mcqCount", 0)
 
-        # Read legacy date-keyed records only when the new per-topic key is absent.
+        # Legacy migration keeps the original plan index as its stable identity.
         if not has_new_progress:
             legacy_study_date = date(2026, 11, 17) + timedelta(days=plan_index * 2)
             legacy_revision_date = legacy_study_date + timedelta(days=1)
@@ -191,25 +404,53 @@ def build_study_plan_rows(html: str, state: dict[str, Any]) -> list[dict[str, An
             mcq_count = old_revision.get("mcqCount", old_study.get("mcqCount", 0))
 
         rows.append({
-            "PlanKey": f"plan:{plan_index}",
+            "PlanKey": progress_key,
             "Date": study_date.isoformat(),
             "Week": (study_offset // 7) + 1,
-            "Subject": subject,
-            "PlannedTopic": topic,
+            "Subject": entry["subject"],
+            "PlannedTopic": entry["topic"],
             "Phase": "Day 1 · Study",
             "MCQAttempts": "",
             "IsCompleted": study_done,
         })
         rows.append({
-            "PlanKey": f"plan:{plan_index}",
+            "PlanKey": progress_key,
             "Date": revision_date.isoformat(),
             "Week": (study_offset // 7) + 1,
-            "Subject": subject,
-            "PlannedTopic": topic,
+            "Subject": entry["subject"],
+            "PlannedTopic": entry["topic"],
             "Phase": "Day 2 · MCQ + Revision",
             "MCQAttempts": safe_number(mcq_count, integer=True),
             "IsCompleted": study_done and mcq_done and revision_done,
         })
+    return rows
+
+
+def build_recovery_queue_rows(
+    study_plan_rows: list[dict[str, Any]],
+    today: date,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for item in study_plan_rows:
+        if item.get("IsCompleted") or not valid_iso_date(item.get("Date")):
+            continue
+        due_date = date.fromisoformat(item["Date"])
+        if due_date >= today:
+            continue
+        phase = "study" if item["Phase"] == "Day 1 · Study" else "mcq_revision"
+        rows.append({
+            "PlanKey": item["PlanKey"],
+            "Subject": item["Subject"],
+            "Topic": item["PlannedTopic"],
+            "Phase": phase,
+            "DueDate": due_date.isoformat(),
+            "Status": "pending",
+        })
+    rows.sort(key=lambda item: (
+        item["DueDate"],
+        int(item["PlanKey"].split(":", 1)[1]),
+        item["Phase"],
+    ))
     return rows
 
 
@@ -265,6 +506,7 @@ def main() -> None:
             checklist.append({"Date": day, "TaskID": item[0], "Task": item[1], "IsCompleted": bool(checks.get(item[0], False))})
 
     plan_rows = build_study_plan_rows(html, state)
+    recovery_rows = build_recovery_queue_rows(plan_rows, date.today())
 
     dates = sorted({row["Date"] for row in logs + checklist + plan_rows if valid_iso_date(row.get("Date"))})
     calendar = []
@@ -311,22 +553,6 @@ def main() -> None:
                 "Attempts": safe_number(value.get("attempts"), integer=True),
                 "Status": str(value.get("status") or ""),
                 "LastQuality": safe_number(value.get("last_quality"), integer=True),
-            })
-
-    recovery_rows: list[dict[str, Any]] = []
-    recovery_state = state.get("recoveryQueue", [])
-    if isinstance(recovery_state, list):
-        for item in recovery_state:
-            if not isinstance(item, dict):
-                continue
-            due_date = item.get("due_date", "")
-            recovery_rows.append({
-                "PlanKey": str(item.get("plan_key") or f"plan:{item.get('planIndex')}"),
-                "Subject": str(item.get("subject") or ""),
-                "Topic": str(item.get("topic") or ""),
-                "Phase": str(item.get("phase") or ""),
-                "DueDate": due_date if valid_iso_date(due_date) else "",
-                "Status": str(item.get("status") or "pending"),
             })
 
     OUT.mkdir(exist_ok=True)
