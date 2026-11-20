@@ -142,3 +142,32 @@ def test_qr_fragment_is_removed_from_address_and_sent_as_authorization_header(tr
             assert request_headers.get("authorization") == "Bearer browser-e2e-access-token"
         finally:
             browser.close()
+
+
+
+def test_uiverse_phase_checkbox_toggles_and_persists(tracker_url):
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        try:
+            page = browser.new_page()
+            response = page.goto(tracker_url, wait_until="networkidle")
+            assert response is not None and response.status == 200
+
+            checkbox = page.locator(".phase-checklist .uiverse-checkbox__input").first
+            assert checkbox.count() == 1
+            assert checkbox.is_enabled()
+
+            with page.expect_response(
+                lambda item: "/api/state" in item.url
+                and item.request.method == "PUT"
+                and item.status == 200
+            ):
+                checkbox.check()
+            assert checkbox.is_checked()
+
+            page.reload(wait_until="networkidle")
+            restored_checkbox = page.locator(".phase-checklist .uiverse-checkbox__input").first
+            assert restored_checkbox.is_checked()
+            assert page.locator(".phase-checklist .uiverse-checkbox__mark").count() > 0
+        finally:
+            browser.close()

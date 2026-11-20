@@ -135,3 +135,36 @@ test("completed and missed labels meet WCAG AA contrast for normal text", () => 
   assert.ok(contrastRatio("#526b5b", "#ffffff") >= 4.5);
   assert.ok(contrastRatio("#80551e", "#fff8f6") >= 4.5);
 });
+
+
+test("Uiverse Halo checkbox is the shared accessible completion control", () => {
+  const helperStart = html.indexOf("function createAnimatedCheckbox");
+  const helperEnd = html.indexOf("\nfunction getTodayStudyActivities", helperStart);
+  assert.ok(helperStart >= 0 && helperEnd > helperStart);
+  const helper = html.slice(helperStart, helperEnd);
+  assert.ok(helper.includes('wrapper.className="uiverse-checkbox"'));
+  assert.ok(helper.includes('input.className="uiverse-checkbox__input"'));
+  assert.ok(helper.includes('input.setAttribute("aria-label",ariaLabel)'));
+  assert.ok(helper.includes("wrapper.append(input,mark)"));
+
+  const phaseStart = html.indexOf("function renderPhaseChecklist");
+  const phaseEnd = html.indexOf("\nfunction ", phaseStart + 1);
+  assert.ok(phaseStart >= 0 && phaseEnd > phaseStart);
+  const phase = html.slice(phaseStart, phaseEnd);
+  assert.ok(phase.includes('createAnimatedCheckbox(!!progress[field]?.[id],labelText+" · "+entry.topic)'));
+  assert.ok(phase.includes("input.disabled=phaseDone||locked"));
+  assert.ok(phase.includes("row.append(check.wrapper,label)"));
+  assert.ok(!phase.includes('document.createElement("input")'));
+
+  assert.ok(css.includes(".uiverse-checkbox__input:checked+.uiverse-checkbox__mark"));
+  assert.ok(css.includes(".uiverse-checkbox__input:focus-visible"));
+  assert.ok(css.includes(".phase-check .uiverse-checkbox__input"));
+  assert.ok(html.includes("Halo square checkbox by uiverse-astronaut"));
+});
+
+test("Uiverse checkbox, buttons and page transitions respect reduced motion", () => {
+  assert.ok(css.includes("@keyframes tracker-page-enter"));
+  assert.ok(css.includes(".main-grid.nav-mode [data-page]:not([hidden]){animation:tracker-page-enter"));
+  assert.ok(css.includes(".btn:active:not(:disabled)"));
+  assert.ok(css.includes("@media(prefers-reduced-motion:reduce){.uiverse-checkbox__input,.uiverse-checkbox__mark,.btn,.main-grid.nav-mode [data-page]:not([hidden]){transition:none!important;animation:none!important;transform:none!important}}"));
+});
