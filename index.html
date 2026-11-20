@@ -804,7 +804,7 @@ body.dark #workspaceNav .nav-brand-mark{background:var(--blue);color:#10141d}
   <div class="card-head"><h2>PYQ topic checklist</h2><span class="chip" id="topicCompletion">0 of 65</span></div>
   <div class="toolbar"><input id="topicSearch" aria-label="Search syllabus topics" type="search" placeholder="Search topics…"><select id="subjectFilter" aria-label="Filter syllabus topics by subject"><option value="all">All subjects</option></select><select id="topicStatus" aria-label="Filter syllabus topics by completion status"><option value="all">All topics</option><option value="pending">Pending</option><option value="done">Completed</option></select></div>
   <div id="topicChecklist"></div>
-  <p class="small-note">Mapped question counts are approximate editorial classifications, not official UPSC topic-wise counts. Mark a topic complete after concept study, PYQs and a quick revision.</p>
+  <p class="small-note">Mapped question counts are approximate editorial classifications, not official UPSC topic-wise counts. Mark a topic complete after concept study, PYQs and a quick revision. Syllabus completion updates subject progress immediately; the scheduled Day 1 / Day 2 checklist is tracked separately.</p>
  </section>
  <section class="card" data-page="revision" hidden>
   <div class="card-head"><h2>Topics to revise</h2><span class="chip" id="revisionCount">0 completed topics</span></div>
@@ -1492,15 +1492,6 @@ function buildSubjectRotatedStudyPlan(entries){
  });
  return ordered;
 }
-function hasCompletedStudyCycleForSyllabusTopic(subject,topic){
- const key=subject+"::"+topic;
- const contributors=STUDY_PLAN_TOPICS.map((entry,planIndex)=>({entry,planIndex})).filter(({entry})=>findMatchingSyllabusTopics(entry.subject,entry.topic).includes(key));
- if(!contributors.length)return true;
- return contributors.every(({planIndex})=>{
-  const progress=state.studyPlanProgress?.["plan:"+planIndex]||{};
-  return !!progress.studyDone&&!!progress.revisionDone&&isPhaseChecklistComplete(progress,"study")&&isPhaseChecklistComplete(progress,"mcq_revision");
- });
-}
 function syncSyllabusCompletionToStudyPlan(subject,topic){
  const key=subject+"::"+topic;
  if(!validTopicKeys().has(key))return;
@@ -1510,7 +1501,12 @@ function syncSyllabusCompletionToStudyPlan(subject,topic){
   if(!keys.includes(key)||!keys.every(mappedKey=>!!state.topics?.[mappedKey]))return;
   const progressKey=getStudyPlanProgressDateKey(entry);
   state.studyPlanProgress=state.studyPlanProgress||{};
-  state.studyPlanProgress[progressKey]={...getStudyPlanProgress(entry),studyDone:true,studyReset:false};
+  state.studyPlanProgress[progressKey]={
+   ...getStudyPlanProgress(entry),
+   studyDone:true,
+   studyReset:false,
+   studyChecklist:Object.fromEntries(STUDY_DAY_CHECKLIST.map(([id])=>[id,true]))
+  };
  });
 }
 function syncSyllabusUncompletionToStudyPlan(subject,topic){
@@ -1608,7 +1604,7 @@ function revisionDateAfter(days){
 }
 function completeTopicWithMastery(subject,topic){
  const key=subject+"::"+topic;
- if(!hasCompletedStudyCycleForSyllabusTopic(subject,topic)){notify("Complete both Day 1 preparation and Day 2 MCQ + revision checklists before completing this topic.");renderTopics();return;}
+ if(!validTopicKeys().has(key)){notify("This topic is no longer available in the syllabus.");renderTopics();return;}
  state.topics=state.topics||{};
  state.topics[key]=true;
  state.revisionSchedule=state.revisionSchedule||{};
