@@ -142,3 +142,76 @@ def test_qr_fragment_is_removed_from_address_and_sent_as_authorization_header(tr
             assert request_headers.get("authorization") == "Bearer browser-e2e-access-token"
         finally:
             browser.close()
+
+
+def test_customization_management_and_device_theme_profiles(tracker_url):
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        try:
+            page = browser.new_page(viewport={"width": 1365, "height": 900})
+            page.goto(tracker_url, wait_until="networkidle")
+            page.locator('label[for="nav-settings"]').click()
+
+            assert page.locator("body").get_attribute("data-theme-profile") == "desktop"
+            page.locator("#themeToggle").check()
+            assert "dark" in page.locator("body").get_attribute("class").split()
+            page.set_viewport_size({"width": 390, "height": 844})
+            assert page.locator("body").get_attribute("data-theme-profile") == "desktop"
+
+            page.locator("#targetDate").fill("2027-05-24")
+            page.locator("#targetDate").press("Tab")
+            page.locator("#newSubject").fill("Optional Studies")
+            page.locator("#newTopic").fill("Reading comprehension")
+            page.locator("#addCustomTopic").click()
+            assert page.locator("#customSyllabusManager").get_by_text("Reading comprehension").count() == 1
+
+            page.once("dialog", lambda dialog: dialog.accept("Advanced comprehension"))
+            page.locator('#customSyllabusManager button[data-action="rename-topic"]').click()
+            assert page.locator("#customSyllabusManager").get_by_text("Advanced comprehension").count() == 1
+
+            page.once("dialog", lambda dialog: dialog.accept("Extra Studies"))
+            page.locator('#customSyllabusManager button[data-action="rename-subject"]').click()
+            subject_names = page.locator("#customSyllabusManager .settings-manage-copy > strong").all_text_contents()
+            assert subject_names.count("Extra Studies") == 1
+            assert "Optional Studies" not in subject_names
+
+            page.locator("#newTaskName").fill("Review flashcards")
+            page.locator("#addDailyTask").click()
+            assert page.locator("#customDailyManager").get_by_text("Review flashcards").count() == 1
+            page.once("dialog", lambda dialog: dialog.accept("Review flashcards daily"))
+            page.locator('#customDailyManager button[data-action="rename-task"]').click()
+
+            page.reload(wait_until="networkidle")
+            navigation = page.locator("#workspaceNav")
+            assert navigation.evaluate("(element) => element.scrollWidth > element.clientWidth")
+            navigation.evaluate("(element) => { element.scrollLeft = element.scrollWidth; }")
+
+            settings_label = page.locator('label[for="nav-settings"]')
+            assert settings_label.evaluate(
+                "(element) => { const rect = element.getBoundingClientRect(); return rect.left >= 0 && rect.right <= window.innerWidth; }"
+            )
+            settings_label.click()
+            assert page.locator("#targetDate").input_value() == "2027-05-24"
+            assert "dark" in page.locator("body").get_attribute("class").split()
+            assert page.locator("#customSyllabusManager").get_by_text("Advanced comprehension").count() == 1
+            assert page.locator("#customDailyManager").get_by_text("Review flashcards daily").count() == 1
+
+            page.once("dialog", lambda dialog: dialog.accept())
+            page.locator('#customSyllabusManager button[data-action="delete-subject"]').click()
+            page.once("dialog", lambda dialog: dialog.accept())
+            page.locator('#customDailyManager button[data-action="delete-task"]').click()
+            assert page.locator("#customSyllabusManager").get_by_text("No custom topics yet.").count() == 1
+            assert page.locator("#customDailyManager").get_by_text("No custom tasks yet.").count() == 1
+
+            mobile_context = browser.new_context(
+                user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+                viewport={"width": 390, "height": 844},
+                is_mobile=True,
+                has_touch=True,
+            )
+            mobile_page = mobile_context.new_page()
+            mobile_page.goto(tracker_url, wait_until="networkidle")
+            assert mobile_page.locator("body").get_attribute("data-theme-profile") == "mobile"
+            mobile_context.close()
+        finally:
+            browser.close()

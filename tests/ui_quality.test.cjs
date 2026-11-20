@@ -144,3 +144,23 @@ test("completed and missed labels meet WCAG AA contrast for normal text", () => 
   assert.ok(contrastRatio("#526b5b", "#ffffff") >= 4.5);
   assert.ok(contrastRatio("#80551e", "#fff8f6") >= 4.5);
 });
+
+test("customization controls support management and clearly separate self-paced topics", () => {
+  assert.match(html, /id="customSyllabusManager"/);
+  assert.match(html, /id="customDailyManager"/);
+  assert.match(html, /Custom topics are included in syllabus progress and are self-paced/);
+  assert.match(html, /"rename-topic"/);
+  assert.match(html, /"delete-topic"/);
+  assert.match(html, /"rename-task"/);
+  assert.match(html, /"delete-task"/);
+  assert.match(html, /function moveTopicStateKey\(/);
+  assert.match(html, /function clearTopicStateKey\(/);
+  assert.match(html, /function renderSettings\(/);
+});
+
+test("device theme selection is independent of responsive viewport width", () => {
+  assert.match(html, /navigator\.userAgentData\?\.mobile/);
+  assert.match(html, /navigator\.maxTouchPoints/);
+  assert.doesNotMatch(html, /matchMedia\("\(max-width: 760px\)"\)\.addEventListener\("change",applyDeviceTheme\)/);
+  assert.match(html, /document\.body\.dataset\.themeProfile=device/);
+});
