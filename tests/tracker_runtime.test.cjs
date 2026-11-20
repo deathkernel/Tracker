@@ -706,3 +706,64 @@ test("saved-state hydration runs only after study-plan migration dependencies in
   assert.ok(dailyPlan < savedStateHydration);
   assert.equal(script.includes("let state=normalizeProgressState(readState())"), false);
 });
+
+
+test("legacy browser recovery snapshots restore saved progress after the primary state was blanked", () => {
+  const start = script.indexOf("function hasSavedUserData(value){");
+  const end = script.indexOf("\nfunction persist()", start);
+  assert.ok(start >= 0 && end > start);
+  const legacy = {
+    version: 0,
+    topics: { "Polity::Fundamental Rights": true },
+    logs: { "2026-11-19": { hours: 3, mcqs: 20, csat: 0, notes: "saved notes" } },
+    studyPlanProgress: { "plan:0": { studyDone: true } },
+    studyPlanProgressSchema: 1
+  };
+  const storage = new Map([
+    ["upsc-dashboard-v2", JSON.stringify({ version: 0, topics: {}, logs: {}, studyPlanProgress: {} })],
+    ["upsc-dashboard-v2-recovery", JSON.stringify({
+      reason: "The browser progress JSON was corrupt. The original raw value was preserved for recovery.",
+      raw: JSON.stringify(legacy)
+    })]
+  ]);
+  const sandbox = {
+    STORE: "upsc-dashboard-v2",
+    recoveredLegacyProgress: false,
+    localStorage: {
+      getItem(key) { return storage.get(key) ?? null; },
+      setItem(key, value) { storage.set(key, value); }
+    },
+    normalizeProgressState: value => value,
+    defaultState: () => ({ version: 0, topics: {}, logs: {}, studyPlanProgress: {} })
+  };
+  vm.runInNewContext(script.slice(start, end) + "\nthis.loadState=readState;", sandbox);
+  const recovered = sandbox.loadState();
+  assert.equal(recovered.topics["Polity::Fundamental Rights"], true);
+  assert.equal(recovered.logs["2026-11-19"].notes, "saved notes");
+  assert.equal(sandbox.recoveredLegacyProgress, true);
+});
+
+test("legacy recovery never overrides a deliberate versioned empty progress reset", () => {
+  const start = script.indexOf("function hasSavedUserData(value){");
+  const end = script.indexOf("\nfunction persist()", start);
+  assert.ok(start >= 0 && end > start);
+  const storage = new Map([
+    ["upsc-dashboard-v2", JSON.stringify({ version: 8, topics: {}, logs: {}, studyPlanProgress: {} })],
+    ["upsc-dashboard-v2-recovery", JSON.stringify({
+      reason: "The browser progress JSON was corrupt. The original raw value was preserved for recovery.",
+      raw: JSON.stringify({ version: 2, topics: { "Polity::Fundamental Rights": true } })
+    })]
+  ]);
+  const sandbox = {
+    STORE: "upsc-dashboard-v2",
+    recoveredLegacyProgress: false,
+    localStorage: { getItem: key => storage.get(key) ?? null },
+    normalizeProgressState: value => value,
+    defaultState: () => ({ version: 0, topics: {}, logs: {}, studyPlanProgress: {} })
+  };
+  vm.runInNewContext(script.slice(start, end) + "\nthis.loadState=readState;", sandbox);
+  const current = sandbox.loadState();
+  assert.equal(current.version, 8);
+  assert.equal(Object.keys(current.topics).length, 0);
+  assert.equal(sandbox.recoveredLegacyProgress, false);
+});
