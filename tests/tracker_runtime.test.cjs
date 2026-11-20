@@ -24,7 +24,7 @@ test("Top 50 P1 topics are mapped and scheduled before standard topics", () => {
   const rotationStart = script.indexOf("function getStudyPlanRotationSubject(entry){");
   const rotationEnd = script.indexOf("\nfunction addDaysToDateKey", rotationStart);
   const priorityStart = script.indexOf("const PRELIMS_TOP_50_KEYS=");
-  const priorityEnd = script.indexOf("\nconst SHUFFLED_STUDY_PLAN=", priorityStart);
+  const priorityEnd = script.indexOf("\nfunction hasCompletedStudyCycleForSyllabusTopic", priorityStart);
   assert.ok(mappingStart >= 0 && mappingEnd > mappingStart);
   assert.ok(planStart >= 0 && planEnd > planStart);
   assert.ok(rotationStart >= 0 && rotationEnd > rotationStart);
@@ -58,7 +58,7 @@ test("schedule rotates subjects within priority tiers and preserves original pro
   const rotationStart = script.indexOf("function getStudyPlanRotationSubject(entry){");
   const rotationEnd = script.indexOf("\nfunction addDaysToDateKey", rotationStart);
   const priorityStart = script.indexOf("const PRELIMS_TOP_50_KEYS=");
-  const priorityEnd = script.indexOf("\nconst SHUFFLED_STUDY_PLAN=", priorityStart);
+  const priorityEnd = script.indexOf("\nfunction hasCompletedStudyCycleForSyllabusTopic", priorityStart);
   const sandbox = {
     allSubjects:()=>[
       {name:"Polity",topics:[["P1 A",1,"P1"],["P1 B",1,"P1"],["P2 A",1,"P2"],["P2 B",1,"P2"]]},
