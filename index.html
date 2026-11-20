@@ -778,23 +778,23 @@ function normalizeRevisionSchedule(value){
  const source=value&&typeof value==="object"&&!Array.isArray(value)?value:{};
  return Object.fromEntries(Object.entries(source).filter(([,item])=>item&&typeof item==="object"&&!Array.isArray(item)).map(([key,item])=>[key,{
   ...item,
-  due_date:normalizeOptionalDate(item.due_date)||localDate(),
-  interval_days:normalizeBoundedNumber(item.interval_days,1,3650,true,1),
+  due_date:normalizeOptionalDate(item.due_date??item.dueDate)||localDate(),
+  interval_days:normalizeBoundedNumber(item.interval_days??item.intervalDays,1,3650,true,1),
   repetitions:normalizeBoundedNumber(item.repetitions,0,1000000,true),
-  ease_factor:normalizeBoundedNumber(item.ease_factor,1.3,3,false,2.5),
-  last_reviewed_at:normalizeOptionalDate(item.last_reviewed_at),
-  last_quality:item.last_quality==null?null:normalizeBoundedNumber(item.last_quality,0,5,true,null)
+  ease_factor:normalizeBoundedNumber(item.ease_factor??item.easeFactor,1.3,3,false,2.5),
+  last_reviewed_at:normalizeOptionalDate(item.last_reviewed_at??item.lastReviewedAt),
+  last_quality:(item.last_quality??item.lastQuality)==null?null:normalizeBoundedNumber(item.last_quality??item.lastQuality,0,5,true,null)
  }]));
 }
 function normalizeRetestSchedule(value){
  const source=value&&typeof value==="object"&&!Array.isArray(value)?value:{};
  return Object.fromEntries(Object.entries(source).filter(([,item])=>item&&typeof item==="object"&&!Array.isArray(item)).map(([key,item])=>[key,{
   ...item,
-  due_date:normalizeOptionalDate(item.due_date)||"",
+  due_date:normalizeOptionalDate(item.due_date??item.dueDate)||"",
   attempts:normalizeBoundedNumber(item.attempts,0,1000000,true),
-  last_quality:item.last_quality==null?null:normalizeBoundedNumber(item.last_quality,0,5,true,null),
+  last_quality:(item.last_quality??item.lastQuality)==null?null:normalizeBoundedNumber(item.last_quality??item.lastQuality,0,5,true,null),
   status:typeof item.status==="string"?item.status:"scheduled",
-  interval_days:normalizeBoundedNumber(item.interval_days,1,3650,true,1)
+  interval_days:normalizeBoundedNumber(item.interval_days??item.intervalDays,1,3650,true,1)
  }]));
 }
 function validateBackupReviewRecords(incoming){
@@ -809,15 +809,15 @@ function validateBackupReviewRecords(incoming){
   ],["lastReviewedAt","last_reviewed_at"]],
   ["revisionSchedule",[
    {fields:["repetitions"],min:0,max:1000000,integer:true},
-   {fields:["interval_days"],min:1,max:3650,integer:true},
-   {fields:["ease_factor"],min:1.3,max:3},
-   {fields:["last_quality"],min:0,max:5,integer:true,nullable:true}
-  ],["due_date","last_reviewed_at"]],
+   {fields:["interval_days","intervalDays"],min:1,max:3650,integer:true},
+   {fields:["ease_factor","easeFactor"],min:1.3,max:3},
+   {fields:["last_quality","lastQuality"],min:0,max:5,integer:true,nullable:true}
+  ],["due_date","dueDate","last_reviewed_at","lastReviewedAt"]],
   ["retestSchedule",[
    {fields:["attempts"],min:0,max:1000000,integer:true},
-   {fields:["interval_days"],min:1,max:3650,integer:true},
-   {fields:["last_quality"],min:0,max:5,integer:true,nullable:true}
-  ],["due_date"]]
+   {fields:["interval_days","intervalDays"],min:1,max:3650,integer:true},
+   {fields:["last_quality","lastQuality"],min:0,max:5,integer:true,nullable:true}
+  ],["due_date","dueDate"]]
  ];
  for(const [mapName,rules,dateFields] of maps){
   const records=incoming[mapName];

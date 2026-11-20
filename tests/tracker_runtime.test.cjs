@@ -556,6 +556,12 @@ test("nested backup review records reject malformed and unsafe schedule values",
     retestSchedule: { "Polity::Rights": { due_date: "2026-02-30" } }
   }), /due_date/);
   assert.throws(() => sandbox.validate({
+    retestSchedule: { "Polity::Rights": { dueDate: "2026-02-30" } }
+  }), /dueDate/);
+  assert.throws(() => sandbox.validate({
+    revisionSchedule: { "Polity::Rights": { intervalDays: 99999 } }
+  }), /intervalDays/);
+  assert.throws(() => sandbox.validate({
     masteryProgress: { "Polity::Rights": null }
   }), /invalid masteryProgress record/);
   assert.doesNotThrow(() => sandbox.validate({
@@ -576,6 +582,14 @@ test("nested backup review records reject malformed and unsafe schedule values",
         interval_days: 6,
         repetitions: 2,
         ease_factor: 2.5
+      },
+      "Economy::Inflation": {
+        dueDate: "2026-11-24",
+        intervalDays: 6,
+        repetitions: 2,
+        easeFactor: 2.4,
+        lastReviewedAt: "2026-11-20",
+        lastQuality: 4
       }
     },
     retestSchedule: {
@@ -584,6 +598,13 @@ test("nested backup review records reject malformed and unsafe schedule values",
         attempts: 1,
         interval_days: 3,
         last_quality: 4,
+        status: "scheduled"
+      },
+      "Economy::Inflation": {
+        dueDate: "2026-11-23",
+        attempts: 2,
+        intervalDays: 3,
+        lastQuality: 4,
         status: "scheduled"
       }
     }
@@ -614,6 +635,30 @@ test("nested backup review records reject malformed and unsafe schedule values",
   const retest = sandbox.retest({ key: { due_date: "invalid", attempts: -1 } }).key;
   assert.equal(retest.due_date, "");
   assert.equal(retest.attempts, 0);
+
+  const camelRevision = sandbox.revision({ key: {
+    dueDate: "2026-11-24",
+    intervalDays: 6,
+    easeFactor: 2.4,
+    lastReviewedAt: "2026-11-20",
+    lastQuality: 4
+  }}).key;
+  assert.equal(camelRevision.due_date, "2026-11-24");
+  assert.equal(camelRevision.interval_days, 6);
+  assert.equal(camelRevision.ease_factor, 2.4);
+  assert.equal(camelRevision.last_reviewed_at, "2026-11-20");
+  assert.equal(camelRevision.last_quality, 4);
+
+  const camelRetest = sandbox.retest({ key: {
+    dueDate: "2026-11-23",
+    attempts: 2,
+    intervalDays: 3,
+    lastQuality: 4
+  }}).key;
+  assert.equal(camelRetest.due_date, "2026-11-23");
+  assert.equal(camelRetest.interval_days, 3);
+  assert.equal(camelRetest.last_quality, 4);
+  assert.equal(camelRetest.attempts, 2);
 });
 
 
