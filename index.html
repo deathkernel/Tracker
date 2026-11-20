@@ -475,6 +475,36 @@ function normalizePhaseChecklist(value,items,legacyComplete=false){
  const hasSavedChecklist=Object.keys(source).length>0;
  return Object.fromEntries(items.map(([id])=>[id,hasSavedChecklist?source[id]===true:legacyComplete]));
 }
+function isValidDateKey(value){
+ if(typeof value!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;
+ const parsed=new Date(value+"T00:00:00");
+ return !Number.isNaN(parsed.getTime())&&localDateKey(parsed)===value;
+}
+function normalizeLogNumber(value,maximum,integer=false){
+ const number=Number(value);
+ return Number.isFinite(number)&&number>=0&&number<=maximum&&(!integer||Number.isInteger(number))?number:0;
+}
+function normalizeStudyLogs(value){
+ const source=value&&typeof value==="object"&&!Array.isArray(value)?value:{};
+ return Object.fromEntries(Object.entries(source).filter(([day,item])=>isValidDateKey(day)&&item&&typeof item==="object"&&!Array.isArray(item)).map(([day,item])=>[day,{
+  hours:normalizeLogNumber(item.hours,16),
+  mcqs:normalizeLogNumber(item.mcqs,500,true),
+  csat:normalizeLogNumber(item.csat,300,true),
+  notes:typeof item.notes==="string"?item.notes:""
+ }]));
+}
+function validateBackupLogs(logs){
+ for(const [day,item] of Object.entries(logs)){
+  if(!isValidDateKey(day)||!item||typeof item!=="object"||Array.isArray(item))throw new Error("Backup contains an invalid study log entry for "+day+".");
+  for(const [field,maximum,integer] of [["hours",16,false],["mcqs",500,true],["csat",300,true]]){
+   if(item[field]===undefined)continue;
+   if((typeof item[field]!=="number"&&typeof item[field]!=="string")||String(item[field]).trim()==="")throw new Error("Backup contains an invalid "+field+" value for "+day+".");
+   const number=Number(item[field]);
+   if(!Number.isFinite(number)||number<0||number>maximum||(integer&&!Number.isInteger(number)))throw new Error("Backup contains an invalid "+field+" value for "+day+".");
+  }
+  if(item.notes!==undefined&&typeof item.notes!=="string")throw new Error("Backup contains invalid notes for "+day+".");
+ }
+}
 const STORE="upsc-dashboard-v2";
 const $=id=>document.getElementById(id);
 const localDate=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-")};
@@ -495,6 +525,7 @@ function normalizeProgressState(value){
  next.customSubjects=(Array.isArray(source.customSubjects)?source.customSubjects:[]).filter(item=>item&&typeof item.name==="string"&&item.name.trim()).map(item=>({name:item.name.trim(),topics:(Array.isArray(item.topics)?item.topics:[]).filter(topic=>Array.isArray(topic)&&typeof topic[0]==="string"&&topic[0].trim()).map(topic=>[topic[0].trim(),Number.isFinite(Number(topic[1]))?Number(topic[1]):null,typeof topic[2]==="string"?topic[2]:"P2"])}));
  next.customDaily=(Array.isArray(source.customDaily)?source.customDaily:[]).filter(item=>Array.isArray(item)&&item.length>=2&&typeof item[0]==="string"&&typeof item[1]==="string"&&item[1].trim()).map(item=>[item[0],item[1].trim(),String(item[2]||""),String(item[3]||"Personal task")]);
  for(const key of ["topics","daily","weekly","logs","studyPlanDone","revisionDone","settings"]){if(!next[key]||typeof next[key]!=="object"||Array.isArray(next[key]))next[key]={};}
+ next.logs=normalizeStudyLogs(next.logs);
  if(!isValidTargetDate(next.settings.targetDate))next.settings.targetDate="2027-05-23";
  next.version=Number.isInteger(Number(source.version))&&Number(source.version)>=0?Number(source.version):0;
 
@@ -752,22 +783,66 @@ function syncStudyPlanCompletionToSyllabus(entry){
   if(!state.revisionSchedule[key])state.revisionSchedule[key]={due_date:revisionDateAfter(1),interval_days:1,repetitions:0,ease_factor:2.5,last_reviewed_at:null,last_quality:null};
  });
 }
+async function recordStudyReviewBatch(keys,quality,{isRetest=false,updateRevision=false}={}){
+ const uniqueKeys=[...new Set(keys)];
+ if(!uniqueKeys.length)throw new Error("No study topics were provided for review.");
+ const reviews=uniqueKeys.map(key=>({
+  key,
+  previous_revision:state.revisionSchedule?.[key]||{},
+  previous_mastery:state.masteryProgress?.[key]||{},
+  previous_retest:state.retestSchedule?.[key]||{},
+  quality,
+  is_retest:isRetest,
+  update_revision:updateRevision
+ }));
+ const response=await fetch("/api/study/review-batch",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({today:localDate(),reviews})});
+ if(!response.ok)throw new Error("Revision, mastery and retest progress could not be updated.");
+ const result=await response.json();
+ if(!Array.isArray(result.updates)||result.updates.length!==uniqueKeys.length)throw new Error("The review service returned an incomplete batch.");
+ const updates=new Map(result.updates.map(item=>[item.key,item]));
+ if(updates.size!==uniqueKeys.length||uniqueKeys.some(key=>!updates.has(key)))throw new Error("The review service returned mismatched topic keys.");
+
+ const masteryProgress={...(state.masteryProgress||{})};
+ const retestSchedule={...(state.retestSchedule||{})};
+ const revisionSchedule={...(state.revisionSchedule||{})};
+ const revisionDone={...(state.revisionDone||{})};
+ for(const key of uniqueKeys){
+  const item=updates.get(key);
+  if(!item?.mastery||!item?.retest)throw new Error("The review service returned incomplete mastery data.");
+  masteryProgress[key]={
+   reviews:item.mastery.reviews,
+   qualityTotal:item.mastery.quality_total,
+   averageQuality:item.mastery.average_quality,
+   masteryLevel:item.mastery.mastery_level,
+   consecutiveStrong:item.mastery.consecutive_strong,
+   lastQuality:item.mastery.last_quality,
+   lastReviewedAt:item.mastery.last_reviewed_at
+  };
+  retestSchedule[key]={
+   due_date:item.retest.due_date,
+   attempts:item.retest.attempts,
+   last_quality:item.retest.last_quality,
+   status:item.retest.status,
+   interval_days:item.retest.interval_days
+  };
+  if(updateRevision){
+   if(!item.revision_schedule)throw new Error("The review service returned incomplete revision data.");
+   revisionSchedule[key]=item.revision_schedule;
+   revisionDone[key]=true;
+  }
+ }
+ state.masteryProgress=masteryProgress;
+ state.retestSchedule=retestSchedule;
+ if(updateRevision){
+  state.revisionSchedule=revisionSchedule;
+  state.revisionDone=revisionDone;
+ }
+}
 async function syncStudyPlanRevisionToSyllabus(entry,quality=3){
  const keys=findMatchingSyllabusTopics(entry?.subject,entry?.topic);
- state.revisionSchedule=state.revisionSchedule||{};
- state.revisionDone=state.revisionDone||{};
- let trackedCanonical=false;
+ const reviewKeys=keys.length?keys:["plan:"+entry.planIndex];
  try{
-  for(const key of keys){
-   const previous=state.revisionSchedule[key]||{interval_days:1,repetitions:0,ease_factor:2.5};
-   const response=await fetch("/api/revision/next",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({today:localDate(),previous,quality})});
-   if(!response.ok)throw new Error("Revision schedule could not be updated.");
-   state.revisionSchedule[key]=await response.json();
-   state.revisionDone[key]=true;
-   await recordMasteryProgress(key,quality,false);
-   trackedCanonical=true;
-  }
-  if(!trackedCanonical)await recordMasteryProgress("plan:"+entry.planIndex,quality,false);
+  await recordStudyReviewBatch(reviewKeys,quality,{updateRevision:keys.length>0});
   return true;
  }catch(error){notify(error.message||"Could not update the revision schedule.");return false;}
 }
@@ -792,15 +867,8 @@ async function completeScheduledRevision(subject,topic){
  if(!state.topics?.[key]){notify("Complete the topic before marking its revision done.");renderRevision();return;}
  const quality=askRecallQuality(topic,"revision");
  if(quality===null)return;
- state.revisionSchedule=state.revisionSchedule||{};
- const previous=state.revisionSchedule[key]||{interval_days:1,repetitions:0,ease_factor:2.5};
  try{
-  const response=await fetch("/api/revision/next",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({today:localDate(),previous,quality})});
-  if(!response.ok)throw new Error("Revision schedule could not be updated.");
-  state.revisionSchedule[key]=await response.json();
-  state.revisionDone=state.revisionDone||{};
-  state.revisionDone[key]=true;
-  await recordMasteryProgress(key,quality,false);
+  await recordStudyReviewBatch([key],quality,{updateRevision:true});
   persist();
   renderRevision();
   renderCharts();
@@ -810,7 +878,7 @@ async function completeScheduledRetest(subject,topic,progressKey=null){
  const key=progressKey||subject+"::"+topic,quality=askRecallQuality(topic,"retest");
  if(quality===null)return;
  try{
-  await recordMasteryProgress(key,quality,true);
+  await recordStudyReviewBatch([key],quality,{isRetest:true});
   persist();
   renderRevision();
   renderCharts();
@@ -1066,35 +1134,6 @@ function refreshRecoveryQueue(today=localDate()){
  })).sort((a,b)=>a.due_date.localeCompare(b.due_date)||a.planIndex-b.planIndex||a.phase.localeCompare(b.phase));
  state.recoveryQueue=queue;
  return queue;
-}
-async function recordMasteryProgress(key,quality,isRetest=false){
- const response=await fetch("/api/study/review",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
-  today:localDate(),
-  previous_mastery:state.masteryProgress?.[key]||{},
-  previous_retest:state.retestSchedule?.[key]||{},
-  quality,
-  is_retest:isRetest
- })});
- if(!response.ok)throw new Error("Mastery and retest progress could not be updated.");
- const result=await response.json();
- state.masteryProgress=state.masteryProgress||{};
- state.masteryProgress[key]={
-  reviews:result.mastery.reviews,
-  qualityTotal:result.mastery.quality_total,
-  averageQuality:result.mastery.average_quality,
-  masteryLevel:result.mastery.mastery_level,
-  consecutiveStrong:result.mastery.consecutive_strong,
-  lastQuality:result.mastery.last_quality,
-  lastReviewedAt:result.mastery.last_reviewed_at
- };
- state.retestSchedule=state.retestSchedule||{};
- state.retestSchedule[key]={
-  due_date:result.retest.due_date,
-  attempts:result.retest.attempts,
-  last_quality:result.retest.last_quality,
-  status:result.retest.status,
-  interval_days:result.retest.interval_days
- };
 }
 function askRecallQuality(topic,kind="revision"){
  const raw=prompt("Rate your recall for "+topic+" (0 = no recall, 5 = excellent).", "3");
@@ -1367,12 +1406,12 @@ $("phoneAccessBtn")?.addEventListener("click",showPhoneAccess);
 $("closePhoneAccess")?.addEventListener("click",()=>{$("phoneAccessPanel").hidden=true;$("phoneAccessBtn")?.setAttribute("aria-expanded","false")});
 function initFilters(){allSubjects().forEach(s=>{const opt=document.createElement("option");opt.value=s.name;opt.textContent=s.name;$("subjectFilter").append(opt)});$("topicSearch").addEventListener("input",renderTopics);$("subjectFilter").addEventListener("change",renderTopics);$("topicStatus").addEventListener("change",renderTopics);$("revisionSearch").addEventListener("input",renderRevision);$("revisionSubject").addEventListener("change",renderRevision);$("revisionStatus").addEventListener("change",renderRevision)}
 $("logDate").value=localDate();
-$("saveLog").addEventListener("click",()=>{const date=$("logDate").value;if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||Number.isNaN(new Date(date+"T00:00:00").getTime())){notify("Choose a valid study date.");return}const hours=Number($("logHours").value),mcqs=Number($("logMcq").value),csat=Number($("logCsat").value);if([hours,mcqs,csat].some(x=>!Number.isFinite(x)||x<0)||hours>16||mcqs>500||csat>300){notify("Use valid limits: hours 0–16, MCQs 0–500, CSAT 0–300.");return}state.logs[date]={hours,mcqs,csat,notes:$("logNotes").value.trim()};persist();renderStats();renderLogs();renderCharts();notify("Study log saved.")});
+$("saveLog").addEventListener("click",()=>{const date=$("logDate").value;if(!isValidDateKey(date)){notify("Choose a valid study date.");return}const hours=Number($("logHours").value),mcqs=Number($("logMcq").value),csat=Number($("logCsat").value);if([hours,mcqs,csat].some(x=>!Number.isFinite(x)||x<0)||hours>16||mcqs>500||csat>300){notify("Use valid limits: hours 0–16, MCQs 0–500, CSAT 0–300.");return}state.logs[date]={hours,mcqs,csat,notes:$("logNotes").value.trim()};persist();renderStats();renderLogs();renderCharts();notify("Study log saved.")});
 $("clearLog").addEventListener("click",()=>{["logHours","logMcq","logCsat","logNotes"].forEach(id=>$(id).value="")});
 $("exportBtn").addEventListener("click",()=>{const blob=new Blob([JSON.stringify({version:2,exportedAt:new Date().toISOString(),data:state},null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="upsc-2027-progress-backup.json";a.click();URL.revokeObjectURL(url);notify("Backup exported.")});
 $("importBtn").addEventListener("click",()=>$("importFile").click());
 async function replaceProgressState(incoming){if(incoming?.settings?.targetDate!==undefined&&!isValidTargetDate(incoming.settings.targetDate))throw new Error("The backup target date must leave enough days for the complete two-day study plan.");await saveQueue;let version=Number(state.version)||0;try{const response=await fetch("/api/state");if(response.ok){const remote=await response.json();if(Number.isInteger(Number(remote.version))&&Number(remote.version)>=0)version=Number(remote.version)}}catch{}state=normalizeProgressState({...incoming,version});await persist();renderAll();const response=await fetch("/api/state");if(!response.ok)throw new Error("Backup is saved in this browser, but SQLite could not confirm the import.");const saved=normalizeProgressState(await response.json());const expected={...state,version:0},actual={...saved,version:0};if(JSON.stringify(expected)!==JSON.stringify(actual))throw new Error("Backup is saved locally, but SQLite verification did not match. Keep the browser backup and retry.");state=saved;localStorage.setItem(STORE,JSON.stringify(state));renderAll()}
-$("importFile").addEventListener("change",async e=>{const file=e.target.files[0];if(!file)return;try{if(file.size>10*1024*1024)throw new Error("Backup files must be 10 MB or smaller.");const parsed=JSON.parse(await file.text()),incoming=parsed?.data??parsed;if(!incoming||typeof incoming!=="object"||Array.isArray(incoming)||!incoming.topics||typeof incoming.topics!=="object"||Array.isArray(incoming.topics)||!incoming.logs||typeof incoming.logs!=="object"||Array.isArray(incoming.logs))throw new Error("This file is not a valid UPSC tracker backup.");if(incoming.settings?.targetDate!==undefined&&!isValidTargetDate(incoming.settings.targetDate))throw new Error("The backup target date must leave enough days for the complete two-day study plan.");if(!confirm("Import backup and replace the progress currently saved in this browser?"))return;await replaceProgressState(incoming);notify("Backup imported successfully.")}catch(err){notify(err.message||"Could not import backup.")}finally{e.target.value=""}});
+$("importFile").addEventListener("change",async e=>{const file=e.target.files[0];if(!file)return;try{if(file.size>10*1024*1024)throw new Error("Backup files must be 10 MB or smaller.");const parsed=JSON.parse(await file.text()),incoming=parsed?.data??parsed;if(!incoming||typeof incoming!=="object"||Array.isArray(incoming)||!incoming.topics||typeof incoming.topics!=="object"||Array.isArray(incoming.topics)||!incoming.logs||typeof incoming.logs!=="object"||Array.isArray(incoming.logs))throw new Error("This file is not a valid UPSC tracker backup.");if(incoming.settings?.targetDate!==undefined&&!isValidTargetDate(incoming.settings.targetDate))throw new Error("The backup target date must leave enough days for the complete two-day study plan.");validateBackupLogs(incoming.logs);if(!confirm("Import backup and replace the progress currently saved in this browser?"))return;await replaceProgressState(incoming);notify("Backup imported successfully.")}catch(err){notify(err.message||"Could not import backup.")}finally{e.target.value=""}});
 $("resetBtn").addEventListener("click",async()=>{if(confirm("Reset study progress, logs and revision records? Your custom subjects, daily tasks and settings will be preserved. Export a backup first if you may need the progress.")){const current=state;const reset={...defaultState(),version:current.version,settings:current.settings,customSubjects:current.customSubjects,customDaily:current.customDaily,studyPlanProgressSchema:2};if(Array.isArray(current.questionBank))reset.questionBank=current.questionBank;await replaceProgressState(reset);$("logHours").value="";$("logMcq").value="";$("logCsat").value="";$("logNotes").value="";notify("Study progress reset. Your custom setup was preserved.")}});
 
 // Personal customization

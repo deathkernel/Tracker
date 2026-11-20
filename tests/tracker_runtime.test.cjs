@@ -293,17 +293,93 @@ test("uncompletion invalidates linked study but preserves MCQ history", () => {
   assert.match(script, /mcqDone:!reset&&!!\(current\.mcqDone/);
 });
 
-test("revision quality updates shared mastery and retest state", () => {
-  assert.match(script, /fetch\("\/api\/study\/review"/);
+test("revision quality updates shared mastery and retest state through a batch endpoint", () => {
+  assert.match(script, /fetch\("\/api\/study\/review-batch"/);
   assert.match(script, /previous_mastery:state\.masteryProgress/);
   assert.match(script, /previous_retest:state\.retestSchedule/);
   assert.match(script, /async function completeScheduledRetest\(subject,topic,progressKey=null\)/);
   assert.match(script, /Record retest/);
 });
 
-test("revision scheduling remains delegated to the backend", () => {
-  assert.match(script, /fetch\("\/api\/revision\/next"/);
-  assert.match(script, /quality\}\)\}\);/);
+test("revision scheduling remains delegated to one backend batch calculation", () => {
+  assert.match(script, /update_revision:updateRevision/);
+  assert.match(script, /async function recordStudyReviewBatch\(/);
+  assert.doesNotMatch(script, /fetch\("\/api\/revision\/next"/);
+});
+
+test("revision review batches do not mutate any topic when the backend batch fails", async () => {
+  const start = script.indexOf("async function recordStudyReviewBatch(");
+  const end = script.indexOf("\\nasync function syncStudyPlanRevisionToSyllabus", start);
+  assert.ok(start >= 0 && end > start);
+  const initial = {
+    revisionSchedule: { "Polity::Rights": { due_date: "2026-11-21" } },
+    revisionDone: {},
+    masteryProgress: { "Polity::Rights": { reviews: 1, masteryLevel: 1 } },
+    retestSchedule: {}
+  };
+  const sandbox = {
+    state: structuredClone(initial),
+    localDate: () => "2026-11-20",
+    fetch: async () => ({ ok: false, status: 422, json: async () => ({}) })
+  };
+  vm.runInNewContext(script.slice(start, end) + "\\nthis.run=recordStudyReviewBatch;", sandbox);
+  await assert.rejects(
+    sandbox.run(["Polity::Rights", "Polity::Basic Structure"], 4, { updateRevision: true }),
+    /could not be updated/
+  );
+  assert.deepEqual(JSON.parse(JSON.stringify(sandbox.state)), initial);
+});
+
+test("revision review batch commits all topic results only after a complete response", async () => {
+  const start = script.indexOf("async function recordStudyReviewBatch(");
+  const end = script.indexOf("\\nasync function syncStudyPlanRevisionToSyllabus", start);
+  assert.ok(start >= 0 && end > start);
+  const sandbox = {
+    state: { revisionSchedule: {}, revisionDone: {}, masteryProgress: {}, retestSchedule: {} },
+    localDate: () => "2026-11-20",
+    fetch: async (_url, options) => {
+      const body = JSON.parse(options.body);
+      return {
+        ok: true,
+        json: async () => ({
+          updates: body.reviews.map(item => ({
+            key: item.key,
+            revision_schedule: item.update_revision ? { due_date: "2026-11-21", interval_days: 1 } : null,
+            mastery: { reviews: 1, quality_total: 4, average_quality: 4, mastery_level: 1, consecutive_strong: 1, last_quality: 4, last_reviewed_at: "2026-11-20" },
+            retest: { due_date: "2026-11-27", attempts: 0, last_quality: 4, status: "scheduled", interval_days: 7 }
+          }))
+        })
+      };
+    }
+  };
+  vm.runInNewContext(script.slice(start, end) + "\\nthis.run=recordStudyReviewBatch;", sandbox);
+  await sandbox.run(["Polity::Rights", "Polity::Basic Structure"], 4, { updateRevision: true });
+  assert.deepEqual(Object.keys(sandbox.state.masteryProgress).sort(), ["Polity::Basic Structure", "Polity::Rights"]);
+  assert.equal(sandbox.state.revisionSchedule["Polity::Rights"].due_date, "2026-11-21");
+  assert.equal(sandbox.state.revisionDone["Polity::Basic Structure"], true);
+  assert.equal(sandbox.state.retestSchedule["Polity::Rights"].due_date, "2026-11-27");
+});
+
+test("nested backup log validation rejects null, malformed date and invalid numeric records", () => {
+  const start = script.indexOf("function isValidDateKey(value){");
+  const end = script.indexOf("\\nconst STORE=", start);
+  assert.ok(start >= 0 && end > start);
+  const sandbox = {
+    localDateKey: date => [date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-")
+  };
+  vm.runInNewContext(script.slice(start, end) + "\\nthis.validate=validateBackupLogs;this.normalize=normalizeStudyLogs;", sandbox);
+  assert.throws(() => sandbox.validate({ "2026-11-20": null }), /invalid study log entry/);
+  assert.throws(() => sandbox.validate({ "2026-02-30": { hours: 1 } }), /invalid study log entry/);
+  assert.throws(() => sandbox.validate({ "2026-11-20": { hours: 25 } }), /invalid hours value/);
+  assert.throws(() => sandbox.validate({ "2026-11-20": { mcqs: 1.5 } }), /invalid mcqs value/);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(sandbox.normalize({
+      "2026-11-20": { hours: 4, mcqs: 20, csat: 30, notes: "valid" },
+      "2026-11-21": null,
+      "2026-02-30": { hours: 1 }
+    }))),
+    { "2026-11-20": { hours: 4, mcqs: 20, csat: 30, notes: "valid" } }
+  );
 });
 
 test("analytics count phase completion and distinct missed dates", () => {
@@ -412,9 +488,9 @@ test("study-plan recall always has a planner mastery fallback for unmapped or in
   const start = script.indexOf("async function syncStudyPlanRevisionToSyllabus");
   const end = script.indexOf("\nfunction revisionDateAfter", start);
   const sync = script.slice(start, end);
-  assert.match(sync, /let trackedCanonical=false/);
+  assert.match(sync, /const reviewKeys=keys\.length\?keys:\["plan:"\+entry\.planIndex\]/);
   assert.doesNotMatch(sync, /if\(!state\.topics\?\.\[key\]\)continue/);
-  assert.match(sync, /if\(!trackedCanonical\)await recordMasteryProgress\("plan:"\+entry\.planIndex,quality,false\)/);
+  assert.match(sync, /recordStudyReviewBatch\(reviewKeys,quality/);
 });
 
 test("every curated syllabus topic maps to at least one first-pass study unit", () => {

@@ -108,6 +108,62 @@ def test_revision_schedule_endpoint_uses_shared_sm2_policy(client):
     assert invalid.status_code == 422
 
 
+def test_study_review_batch_returns_complete_multi_topic_updates(client):
+    response = client.post("/api/study/review-batch", json={
+        "today": "2026-11-20",
+        "reviews": [
+            {
+                "key": "Polity::Fundamental Rights",
+                "previous_revision": {"interval_days": 1, "repetitions": 1, "ease_factor": 2.5},
+                "previous_mastery": None,
+                "previous_retest": None,
+                "quality": 5,
+                "update_revision": True,
+            },
+            {
+                "key": "Polity::Basic Structure",
+                "previous_revision": {},
+                "previous_mastery": None,
+                "previous_retest": {"attempts": 2},
+                "quality": 2,
+                "update_revision": True,
+            },
+        ],
+    })
+    assert response.status_code == 200
+    updates = response.json()["updates"]
+    assert [item["key"] for item in updates] == [
+        "Polity::Fundamental Rights",
+        "Polity::Basic Structure",
+    ]
+    assert all(item["revision_schedule"]["due_date"] for item in updates)
+    assert updates[0]["mastery"]["mastery_level"] == 1
+    assert updates[1]["retest"]["due_date"] == "2026-11-21"
+    assert updates[1]["retest"]["attempts"] == 2
+
+
+def test_study_review_batch_rejects_any_invalid_item_without_partial_result(client):
+    response = client.post("/api/study/review-batch", json={
+        "today": "2026-11-20",
+        "reviews": [
+            {"key": "Polity::Rights", "quality": 5, "update_revision": True},
+            {"key": "Polity::Basic Structure", "quality": 6, "update_revision": True},
+        ],
+    })
+    assert response.status_code == 422
+
+
+def test_study_review_batch_rejects_duplicate_topic_keys(client):
+    response = client.post("/api/study/review-batch", json={
+        "today": "2026-11-20",
+        "reviews": [
+            {"key": "Polity::Rights", "quality": 4},
+            {"key": "Polity::Rights", "quality": 4},
+        ],
+    })
+    assert response.status_code == 422
+
+
 def test_health_reports_database_query_failure(client, monkeypatch):
     def broken_connect():
         raise sqlite3.OperationalError("database unavailable")
