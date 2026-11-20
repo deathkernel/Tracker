@@ -524,6 +524,51 @@ body.dark .today-topic-card .focus-desc{color:var(--muted)}
 .data-table-wrap:focus-visible,.analytics-table-wrap:focus-visible{outline:3px solid color-mix(in srgb,var(--blue) 35%,transparent);outline-offset:2px}
 @media(max-width:760px){.daily-plan-table{min-width:680px}.data-table{min-width:560px}}
 [data-page][hidden]{display:none!important}
+
+/* Uiverse-inspired interaction layer — adapted for Tracker's existing design system. */
+:root{--motion-fast:150ms;--motion-medium:220ms;--motion-ease:cubic-bezier(.2,.75,.25,1);--focus-ring:0 0 0 3px color-mix(in srgb,var(--blue) 28%,transparent)}
+.btn,.tab,.cir-tabs__t,.subject-open,.topic-subject summary,.today-topic-card,.stat,.card,.task,.log-item,.settings-section,.exam-countdown-card{
+ transition:transform var(--motion-medium) var(--motion-ease),border-color var(--motion-fast) ease,box-shadow var(--motion-medium) ease,background-color var(--motion-medium) ease,color var(--motion-fast) ease;
+}
+.btn{position:relative;isolation:isolate;overflow:hidden;transform:translateY(0);will-change:transform}
+.btn::after{content:"";position:absolute;inset:0;z-index:-1;transform:translateX(-125%) skewX(-18deg);background:linear-gradient(105deg,transparent 25%,rgba(255,255,255,.18) 48%,transparent 70%);transition:transform 520ms var(--motion-ease);pointer-events:none}
+.btn:hover{transform:translateY(-1px);box-shadow:0 5px 14px color-mix(in srgb,var(--ink) 10%,transparent)}
+.btn:hover::after{transform:translateX(125%) skewX(-18deg)}
+.btn:active{transform:translateY(0) scale(.985);box-shadow:none}
+.btn:focus-visible,.tab:focus-visible,.subject-open:focus-visible,.cir-tabs__t:focus-visible{outline:none;box-shadow:var(--focus-ring)}
+.btn.primary{box-shadow:0 2px 5px color-mix(in srgb,var(--blue) 16%,transparent)}
+.btn.primary:hover{box-shadow:0 6px 18px color-mix(in srgb,var(--blue) 24%,transparent)}
+.stat,.card,.today-topic-card,.exam-countdown-card{transform:translateZ(0)}
+.stat:hover,.today-topic-card:hover,.exam-countdown-card:hover{border-color:color-mix(in srgb,var(--blue) 32%,var(--line));box-shadow:0 8px 24px color-mix(in srgb,var(--ink) 7%,transparent)}
+.task,.log-item,.subject-card,.topic-subject{transition:border-color var(--motion-fast) ease,background-color var(--motion-fast) ease,transform var(--motion-fast) var(--motion-ease)}
+.task:hover,.log-item:hover{border-color:color-mix(in srgb,var(--blue) 28%,var(--line))}
+.task:focus-within{border-color:var(--blue);box-shadow:var(--focus-ring)}
+.task input,.topic input,.weekly-check input,.daily-plan-table input{cursor:pointer;transition:transform var(--motion-fast) var(--motion-ease),filter var(--motion-fast) ease}
+.task input:hover,.topic input:hover,.weekly-check input:hover,.daily-plan-table input:hover{transform:scale(1.12)}
+.task input:checked,.topic input:checked,.weekly-check input:checked,.daily-plan-table input:checked{animation:tracker-check-pop 240ms var(--motion-ease)}
+@keyframes tracker-check-pop{0%{transform:scale(.78)}65%{transform:scale(1.18)}100%{transform:scale(1)}}
+.progress>span,.table-progress span{position:relative;overflow:hidden;transition:width 650ms var(--motion-ease)}
+.progress>span::after,.table-progress span::after{content:"";position:absolute;inset:0;transform:translateX(-110%);background:linear-gradient(100deg,transparent,rgba(255,255,255,.28),transparent);animation:tracker-progress-sheen 2.8s ease-in-out infinite}
+@keyframes tracker-progress-sheen{0%,35%{transform:translateX(-110%)}75%,100%{transform:translateX(110%)}}
+.cir-tabs__t{position:relative}
+.cir-tabs__t::after{content:"";position:absolute;left:18px;right:18px;bottom:5px;height:2px;border-radius:2px;background:currentColor;transform:scaleX(0);transform-origin:center;transition:transform var(--motion-medium) var(--motion-ease)}
+.cir-tabs__t:hover::after{transform:scaleX(.42)}
+.cir-tabs__r:checked+.cir-tabs__t::after{transform:scaleX(.55)}
+.nav-count{transition:transform var(--motion-medium) var(--motion-ease),background-color var(--motion-medium) ease}
+.cir-tabs__t:hover .nav-count{transform:scale(1.08)}
+.topic-subject summary:hover{background:color-mix(in srgb,var(--blue-soft) 55%,var(--surface))}
+.subject-open{transition:transform var(--motion-fast) ease,color var(--motion-fast) ease}
+.subject-open:hover{transform:translateX(3px)}
+.toast{box-shadow:0 10px 28px rgba(0,0,0,.16);backdrop-filter:blur(12px)}
+#pageTitle{animation:tracker-page-enter 280ms var(--motion-ease) both}
+@keyframes tracker-page-enter{from{opacity:.55;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@media(hover:none){.stat:hover,.today-topic-card:hover,.exam-countdown-card:hover,.btn:hover{transform:none;box-shadow:none}}
+@media(prefers-reduced-motion:reduce){
+ .btn,.tab,.cir-tabs__t,.subject-open,.topic-subject summary,.today-topic-card,.stat,.card,.task,.log-item,.settings-section,.exam-countdown-card,
+ .progress>span,.table-progress span,#pageTitle{transition:none!important;animation:none!important}
+ .btn::after,.progress>span::after,.table-progress span::after{display:none!important}
+}
+
 </style>
 </head>
 <body data-view="overview">
