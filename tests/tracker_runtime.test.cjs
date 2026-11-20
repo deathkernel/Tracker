@@ -360,7 +360,7 @@ test("revision review batch commits all topic results only after a complete resp
   assert.equal(sandbox.state.retestSchedule["Polity::Rights"].due_date, "2026-11-27");
 });
 
-test("nested backup log validation rejects null, malformed date and invalid numeric records", () => {
+test("activity backup validation keeps MCQs and notes and drops legacy duration fields", () => {
   const start = script.indexOf("function isValidDateKey(value){");
   const end = script.indexOf("const STORE=", start);
   assert.ok(start >= 0 && end > start);
@@ -370,16 +370,35 @@ test("nested backup log validation rejects null, malformed date and invalid nume
   vm.runInNewContext(script.slice(start, end) + "\nthis.validate=validateBackupLogs;this.normalize=normalizeStudyLogs;", sandbox);
   assert.throws(() => sandbox.validate({ "2026-11-20": null }), /invalid study log entry/);
   assert.throws(() => sandbox.validate({ "2026-02-30": { hours: 1 } }), /invalid study log entry/);
-  assert.throws(() => sandbox.validate({ "2026-11-20": { hours: 25 } }), /invalid hours value/);
   assert.throws(() => sandbox.validate({ "2026-11-20": { mcqs: 1.5 } }), /invalid mcqs value/);
+  assert.throws(() => sandbox.validate({ "2026-11-20": { notes: 7 } }), /invalid notes/);
+  assert.doesNotThrow(() => sandbox.validate({ "2026-11-20": { hours: 25, csat: -30, mcqs: 20 } }));
   assert.deepEqual(
     JSON.parse(JSON.stringify(sandbox.normalize({
       "2026-11-20": { hours: 4, mcqs: 20, csat: 30, notes: "valid" },
       "2026-11-21": null,
+      "2026-11-22": { hours: 2, csat: 15 },
       "2026-02-30": { hours: 1 }
     }))),
-    { "2026-11-20": { hours: 4, mcqs: 20, csat: 30, notes: "valid" } }
+    { "2026-11-20": { mcqs: 20, notes: "valid" } }
   );
+});
+
+test("study hour and duration concepts are absent while exam dates and revision schedules remain", () => {
+  for (const marker of ['id="hoursDone"', 'id="studyGoal"', 'id="logHours"', 'id="logCsat"', 'id="studyHoursChart"', 'id="logTotalHours"', 'id="newTaskTime"']) {
+    assert.equal(html.includes(marker), false, marker);
+  }
+  for (const marker of ["Focused study time", "Daily study goal (hours)", "Study hours — last 7 days", "Total study hours", "CSAT minutes", "30 min", "10 min", "CSAT timed practice"]) {
+    assert.equal(html.includes(marker), false, marker);
+  }
+  for (const marker of ["studyHoursTotal", "hours-line-graph", "Study hours over the last seven days", "hoursHost"]) {
+    assert.equal(script.includes(marker), false, marker);
+  }
+  assert.match(script, /delete next\.settings\.studyGoal/);
+  assert.match(script, /function normalizeStudyLogs\(value\)/);
+  assert.match(script, /function normalizeRevisionSchedule\(value\)/);
+  assert.match(script, /function normalizeRetestSchedule\(value\)/);
+  assert.ok(html.includes('id="targetDate"'));
 });
 
 test("analytics count phase completion and distinct missed dates", () => {
@@ -760,7 +779,7 @@ test("legacy browser recovery snapshots restore saved progress after the primary
   const legacy = {
     version: 0,
     topics: { "Polity::Fundamental Rights": true },
-    logs: { "2026-11-19": { hours: 3, mcqs: 20, csat: 0, notes: "saved notes" } },
+    logs: { "2026-11-19": { mcqs: 20, notes: "saved notes" } },
     studyPlanProgress: { "plan:0": { studyDone: true } },
     studyPlanProgressSchema: 1
   };

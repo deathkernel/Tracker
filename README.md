@@ -20,9 +20,9 @@ Keep the command window open while using the tracker. Press Ctrl+C to stop the l
 - 9 base subjects and 291 curated syllabus topics, with every topic explicitly mapped to at least one first-pass study unit. Related topics may share a lesson.
 - Subject-wise progress, topic search and completion filters.
 - Weekly roadmap with date, subject and study focus.
-- Study log for focused hours, MCQs, CSAT and notes.
+- Daily activity log for MCQ counts and study notes.
 - JSON backup/restore.
-- Customize the exam target date and daily study-hour goal.
+- Customize the exam target date.
 - Switch between light and dark themes.
 - Add your own subjects, topics and daily checklist tasks.
 - Local SQLite persistence with browser storage fallback.
@@ -30,7 +30,7 @@ Keep the command window open while using the tracker. Press Ctrl+C to stop the l
 
 ## Preparation tracking
 
-The tracker records daily MCQ counts, study hours, CSAT minutes and notes. It tracks the number of questions attempted; it does not store, display, import or run MCQ question content.
+The tracker records daily MCQ counts and study notes. It does not collect study durations or daily hour targets. It tracks the number of questions attempted; it does not store, display, import or run MCQ question content.
 
 ## Personal data and privacy
 
