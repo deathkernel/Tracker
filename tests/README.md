@@ -1,9 +1,22 @@
-# Tracker strict-rule tests
+# Tracker tests
 
-Run the dependency-free rule-engine tests with Node.js 18 or newer:
+Run these commands from the repository root.
+
+## Install test dependencies
+
+The application dependencies are listed in `requirements.txt`. Install the additional Python test dependencies with:
 
 ```bash
-node --test tests/strict_engine.test.cjs
+python -m pip install -r requirements.txt pytest httpx
 ```
 
-The tests cover mastery evidence thresholds, the six spaced-revision dates, overdue/due/upcoming classification, and invalid accuracy inputs.
+## Run the complete test suite
+
+```bash
+node --test tests/*.test.cjs
+python tests/check_inline_script.py
+python -m compileall -q server.py tests
+python -m pytest -q
+```
+
+The JavaScript runtime suite covers study-cycle scheduling, priority ordering, progress migration, Missing Topics behavior, backup validation, and revision batch atomicity. The Python suite covers the API, revision engine, and Power BI export pipeline.
