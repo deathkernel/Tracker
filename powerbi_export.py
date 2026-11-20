@@ -75,6 +75,9 @@ CSV_COLUMNS = {
     "DailyChecklist": ["Date", "TaskID", "Task", "IsCompleted"],
     "StudyPlan": ["Date", "Week", "Subject", "PlannedTopic", "Phase", "MCQAttempts", "IsCompleted"],
     "Calendar": ["Date", "Year", "MonthNumber", "Month", "Weekday", "WeekdayNumber"],
+    "Mastery": ["TopicKey", "Subject", "Topic", "Reviews", "MasteryLevel", "AverageQuality", "LastQuality"],
+    "RetestSchedule": ["TopicKey", "Subject", "Topic", "DueDate", "Attempts", "Status", "LastQuality"],
+    "RecoveryQueue": ["PlanKey", "Subject", "Topic", "Phase", "DueDate", "Status"],
 }
 
 
@@ -263,8 +266,70 @@ def main() -> None:
         day = date.fromisoformat(value)
         calendar.append({"Date": value, "Year": day.year, "MonthNumber": day.month, "Month": day.strftime("%B"), "Weekday": day.strftime("%A"), "WeekdayNumber": day.isoweekday()})
 
+    known_topics = {row["TopicKey"]: row for row in topic_rows}
+    mastery_rows: list[dict[str, Any]] = []
+    mastery_state = state.get("masteryProgress", {})
+    if isinstance(mastery_state, dict):
+        for key, value in mastery_state.items():
+            topic = known_topics.get(key)
+            if not topic or not isinstance(value, dict):
+                continue
+            mastery_rows.append({
+                "TopicKey": key,
+                "Subject": topic["Subject"],
+                "Topic": topic["Topic"],
+                "Reviews": safe_number(value.get("reviews"), integer=True),
+                "MasteryLevel": safe_number(value.get("masteryLevel"), integer=True),
+                "AverageQuality": safe_number(value.get("averageQuality")),
+                "LastQuality": safe_number(value.get("lastQuality"), integer=True),
+            })
+
+    retest_rows: list[dict[str, Any]] = []
+    retest_state = state.get("retestSchedule", {})
+    if isinstance(retest_state, dict):
+        for key, value in retest_state.items():
+            topic = known_topics.get(key)
+            if not topic or not isinstance(value, dict):
+                continue
+            due_date = value.get("due_date", "")
+            retest_rows.append({
+                "TopicKey": key,
+                "Subject": topic["Subject"],
+                "Topic": topic["Topic"],
+                "DueDate": due_date if valid_iso_date(due_date) else "",
+                "Attempts": safe_number(value.get("attempts"), integer=True),
+                "Status": str(value.get("status") or ""),
+                "LastQuality": safe_number(value.get("last_quality"), integer=True),
+            })
+
+    recovery_rows: list[dict[str, Any]] = []
+    recovery_state = state.get("recoveryQueue", [])
+    if isinstance(recovery_state, list):
+        for item in recovery_state:
+            if not isinstance(item, dict):
+                continue
+            due_date = item.get("due_date", "")
+            recovery_rows.append({
+                "PlanKey": str(item.get("key") or ""),
+                "Subject": str(item.get("subject") or ""),
+                "Topic": str(item.get("topic") or ""),
+                "Phase": str(item.get("phase") or ""),
+                "DueDate": due_date if valid_iso_date(due_date) else "",
+                "Status": str(item.get("status") or "pending"),
+            })
+
     OUT.mkdir(exist_ok=True)
-    for name, rows in [("Topics", topic_rows), ("TopicProgress", progress_rows), ("StudyLogs", logs), ("DailyChecklist", checklist), ("StudyPlan", plan_rows), ("Calendar", calendar)]:
+    for name, rows in [
+        ("Topics", topic_rows),
+        ("TopicProgress", progress_rows),
+        ("StudyLogs", logs),
+        ("DailyChecklist", checklist),
+        ("StudyPlan", plan_rows),
+        ("Calendar", calendar),
+        ("Mastery", mastery_rows),
+        ("RetestSchedule", retest_rows),
+        ("RecoveryQueue", recovery_rows),
+    ]:
         write_csv(name, rows)
     print(f"Power BI data exported to {OUT}")
 
