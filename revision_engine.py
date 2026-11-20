@@ -103,3 +103,92 @@ def build_due_revision_queue(
             })
     due.sort(key=lambda item: (item["due_date"], item["subject"], item["topic"]))
     return due[:30]
+
+
+
+def update_mastery_progress(
+    previous: dict[str, Any] | None,
+    today: str,
+    quality: int,
+) -> dict[str, Any]:
+    """Update deterministic recall mastery metrics for one study topic."""
+    if isinstance(quality, bool) or not isinstance(quality, int) or not 0 <= quality <= 5:
+        raise ValueError("Revision quality must be an integer between 0 and 5.")
+    try:
+        reviewed_date = datetime.strptime(today, "%Y-%m-%d").date()
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Review date must use YYYY-MM-DD.") from exc
+
+    prior = previous if isinstance(previous, dict) else {}
+    try:
+        reviews = max(0, int(prior.get("reviews", 0)))
+    except (TypeError, ValueError, OverflowError):
+        reviews = 0
+    try:
+        quality_total = float(prior.get("quality_total", prior.get("qualityTotal", 0)))
+    except (TypeError, ValueError, OverflowError):
+        quality_total = 0.0
+    if quality_total < 0 or quality_total != quality_total:
+        quality_total = 0.0
+    if quality_total == 0 and reviews:
+        try:
+            quality_total = max(0.0, float(prior.get("average_quality", prior.get("averageQuality", 0)))) * reviews
+        except (TypeError, ValueError, OverflowError):
+            quality_total = 0.0
+
+    try:
+        mastery_level = int(prior.get("mastery_level", prior.get("masteryLevel", 0)))
+    except (TypeError, ValueError, OverflowError):
+        mastery_level = 0
+    mastery_level = max(0, min(5, mastery_level))
+    try:
+        consecutive_strong = max(0, int(prior.get("consecutive_strong", prior.get("consecutiveStrong", 0))))
+    except (TypeError, ValueError, OverflowError):
+        consecutive_strong = 0
+
+    reviews += 1
+    quality_total += quality
+    mastery_level = max(0, min(5, mastery_level + (1 if quality >= 4 else -1 if quality < 3 else 0)))
+    consecutive_strong = consecutive_strong + 1 if quality >= 4 else 0
+    return {
+        "reviews": reviews,
+        "quality_total": quality_total,
+        "average_quality": round(quality_total / reviews, 2),
+        "mastery_level": mastery_level,
+        "consecutive_strong": consecutive_strong,
+        "last_quality": quality,
+        "last_reviewed_at": reviewed_date.isoformat(),
+    }
+
+
+def next_retest_schedule(
+    previous: dict[str, Any] | None,
+    today: str,
+    quality: int,
+    *,
+    is_retest: bool = False,
+) -> dict[str, Any]:
+    """Schedule a follow-up recall check based on the latest 0–5 quality score."""
+    if isinstance(quality, bool) or not isinstance(quality, int) or not 0 <= quality <= 5:
+        raise ValueError("Revision quality must be an integer between 0 and 5.")
+    try:
+        reviewed_date = datetime.strptime(today, "%Y-%m-%d").date()
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Review date must use YYYY-MM-DD.") from exc
+
+    prior = previous if isinstance(previous, dict) else {}
+    try:
+        attempts = max(0, int(prior.get("attempts", 0)))
+    except (TypeError, ValueError, OverflowError):
+        attempts = 0
+    if is_retest:
+        attempts += 1
+
+    interval_days = 1 if quality < 3 else 3 if quality < 4 else 7
+    return {
+        "due_date": (reviewed_date + timedelta(days=interval_days)).isoformat(),
+        "attempts": attempts,
+        "last_quality": quality,
+        "status": "scheduled",
+        "interval_days": interval_days,
+    }
