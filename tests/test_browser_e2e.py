@@ -209,8 +209,15 @@ def test_customization_management_and_device_theme_profiles(tracker_url):
                 is_mobile=True,
                 has_touch=True,
             )
+            mobile_context.add_init_script("""
+                Object.defineProperty(navigator, "userAgentData", {
+                    configurable: true,
+                    value: { mobile: false }
+                });
+            """)
             mobile_page = mobile_context.new_page()
             mobile_page.goto(tracker_url, wait_until="networkidle")
+            assert mobile_page.evaluate("() => navigator.userAgentData.mobile") is False
             assert mobile_page.locator("body").get_attribute("data-theme-profile") == "mobile"
             mobile_context.close()
         finally:
