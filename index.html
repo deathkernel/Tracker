@@ -586,9 +586,9 @@ function syncStudyPlanCompletionToSyllabus(entry){
 }
 async function syncStudyPlanRevisionToSyllabus(entry,quality=3){
  const keys=findMatchingSyllabusTopics(entry?.subject,entry?.topic);
- if(!keys.length){await recordMasteryProgress("plan:"+entry.planIndex,quality,false);return true;}
  state.revisionSchedule=state.revisionSchedule||{};
  state.revisionDone=state.revisionDone||{};
+ let trackedCanonical=false;
  try{
   for(const key of keys){
    if(!state.topics?.[key])continue;
@@ -598,7 +598,9 @@ async function syncStudyPlanRevisionToSyllabus(entry,quality=3){
    state.revisionSchedule[key]=await response.json();
    state.revisionDone[key]=true;
    await recordMasteryProgress(key,quality,false);
+   trackedCanonical=true;
   }
+  if(!trackedCanonical)await recordMasteryProgress("plan:"+entry.planIndex,quality,false);
   return true;
  }catch(error){notify(error.message||"Could not update the revision schedule.");return false;}
 }
