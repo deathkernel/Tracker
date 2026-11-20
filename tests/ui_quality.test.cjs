@@ -86,17 +86,26 @@ test("UI stylesheet has balanced blocks and top-level responsive media queries",
 });
 
 test("every workspace view is inside the main content landmark", () => {
-  assert.equal((html.match(/<main\b/g) || []).length, 1);
-  assert.equal((html.match(/<\/main>/g) || []).length, 1);
-  assert.doesNotMatch(html, /<aside\b|<\/aside>/);
-  const mainStart = html.indexOf("<main>");
-  const mainEnd = html.indexOf("</main>", mainStart);
+  // Ignore CSS selectors and JavaScript strings: they can contain data-page
+  // text before the actual HTML element and produce false positives.
+  const markup = html
+    .replace(/<style\\b[\\s\\S]*?<\\/style>/gi, "")
+    .replace(/<script\\b[\\s\\S]*?<\\/script>/gi, "");
+
+  assert.equal((markup.match(/<main\\b/g) || []).length, 1);
+  assert.equal((markup.match(/<\\/main>/g) || []).length, 1);
+  assert.doesNotMatch(markup, /<aside\\b|<\\/aside>/);
+  const mainStart = markup.indexOf("<main>");
+  const mainEnd = markup.indexOf("</main>", mainStart);
+  assert.ok(mainStart >= 0 && mainEnd > mainStart, "main content landmark exists");
+
   for (const page of ["overview", "syllabus", "missing", "logs", "plan", "settings", "revision", "charts"]) {
-    const pageIndex = html.indexOf(`data-page="${page}"`);
-    assert.ok(pageIndex > mainStart && pageIndex < mainEnd, `${page} must be inside main`);
+    const pageElement = new RegExp("<(?:section|article|div)\\\\b[^>]*\\\\bdata-page=\"" + page + "\"");
+    const match = pageElement.exec(markup);
+    assert.ok(match, page + " workspace element exists");
+    assert.ok(match.index > mainStart && match.index < mainEnd, page + " must be inside main");
   }
 });
-
 test("search and filter controls expose accessible names", () => {
   const ids = [
     "missingTopicSearch",
