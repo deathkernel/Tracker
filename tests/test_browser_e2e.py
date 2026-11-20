@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import socket
 import subprocess
@@ -226,6 +227,86 @@ def test_manual_syllabus_completion_updates_overview_subject_progress(tracker_ur
             )
             assert progress_percent > 0
         finally:
+            if "original_state" in locals():
+                latest = page.request.get(tracker_url + "/api/state")
+                if latest.status == 200:
+                    restore = {
+                        **original_state,
+                        "version": latest.json().get("version", original_state["version"]),
+                    }
+                    page.request.put(tracker_url + "/api/state", data=restore)
+            browser.close()
+
+
+
+def test_early_syllabus_completion_survives_initial_sqlite_sync(tracker_url):
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1365, "height": 900})
+        held_state_reads = []
+        try:
+            current = page.request.get(tracker_url + "/api/state")
+            assert current.status == 200
+            original_state = current.json()
+            payload = {
+                **original_state,
+                "topics": {},
+                "studyPlanProgress": {},
+            }
+            saved = page.request.put(tracker_url + "/api/state", data=payload)
+            assert saved.status == 200
+            initial_state = page.request.get(tracker_url + "/api/state").json()
+            page.add_init_script(
+                "localStorage.setItem('upsc-dashboard-v2', "
+                + json.dumps(json.dumps(initial_state))
+                + ");"
+            )
+
+            def hold_first_state_read(route):
+                if route.request.method == "GET" and not held_state_reads:
+                    held_state_reads.append((route, route.fetch()))
+                    return
+                route.continue_()
+
+            page.route("**/api/state", hold_first_state_read)
+            page.goto(tracker_url, wait_until="domcontentloaded")
+            assert held_state_reads, "The initial SQLite state read was not intercepted."
+
+            page.locator('label[for="nav-syllabus"]').click()
+            page.locator("#subjectFilter").select_option(label="Polity")
+            page.locator("#topicSearch").fill("Constitutional development")
+            topic_checkbox = page.locator(
+                '#topicChecklist input[aria-label="Mark Constitutional development complete"]'
+            )
+            assert topic_checkbox.count() == 1
+            with page.expect_response(
+                lambda response: response.url.endswith("/api/state")
+                and response.request.method == "PUT"
+                and response.status == 200
+            ):
+                topic_checkbox.check()
+
+            held_route, stale_response = held_state_reads[0]
+            held_route.fulfill(response=stale_response)
+
+            page.locator('label[for="nav-overview"]').click()
+            polity_row = page.locator("#subjectOverview tbody tr").filter(has_text="Polity")
+            page.wait_for_function(
+                """() => {
+                    const row = Array.from(document.querySelectorAll("#subjectOverview tbody tr"))
+                        .find(item => item.cells[0]?.textContent.trim() === "Polity");
+                    return row?.cells[1]?.textContent.trim().startsWith("1 /");
+                }"""
+            )
+            assert polity_row.locator("td").nth(1).inner_text().startswith("1 /")
+            persisted = page.request.get(tracker_url + "/api/state").json()
+            assert persisted["topics"]["Polity::Constitutional development"] is True
+        finally:
+            if held_state_reads:
+                try:
+                    held_state_reads[0][0].fulfill(response=held_state_reads[0][1])
+                except Exception:
+                    pass
             if "original_state" in locals():
                 latest = page.request.get(tracker_url + "/api/state")
                 if latest.status == 200:
