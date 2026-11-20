@@ -2,13 +2,24 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import math
 from typing import Any
 
 
 MAX_STUDY_REVIEW_COUNT = 1_000_000
 MAX_REVISION_INTERVAL_DAYS = 3_650
+
+
+def _parse_iso_date(value: Any, label: str = "Review date") -> date:
+    """Parse a canonical YYYY-MM-DD date and reject permissive alternatives."""
+    try:
+        parsed = datetime.strptime(value, "%Y-%m-%d").date()
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} must use YYYY-MM-DD.") from exc
+    if parsed.isoformat() != value:
+        raise ValueError(f"{label} must use YYYY-MM-DD.")
+    return parsed
 
 
 def _bounded_int(value: Any, default: int, minimum: int, maximum: int) -> int:
@@ -48,10 +59,7 @@ def next_revision_schedule(
     """Return a deterministic SM-2-style next review date for a 0–5 recall score."""
     if isinstance(quality, bool) or not isinstance(quality, int) or not 0 <= quality <= 5:
         raise ValueError("Revision quality must be an integer between 0 and 5.")
-    try:
-        review_date = datetime.strptime(today, "%Y-%m-%d").date()
-    except (TypeError, ValueError) as exc:
-        raise ValueError("Review date must use YYYY-MM-DD.") from exc
+    review_date = _parse_iso_date(today)
     prior = previous if isinstance(previous, dict) else {}
     repetitions = _bounded_int(
         prior.get("repetitions", 0),
@@ -111,8 +119,8 @@ def build_due_revision_queue(
 ) -> list[dict[str, str]]:
     """Select only completed syllabus topics whose persisted review date is due."""
     try:
-        current_date = datetime.strptime(today, "%Y-%m-%d").date()
-    except (TypeError, ValueError):
+        current_date = _parse_iso_date(today, "Current date")
+    except ValueError:
         return []
     if not isinstance(completed_topics, list) or not isinstance(revision_schedule, dict):
         return []
@@ -136,7 +144,7 @@ def build_due_revision_queue(
             due_date = current_date
         elif isinstance(schedule, dict):
             try:
-                due_date = datetime.strptime(str(schedule.get("due_date", "")), "%Y-%m-%d").date()
+                due_date = _parse_iso_date(schedule.get("due_date"), "Revision due date")
             except ValueError:
                 continue
         else:
@@ -161,10 +169,7 @@ def update_mastery_progress(
     """Update deterministic recall mastery metrics for one study topic."""
     if isinstance(quality, bool) or not isinstance(quality, int) or not 0 <= quality <= 5:
         raise ValueError("Revision quality must be an integer between 0 and 5.")
-    try:
-        reviewed_date = datetime.strptime(today, "%Y-%m-%d").date()
-    except (TypeError, ValueError) as exc:
-        raise ValueError("Review date must use YYYY-MM-DD.") from exc
+    reviewed_date = _parse_iso_date(today)
 
     prior = previous if isinstance(previous, dict) else {}
     reviews = _bounded_int(
@@ -230,10 +235,7 @@ def next_retest_schedule(
     """Schedule a follow-up recall check based on the latest 0–5 quality score."""
     if isinstance(quality, bool) or not isinstance(quality, int) or not 0 <= quality <= 5:
         raise ValueError("Revision quality must be an integer between 0 and 5.")
-    try:
-        reviewed_date = datetime.strptime(today, "%Y-%m-%d").date()
-    except (TypeError, ValueError) as exc:
-        raise ValueError("Review date must use YYYY-MM-DD.") from exc
+    reviewed_date = _parse_iso_date(today)
 
     prior = previous if isinstance(previous, dict) else {}
     attempts = _bounded_int(

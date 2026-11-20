@@ -145,3 +145,28 @@ def test_mastery_engine_recovers_from_non_finite_and_out_of_range_prior_values()
 def test_revision_engine_rejects_non_string_review_dates_as_value_errors():
     with pytest.raises(ValueError, match="YYYY-MM-DD"):
         next_revision_schedule(None, None, 3)
+
+
+@pytest.mark.parametrize(
+    "invalid_date",
+    ["2026-1-1", "2026-01-1", "2026-02-30", "2026-11-20T00:00:00", None],
+)
+def test_revision_engine_rejects_noncanonical_dates(invalid_date):
+    from revision_engine import next_retest_schedule, update_mastery_progress
+
+    with pytest.raises(ValueError, match="YYYY-MM-DD"):
+        next_revision_schedule(invalid_date, None, 3)
+    with pytest.raises(ValueError, match="YYYY-MM-DD"):
+        update_mastery_progress(None, invalid_date, 3)
+    with pytest.raises(ValueError, match="YYYY-MM-DD"):
+        next_retest_schedule(None, invalid_date, 3)
+
+
+def test_due_revision_queue_ignores_noncanonical_dates():
+    completed = [{"subject": "Polity", "topic": "Fundamental Rights"}]
+    schedule = {
+        "Polity::Fundamental Rights": {"due_date": "2026-1-1"},
+    }
+
+    assert build_due_revision_queue(completed, schedule, "2026-11-20") == []
+    assert build_due_revision_queue(completed, {}, "2026-1-1") == []

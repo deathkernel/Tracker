@@ -16,9 +16,7 @@ if not exist ".venv\Scripts\python.exe" (
 )
 
 call ".venv\Scripts\activate.bat"
-python -m pip install --upgrade pip
-if errorlevel 1 goto error
-pip install -r requirements.txt
+python -m pip install --disable-pip-version-check -r requirements.txt
 if errorlevel 1 goto error
 
 if not defined TRACKER_HOST set "TRACKER_HOST=127.0.0.1"
