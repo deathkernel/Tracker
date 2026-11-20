@@ -104,7 +104,7 @@ def test_real_browser_navigation_and_mobile_layout(tracker_url):
 
             page.set_viewport_size({"width": 390, "height": 844})
             page.locator('label[for="nav-plan"]').click()
-            assert page.locator("#pageTitle").inner_text() == "Study Plan"
+            assert page.locator("#pageTitle").inner_text() == "Study plan"
             assert page.locator('[data-page="plan"]').is_visible()
             assert page.evaluate(
                 "() => document.documentElement.scrollWidth <= window.innerWidth + 1"

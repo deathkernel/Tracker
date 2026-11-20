@@ -86,7 +86,11 @@ jobs:
               throw "The Tracker dashboard did not return HTTP 200."
             }
           } finally {
+            $listener = Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($listener) {
+              Stop-Process -Id $listener.OwningProcess -Force -ErrorAction SilentlyContinue
+            }
             if (-not $process.HasExited) {
-              & taskkill.exe /PID $process.Id /T /F | Out-Null
+              Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
             }
           }
