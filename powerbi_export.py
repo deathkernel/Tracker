@@ -123,58 +123,84 @@ def build_study_plan_rows(html: str, state: dict[str, Any]) -> list[dict[str, An
     if not groups:
         raise RuntimeError("Could not parse BASE_STUDY_PLAN topics")
 
+    topics: list[tuple[str, str]] = []
+    for subject, raw_topics in groups:
+        topic_names = re.findall(r'"((?:\\.|[^"\\])*)"', raw_topics)
+        topics.extend((subject, topic) for topic in topic_names)
+
+    if not topics:
+        return []
+
     progress_state = state.get("studyPlanProgress", {})
     if not isinstance(progress_state, dict):
         progress_state = {}
     legacy_done = state.get("studyPlanDone", {})
     if not isinstance(legacy_done, dict):
         legacy_done = {}
+    settings = state.get("settings", {})
+    if not isinstance(settings, dict):
+        settings = {}
+
+    start = date(2026, 11, 20)
+    target_text = settings.get("targetDate", "2027-05-23")
+    try:
+        target = date.fromisoformat(target_text) if isinstance(target_text, str) else date(2027, 5, 23)
+    except ValueError:
+        target = date(2027, 5, 23)
+    final_study_offset = max(0, (target - start).days - 1)
 
     rows: list[dict[str, Any]] = []
-    start = date(2026, 11, 17)
-    entry_index = 0
-    for subject, raw_topics in groups:
-        topics = re.findall(r'"((?:\\.|[^"\\])*)"', raw_topics)
-        if not topics:
-            continue
-        for topic in topics:
-            for phase, label in (("study", "Day 1 · Study"), ("mcq_revision", "Day 2 · MCQ + Revision")):
-                planned_date = start + timedelta(days=entry_index)
-                date_key = planned_date.isoformat()
-                progress_date = planned_date - timedelta(days=1) if phase == "mcq_revision" else planned_date
-                progress = progress_state.get(progress_date.isoformat(), {})
-                if not isinstance(progress, dict):
-                    progress = {}
-                if phase == "mcq_revision":
-                    legacy_progress = progress_state.get(date_key, {})
-                    if isinstance(legacy_progress, dict):
-                        current_progress = progress
-                        progress = {
-                            **legacy_progress,
-                            **current_progress,
-                            "studyDone": bool(current_progress.get("studyDone") or legacy_progress.get("studyDone")),
-                            "mcqDone": bool(current_progress.get("mcqDone") or legacy_progress.get("mcqDone")),
-                            "revisionDone": bool(current_progress.get("revisionDone") or legacy_progress.get("revisionDone")),
-                            "mcqLogged": bool(current_progress.get("mcqLogged") or legacy_progress.get("mcqLogged")),
-                        }
-                        if not current_progress.get("mcqDone") and legacy_progress.get("mcqDone"):
-                            progress["mcqCount"] = legacy_progress.get("mcqCount", 0)
-                if phase == "study":
-                    completed = bool(progress.get("studyDone")) or (not progress and bool(legacy_done.get(date_key)))
-                    attempts = ""
-                else:
-                    completed = bool(progress.get("mcqDone") and progress.get("revisionDone")) or (not progress and bool(legacy_done.get(date_key)))
-                    attempts = safe_number(progress.get("mcqCount"), integer=True)
-                rows.append({
-                    "Date": date_key,
-                    "Week": entry_index // 14 + 1,
-                    "Subject": subject,
-                    "PlannedTopic": topic,
-                    "Phase": label,
-                    "MCQAttempts": attempts,
-                    "IsCompleted": completed,
-                })
-                entry_index += 1
+    for plan_index, (subject, topic) in enumerate(topics):
+        if len(topics) > 1:
+            study_offset = round(plan_index * final_study_offset / (len(topics) - 1))
+        else:
+            study_offset = 0
+        study_date = start + timedelta(days=study_offset)
+        revision_date = study_date + timedelta(days=1)
+
+        progress = progress_state.get(f"plan:{plan_index}", {})
+        if not isinstance(progress, dict):
+            progress = {}
+
+        # Read legacy date-keyed records until the dashboard completes migration.
+        legacy_study_date = date(2026, 11, 17) + timedelta(days=plan_index * 2)
+        legacy_revision_date = legacy_study_date + timedelta(days=1)
+        old_study = progress_state.get(legacy_study_date.isoformat(), {})
+        old_revision = progress_state.get(legacy_revision_date.isoformat(), {})
+        if not isinstance(old_study, dict):
+            old_study = {}
+        if not isinstance(old_revision, dict):
+            old_revision = {}
+
+        study_done = bool(progress.get("studyDone"))
+        mcq_done = bool(progress.get("mcqDone"))
+        revision_done = bool(progress.get("revisionDone"))
+        mcq_count = progress.get("mcqCount", 0)
+        if not any((study_done, mcq_done, revision_done, mcq_count)):
+            study_done = bool(old_study.get("studyDone") or legacy_done.get(legacy_study_date.isoformat()))
+            legacy_day_two_done = bool(legacy_done.get(legacy_revision_date.isoformat()))
+            mcq_done = bool(old_study.get("mcqDone") or old_revision.get("mcqDone") or (study_done and legacy_day_two_done))
+            revision_done = bool(old_study.get("revisionDone") or old_revision.get("revisionDone") or (study_done and legacy_day_two_done))
+            mcq_count = old_revision.get("mcqCount", old_study.get("mcqCount", 0))
+
+        rows.append({
+            "Date": study_date.isoformat(),
+            "Week": (study_offset // 7) + 1,
+            "Subject": subject,
+            "PlannedTopic": topic,
+            "Phase": "Day 1 · Study",
+            "MCQAttempts": "",
+            "IsCompleted": study_done,
+        })
+        rows.append({
+            "Date": revision_date.isoformat(),
+            "Week": (study_offset // 7) + 1,
+            "Subject": subject,
+            "PlannedTopic": topic,
+            "Phase": "Day 2 · MCQ + Revision",
+            "MCQAttempts": safe_number(mcq_count, integer=True),
+            "IsCompleted": study_done and mcq_done and revision_done,
+        })
     return rows
 
 
