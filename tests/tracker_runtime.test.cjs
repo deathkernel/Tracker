@@ -689,3 +689,20 @@ test("workspace navigation is wired before state initialization and non-Overview
   assert.ok(pageTags.some(([, page]) => page === "settings"));
   assert.ok(pageTags.filter(([, page]) => page !== "overview").every(([, , attributes]) => /\bhidden\b/.test(attributes)));
 });
+
+
+test("saved-state hydration runs only after study-plan migration dependencies initialize", () => {
+  const defaultStateInit = script.indexOf("let state=defaultState()");
+  const allSubjects = script.indexOf("const allSubjects=");
+  const top50 = script.indexOf("const PRELIMS_TOP_50_KEYS=");
+  const planTopics = script.indexOf("const STUDY_PLAN_TOPICS=");
+  const dailyPlan = script.indexOf("const DAILY_STUDY_PLAN=");
+  const savedStateHydration = script.indexOf("state=normalizeProgressState(readState())");
+  assert.ok(defaultStateInit >= 0);
+  assert.ok(defaultStateInit < allSubjects);
+  assert.ok(allSubjects < top50);
+  assert.ok(top50 < planTopics);
+  assert.ok(planTopics < dailyPlan);
+  assert.ok(dailyPlan < savedStateHydration);
+  assert.equal(script.includes("let state=normalizeProgressState(readState())"), false);
+});
