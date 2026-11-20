@@ -121,15 +121,18 @@ def test_overview_subject_progress_renders_counts_and_contains_mobile_overflow(t
             page = browser.new_page(viewport={"width": 1365, "height": 900})
             current = page.request.get(tracker_url + "/api/state")
             assert current.status == 200
-            payload = current.json()
-            payload["topics"] = {
-                "Polity::Preamble": True,
-                "Polity::Fundamental Rights": True,
+            original_state = current.json()
+            payload = {
+                **original_state,
+                "topics": {
+                    "Polity::Preamble": True,
+                    "Polity::Fundamental Rights": True,
+                },
+                "customSubjects": [{
+                    "name": "Custom audit subject",
+                    "topics": [["Responsive test topic", 1, "P2"]],
+                }],
             }
-            payload["customSubjects"] = [{
-                "name": "Custom audit subject",
-                "topics": [["Responsive test topic", 1, "P2"]],
-            }]
             saved = page.request.put(tracker_url + "/api/state", data=payload)
             assert saved.status == 200
 
@@ -161,6 +164,14 @@ def test_overview_subject_progress_renders_counts_and_contains_mobile_overflow(t
                 "() => document.documentElement.scrollWidth <= window.innerWidth + 1"
             )
         finally:
+            if "original_state" in locals():
+                latest = page.request.get(tracker_url + "/api/state")
+                if latest.status == 200:
+                    restore = {
+                        **original_state,
+                        "version": latest.json().get("version", original_state["version"]),
+                    }
+                    page.request.put(tracker_url + "/api/state", data=restore)
             browser.close()
 
 
