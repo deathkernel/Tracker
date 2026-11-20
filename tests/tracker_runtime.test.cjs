@@ -161,3 +161,13 @@ test("legacy migration resets Day 2 flags but retains MCQ count", () => {
   assert.match(script, /revisionDone:!reset&&!!\(current\.revisionDone/);
   assert.match(script, /mcqCount:Number\.isInteger\(current\.mcqCount\)/);
 });
+
+
+test("study-plan recall always has a planner mastery fallback for unmapped or incomplete syllabus topics", () => {
+  const start = script.indexOf("async function syncStudyPlanRevisionToSyllabus");
+  const end = script.indexOf("\nfunction revisionDateAfter", start);
+  const sync = script.slice(start, end);
+  assert.match(sync, /let trackedCanonical=false/);
+  assert.match(sync, /if\(!state\.topics\?\.\[key\]\)continue/);
+  assert.match(sync, /if\(!trackedCanonical\)await recordMasteryProgress\("plan:"\+entry\.planIndex,quality,false\)/);
+});
