@@ -74,6 +74,7 @@ CSV_COLUMNS = {
     "StudyLogs": ["Date", "StudyHours", "MCQs", "CSAT", "Notes"],
     "DailyChecklist": ["Date", "TaskID", "Task", "IsCompleted"],
     "StudyPlan": ["PlanKey", "Date", "Week", "Subject", "PlannedTopic", "Phase", "MCQAttempts", "IsCompleted"],
+    "PlanTopics": ["PlanKey", "Subject", "PlannedTopic"],
     "Calendar": ["Date", "Year", "MonthNumber", "Month", "Weekday", "WeekdayNumber"],
     "Mastery": ["TopicKey", "PlanKey", "Subject", "Topic", "Reviews", "MasteryLevel", "AverageQuality", "LastQuality"],
     "RetestSchedule": ["TopicKey", "PlanKey", "Subject", "Topic", "DueDate", "Attempts", "Status", "LastQuality"],
@@ -320,7 +321,7 @@ def main() -> None:
                 continue
             due_date = item.get("due_date", "")
             recovery_rows.append({
-                "PlanKey": str(item.get("key") or ""),
+                "PlanKey": str(item.get("plan_key") or f"plan:{item.get('planIndex')}"),
                 "Subject": str(item.get("subject") or ""),
                 "Topic": str(item.get("topic") or ""),
                 "Phase": str(item.get("phase") or ""),
@@ -335,6 +336,10 @@ def main() -> None:
         ("StudyLogs", logs),
         ("DailyChecklist", checklist),
         ("StudyPlan", plan_rows),
+        ("PlanTopics", [
+            {"PlanKey": key, **value}
+            for key, value in sorted(plan_topics.items())
+        ]),
         ("Calendar", calendar),
         ("Mastery", mastery_rows),
         ("RetestSchedule", retest_rows),
