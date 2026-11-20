@@ -337,7 +337,11 @@ def main() -> None:
         ("DailyChecklist", checklist),
         ("StudyPlan", plan_rows),
         ("PlanTopics", [
-            {"PlanKey": key, **value}
+            {
+                "PlanKey": key,
+                "Subject": value["Subject"],
+                "PlannedTopic": value["Topic"],
+            }
             for key, value in sorted(plan_topics.items())
         ]),
         ("Calendar", calendar),
