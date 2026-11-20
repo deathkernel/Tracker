@@ -249,6 +249,21 @@ body.dark .today-topic-card.is-complete{background:linear-gradient(135deg,#191f2
 @media(max-width:760px){.today-topic-card{padding:16px;min-height:0}.today-topic-meta{align-items:flex-start}.today-topic-name{font-size:19px}.today-topic-footer{align-items:flex-start;flex-direction:column}.today-topic-card .study-complete-btn{width:100%}}
 @media(prefers-reduced-motion:reduce){.today-topic-card,.today-topic-card .study-complete-btn{transition:none}.today-topic-card:hover,.today-topic-card .study-complete-btn:not(:disabled):hover{transform:none}}
 
+
+/* PYQ completion indicator: color reflects the actual completed-topic percentage */
+.stat-completion-track{height:6px;margin-top:9px;border-radius:999px;background:#edf0f5;overflow:hidden}
+.stat-completion-track>span{display:block;width:0;height:100%;border-radius:inherit;transition:width .25s ease,background-color .25s ease}
+.topic-completion-value{font-weight:750}
+.topic-completion-value.is-low{color:#c2413b}
+.topic-completion-value.is-medium{color:#a96512}
+.topic-completion-value.is-high{color:#17845d}
+.stat-completion-track.is-low>span{background:#d95d55}
+.stat-completion-track.is-medium>span{background:#d49a38}
+.stat-completion-track.is-high>span{background:#17845d}
+body.dark .stat-completion-track{background:#30394a}
+body.dark .topic-completion-value.is-low{color:#ff857d}
+body.dark .topic-completion-value.is-medium{color:#f3bd63}
+body.dark .topic-completion-value.is-high{color:#61c49b}
 </style>
 </head>
 <body>
@@ -260,7 +275,8 @@ body.dark .today-topic-card.is-complete{background:linear-gradient(135deg,#191f2
 <section class="phone-access-panel" id="phoneAccessPanel" hidden><div class="phone-access-copy"><strong>Open Tracker on your phone</strong><span>Connect both devices to the same Wi-Fi and scan this QR code.</span><small id="phoneAccessUrl">Finding your local address…</small></div><img id="phoneAccessQr" alt="QR code to open this Tracker on your phone"><button class="btn" id="closePhoneAccess" type="button">Close</button></section>
 <section class="grid-stats">
  <div class="stat"><div class="stat-label">Days to target</div><div class="stat-value" id="daysLeft">—</div><div class="stat-foot">Target: 23 May 2027</div></div>
- <div class="stat"><div class="stat-label">PYQ topics completed</div><div class="stat-value" id="topicsDone">0/65</div><div class="stat-foot" id="topicSub">0% of mapped topics</div></div>
+ <div class="stat"><div class="stat-label">PYQ topics completed</div><div class="stat-value" id="topicsDone">0/65</div><div class="stat-foot" id="topicSub">0% of mapped topics</div>
+  <div class="stat-completion-track is-low" id="topicProgressTrack" role="progressbar" aria-label="PYQ topics completed" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="topicProgressFill"></span></div></div>
  <div class="stat"><div class="stat-label">Focused study time</div><div class="stat-value" id="hoursDone">0h</div><div class="stat-foot">Total hours logged</div></div>
  <div class="stat"><div class="stat-label">Study days recorded</div><div class="stat-value" id="daysDone">0</div><div class="stat-foot">Days with a saved study log</div></div>
  <div class="stat"><div class="stat-label">Missed study days</div><div class="stat-value" id="missedDays">0</div><div class="stat-foot">Past plan days not completed</div></div>
@@ -489,7 +505,13 @@ const weekIndex=()=>{const start=new Date("2026-11-17T00:00:00"),now=new Date(lo
 function getStudyPlanCounts(){const today=localDate(),todayDate=new Date(today+"T00:00:00"),missedDates=new Set();let completed=0,upcoming=0;DAILY_STUDY_PLAN.forEach(entry=>{const dateKey=getStudyPlanDateKey(entry),date=new Date(dateKey+"T00:00:00");if(isStudyPlanEntryDone(entry))completed++;else if(date<todayDate)missedDates.add(dateKey);else if(date>todayDate)upcoming++;});return{completed,missed:missedDates.size,upcoming}}
 function localDateKey(date){return [date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-")}
 function daysUntilExam(dateString){const today=new Date(localDate()+"T00:00:00"),exam=new Date(dateString+"T00:00:00");return Math.max(0,Math.ceil((exam-today)/86400000))}
-function renderStats(){const logs=Object.values(state.logs),planCounts=getStudyPlanCounts(),targetDate=(state.settings||{}).targetDate||"2027-05-23";$("daysLeft").textContent=totalDays();$("targetDate").value=targetDate;$("studyGoal").value=(state.settings||{}).studyGoal||4;$("topicsDone").textContent=doneTopics()+"/"+totalTopics();$("topicSub").textContent=(totalTopics()?Math.round(doneTopics()/totalTopics()*100):0)+"% of mapped topics";$("hoursDone").textContent=logs.reduce((n,x)=>n+(Number(x.hours)||0),0).toFixed(1)+"h";$("daysDone").textContent=logs.length;$("missedDays").textContent=planCounts.missed;$("topicCompletion").textContent=doneTopics()+" of "+totalTopics();$("prelimsRemaining").textContent=daysUntilExam(targetDate);const prelimsDate=document.querySelector(".prelims-countdown .exam-countdown-date");if(prelimsDate)prelimsDate.textContent=new Date(targetDate+"T00:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});$("mainsRemaining").textContent=daysUntilExam("2027-08-20");$("todayLabel").textContent=new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short",year:"numeric"})}
+function completionColorClass(percent){
+ const value=Math.max(0,Math.min(100,Number(percent)||0));
+ if(value>=80)return "is-high";
+ if(value>=40)return "is-medium";
+ return "is-low";
+}
+function renderStats(){const logs=Object.values(state.logs),planCounts=getStudyPlanCounts(),targetDate=(state.settings||{}).targetDate||"2027-05-23";$("daysLeft").textContent=totalDays();$("targetDate").value=targetDate;$("studyGoal").value=(state.settings||{}).studyGoal||4;$("topicsDone").textContent=doneTopics()+"/"+totalTopics();const topicPercent=totalTopics()?Math.round(doneTopics()/totalTopics()*100):0;const topicLevel=completionColorClass(topicPercent);const topicSub=$("topicSub");topicSub.textContent=topicPercent+"% of mapped topics";topicSub.className="stat-foot topic-completion-value "+topicLevel;const topicTrack=$("topicProgressTrack"),topicFill=$("topicProgressFill");if(topicTrack&&topicFill){topicFill.style.width=topicPercent+"%";topicTrack.className="stat-completion-track "+topicLevel;topicTrack.setAttribute("aria-valuenow",String(topicPercent));topicTrack.setAttribute("aria-valuetext",topicPercent+"% of mapped topics completed")}$("hoursDone").textContent=logs.reduce((n,x)=>n+(Number(x.hours)||0),0).toFixed(1)+"h";$("daysDone").textContent=logs.length;$("missedDays").textContent=planCounts.missed;$("topicCompletion").textContent=doneTopics()+" of "+totalTopics();$("prelimsRemaining").textContent=daysUntilExam(targetDate);const prelimsDate=document.querySelector(".prelims-countdown .exam-countdown-date");if(prelimsDate)prelimsDate.textContent=new Date(targetDate+"T00:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});$("mainsRemaining").textContent=daysUntilExam("2027-08-20");$("todayLabel").textContent=new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short",year:"numeric"})}
 function createAnimatedCheckbox(checked=false,ariaLabel="Toggle checkbox"){
  const wrapper=document.createElement("span");wrapper.className="checkbox-wrapper-12";
  const cbx=document.createElement("span");cbx.className="cbx";

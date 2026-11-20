@@ -13,6 +13,25 @@ test("dashboard keeps each syllabus topic as a two-phase study unit", () => {
   assert.match(script, /phase:"mcq_revision"/);
 });
 
+test("PYQ completion indicator color follows completed-topic percentage", () => {
+  assert.match(html, /id="topicProgressTrack" role="progressbar"/);
+  assert.match(script, /topicFill\.style\.width=topicPercent\+"%"/);
+  assert.match(script, /topicTrack\.setAttribute\("aria-valuenow",String\(topicPercent\)\)/);
+  const start = script.indexOf("function completionColorClass(percent){");
+  const end = script.indexOf("\nfunction renderStats()", start);
+  assert.ok(start >= 0 && end > start);
+  const sandbox = {};
+  vm.runInNewContext(script.slice(start, end) + "\nthis.getColorClass=completionColorClass;", sandbox);
+  assert.equal(sandbox.getColorClass(0), "is-low");
+  assert.equal(sandbox.getColorClass(39), "is-low");
+  assert.equal(sandbox.getColorClass(40), "is-medium");
+  assert.equal(sandbox.getColorClass(79), "is-medium");
+  assert.equal(sandbox.getColorClass(80), "is-high");
+  assert.equal(sandbox.getColorClass(100), "is-high");
+  assert.equal(sandbox.getColorClass(140), "is-high");
+  assert.equal(sandbox.getColorClass(-10), "is-low");
+});
+
 test("exam-deadline schedule finishes the final review by the configured target date", () => {
   const start = script.indexOf("function addDaysToDateKey(dateKey,days){");
   const end = script.indexOf("function getStudyPlanProgressDateKey(entry){", start);
