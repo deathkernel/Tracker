@@ -1739,7 +1739,8 @@ function setWorkspaceView(view){
  };
  const activeView=titles[view]?view:"overview";
  document.body.dataset.view=activeView;
- document.querySelectorAll("[data-page]").forEach(card=>{card.hidden=card.dataset.page!==activeView});
+ window.trackerView=activeView;
+ document.querySelectorAll("[data-page]").forEach(page=>{const visible=page.dataset.page===activeView;page.hidden=!visible;page.setAttribute("aria-hidden",String(!visible))});
  document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input=>{input.checked=input.value===activeView});
  $("pageTitle").textContent=titles[activeView];
  $("pageHint").textContent=descriptions[activeView];
