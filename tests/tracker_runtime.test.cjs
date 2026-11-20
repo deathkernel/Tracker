@@ -36,6 +36,14 @@ test("subject rotation interleaves subjects without changing saved topic indexes
   assert.deepEqual(Array.from(rotated, entry => entry.scheduleIndex), [0,1,2,3,4]);
   assert.deepEqual(Array.from(rotated.slice(0,3), entry => entry.subject), ["Polity","History","Economy"]);
 });
+
+test("first schedule day includes multiple rotated subjects without date gaps", () => {
+  const start = script.indexOf("function studyPlanDateOffset(entry){");
+  const end = script.indexOf("\nfunction getStudyPlanDateKey(entry){", start);
+  assert.ok(start >= 0 && end > start);
+  const dateOffset = script.slice(start, end);
+  assert.match(dateOffset, /Math\.floor\(scheduleIndex\*finalStudyOffset\/\(STUDY_PLAN_TOPICS\.length-1\)\)/);
+});
 test("topic checklists render under Daily routine, not Today’s study cycle", () => {
   const routine = script.slice(script.indexOf("function renderDaily(){"), script.indexOf("\nfunction renderSubjectOverview(){"));
   const cycle = script.slice(script.indexOf("function renderOverviewSchedule(){"), script.indexOf("\nfunction renderRoadmap(){"));
