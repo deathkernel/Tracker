@@ -138,7 +138,7 @@ test("PYQ completion indicator color follows completed-topic percentage", () => 
 
 test("target date validation protects the two-phase schedule capacity", () => {
   const start = script.indexOf("function isValidTargetDate(value){");
-  const end = script.indexOf("\\nfunction getMinimumTargetDateKey", start);
+  const end = script.indexOf("\nfunction getMinimumTargetDateKey", start);
   assert.ok(start >= 0 && end > start);
   const sandbox = {
     CYCLE_START_DATE: "2026-11-20",
@@ -246,7 +246,7 @@ test("checklist completion helper requires every item in the selected phase", ()
 
 test("Missing Topics resolves shuffled schedule rows by stable original plan index", () => {
   const start = script.indexOf("function getStudyPlanEntryByPlanIndex(planIndex,phase){");
-  const end = script.indexOf("\\nfunction studyPlanDateOffset", start);
+  const end = script.indexOf("\nfunction studyPlanDateOffset", start);
   assert.ok(start >= 0 && end > start);
   const entries = [
     { planIndex: 1, phase: "study", topic: "second" },
@@ -261,7 +261,7 @@ test("Missing Topics resolves shuffled schedule rows by stable original plan ind
   );
   assert.equal(sandbox.lookup(0, "study").topic, "first");
   assert.equal(sandbox.lookup(1, "mcq_revision").topic, "second revision");
-  const missing = script.slice(script.indexOf("function renderMissingTopics()"), script.indexOf("\\nfunction renderRevision()", script.indexOf("function renderMissingTopics()")));
+  const missing = script.slice(script.indexOf("function renderMissingTopics()"), script.indexOf("\nfunction renderRevision()", script.indexOf("function renderMissingTopics()")));
   assert.match(missing, /getStudyPlanEntryByPlanIndex\(planIndex,"study"\)/);
   assert.match(missing, /getStudyPlanEntryByPlanIndex\(planIndex,"mcq_revision"\)/);
   assert.doesNotMatch(missing, /DAILY_STUDY_PLAN\[planIndex\*2/);
