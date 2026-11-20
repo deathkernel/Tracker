@@ -767,3 +767,13 @@ test("legacy recovery never overrides a deliberate versioned empty progress rese
   assert.equal(Object.keys(current.topics).length, 0);
   assert.equal(sandbox.recoveredLegacyProgress, false);
 });
+
+
+
+test("LAN API calls use a per-tab bearer token captured from the QR URL fragment", () => {
+  assert.match(script, /const LAN_ACCESS_TOKEN_KEY="tracker-lan-access-token"/);
+  assert.match(script, /new URLSearchParams\(window\.location\.hash\.slice\(1\)\)\.get\("access_token"\)/);
+  assert.match(script, /window\.history\.replaceState\(null,"",window\.location\.pathname\+window\.location\.search\)/);
+  assert.match(script, /headers\.set\("Authorization","Bearer "\+token\)/);
+  assert.doesNotMatch(script, /fetch\("\/api\/(?:state|study\/review-batch|network-info)"/);
+});

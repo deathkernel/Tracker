@@ -1,24 +1,29 @@
 from __future__ import annotations
 
+import hmac
+import ipaddress
 import json
 import os
+import secrets
 import socket
-from contextlib import asynccontextmanager, contextmanager
 import sqlite3
+from contextlib import asynccontextmanager, contextmanager
+from urllib.parse import quote, urlsplit, urlunsplit
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, Response
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, JSONResponse, Response
 
 from revision_engine import next_revision_schedule, next_retest_schedule, update_mastery_progress
 from pydantic import BaseModel, ConfigDict, Field
 
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR / "tracker.db"
+DB_PATH = Path(os.environ.get("TRACKER_DB_PATH", str(BASE_DIR / "tracker.db")))
 INDEX_PATH = BASE_DIR / "index.html"
+LAN_ACCESS_TOKEN = os.environ.get("TRACKER_ACCESS_TOKEN") or secrets.token_urlsafe(32)
 STUDY_CYCLE_START_DATE = date(2026, 11, 20)
 MIN_STUDY_WINDOW_DAYS = 95  # 189 planned units, with at most two new topics per day.
 
@@ -49,6 +54,43 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="UPSC 2027 Tracker", version="1.1.0", lifespan=lifespan)
+
+
+def is_loopback_request(request: Request) -> bool:
+    client = request.client
+    if client is None:
+        return False
+    try:
+        address = ipaddress.ip_address(client.host)
+    except ValueError:
+        return False
+    if isinstance(address, ipaddress.IPv6Address) and address.ipv4_mapped is not None:
+        address = address.ipv4_mapped
+    return address.is_loopback
+
+
+@app.middleware("http")
+async def protect_lan_api(request: Request, call_next):
+    public_local_network_endpoints = {"/api/network-info", "/api/qr-code"}
+    if (
+        request.url.path.startswith("/api/")
+        and request.url.path not in public_local_network_endpoints
+        and not is_loopback_request(request)
+    ):
+        supplied = request.headers.get("authorization", "")
+        expected = f"Bearer {LAN_ACCESS_TOKEN}"
+        if not hmac.compare_digest(supplied, expected):
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "detail": (
+                        "Tracker data is protected on the local network. "
+                        "Scan the phone-access QR code from the host PC."
+                    )
+                },
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+    return await call_next(request)
 
 
 def connect_database() -> sqlite3.Connection:
@@ -136,12 +178,22 @@ def network_info() -> dict[str, Any]:
 
 
 @app.get("/api/qr-code")
-def qr_code(url: str) -> Response:
+def qr_code(url: str, request: Request) -> Response:
+    if not is_loopback_request(request):
+        raise HTTPException(
+            status_code=403,
+            detail="Generate the phone-access QR code from the Tracker host PC.",
+        )
+    parts = urlsplit(url)
+    if parts.scheme not in {"http", "https"} or not parts.netloc:
+        raise HTTPException(status_code=422, detail="A valid HTTP(S) URL is required.")
+    destination = urlunsplit((parts.scheme, parts.netloc, parts.path, parts.query, ""))
+    destination += f"#access_token={quote(LAN_ACCESS_TOKEN, safe='')}"
     from io import BytesIO
     import qrcode
     from qrcode.image.svg import SvgPathImage
 
-    image = qrcode.make(url, image_factory=SvgPathImage, box_size=8, border=4)
+    image = qrcode.make(destination, image_factory=SvgPathImage, box_size=8, border=4)
     output = BytesIO()
     image.save(output)
     return Response(content=output.getvalue(), media_type="image/svg+xml")
