@@ -520,9 +520,10 @@ body.dark .today-topic-card .focus-desc{color:var(--muted)}
  *,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}
 }
 
+[data-page][hidden]{display:none!important}
 </style>
 </head>
-<body>
+<body data-view="overview">
 <div class="shell">
 <header class="header">
  <div class="brand"><div class="mark">UP</div><div><div class="eyebrow">Personal study workspace</div><h1>UPSC Prelims 2027</h1><p class="subtitle">Plan your day. Track every topic. Review your progress.</p></div></div>
@@ -571,7 +572,7 @@ body.dark .today-topic-card .focus-desc{color:var(--muted)}
 </section>
 <div class="main-grid nav-mode">
 <main>
- <section class="settings-page" data-page="settings">
+ <section class="settings-page" data-page="settings" hidden>
  <div class="settings-intro"><div><div class="eyebrow">PERSONAL WORKSPACE</div><h2>Settings & customization</h2><p class="subtitle">Manage your study targets, appearance and personal study tools.</p></div><input class="theme-checkbox" type="checkbox" id="themeToggle" aria-label="Toggle color theme"></div>
  <section class="settings-section"><div class="settings-section-head"><span class="settings-icon">◐</span><div><h3>Appearance</h3><p>Choose how Tracker looks on this device.</p></div></div><div class="settings-option-row"><div><strong>Color theme</strong><small>PC and phone themes can be customized independently.</small></div><span class="settings-live-note">Device-specific</span></div></section>
  <section class="settings-section"><div class="settings-section-head"><span class="settings-icon">◎</span><div><h3>Study goals</h3><p>Set the target date and your daily study commitment.</p></div></div><div class="settings-grid"><div class="field"><label for="targetDate">Prelims target date</label><input type="date" id="targetDate" value="2027-05-23"></div><div class="field"><label for="studyGoal">Daily study goal (hours)</label><input type="number" id="studyGoal" min="1" max="16" step="0.5" value="4"></div></div></section>
@@ -597,24 +598,24 @@ body.dark .today-topic-card .focus-desc{color:var(--muted)}
   <div class="card-head"><h2>Subject progress</h2><span class="chip" id="subjectCount">9 subjects</span></div>
   <div class="subject-grid" id="subjectOverview"></div>
  </section>
- <section class="card" data-page="missing">
+ <section class="card" data-page="missing" hidden>
   <div class="card-head"><div><h2>Missing Topics</h2><p class="small-note">Only past scheduled topics with incomplete study or MCQ + revision are shown. Today’s and future topics stay out of this list.</p></div><span class="chip" id="missingTopicCount">0 remaining</span></div>
   <div class="toolbar"><input id="missingTopicSearch" type="search" placeholder="Search missing topics…"><select id="missingSubjectFilter"><option value="all">All subjects</option></select><select id="missingPriorityFilter"><option value="all">All overdue phases</option><option value="study">Study pending</option><option value="mcq_revision">MCQ + Revision pending</option></select></div>
   <div id="missingTopicList"></div>
  </section>
- <section class="card" data-page="syllabus">
+ <section class="card" data-page="syllabus" hidden>
   <div class="card-head"><h2>PYQ topic checklist</h2><span class="chip" id="topicCompletion">0 of 65</span></div>
   <div class="toolbar"><input id="topicSearch" type="search" placeholder="Search topics…"><select id="subjectFilter"><option value="all">All subjects</option></select><select id="topicStatus"><option value="all">All topics</option><option value="pending">Pending</option><option value="done">Completed</option></select></div>
   <div id="topicChecklist"></div>
   <p class="small-note">Mapped question counts are approximate editorial classifications, not official UPSC topic-wise counts. Mark a topic complete after concept study, PYQs and a quick revision.</p>
  </section>
- <section class="card" data-page="revision">
+ <section class="card" data-page="revision" hidden>
   <div class="card-head"><h2>Topics to revise</h2><span class="chip" id="revisionCount">0 completed topics</span></div>
   <div class="toolbar"><input id="revisionSearch" type="search" placeholder="Search completed topics…"><select id="revisionSubject"><option value="all">All subjects</option></select><select id="revisionStatus"><option value="all">All revision status</option><option value="pending">Needs revision</option><option value="done">Revised</option></select></div>
   <div id="revisionChecklist"></div>
   <p class="small-note">Every topic you complete in Syllabus or through the daily study plan appears here automatically. Revision ticks are separate from original completion.</p>
  </section>
- <section class="card" data-page="charts">
+ <section class="card" data-page="charts" hidden>
   <div class="card-head"><h2>Preparation analytics</h2><span class="chip" id="chartsUpdated">Live progress</span></div>
   <p class="page-hint">All charts update automatically when you complete topics, revisions, daily tasks or save study logs.</p>
   <div class="exam-chart-grid" id="examCountdownCharts"></div>
@@ -626,7 +627,7 @@ body.dark .today-topic-card .focus-desc{color:var(--muted)}
  </section>
 </main>
 <aside>
- <section class="card study-log-entry" data-page="logs">
+ <section class="card study-log-entry" data-page="logs" hidden>
  <div class="card-head"><div><div class="eyebrow">DAILY TRACKING</div><h2>Log your study session</h2><p class="subtitle">Record your effort and keep your preparation consistent.</p></div><span class="chip">Study log</span></div>
  <div class="log-entry-grid">
   <div class="field"><label for="logDate">Study date</label><input type="date" id="logDate"></div>
@@ -637,11 +638,11 @@ body.dark .today-topic-card .focus-desc{color:var(--muted)}
  </div>
  <div class="form-actions log-form-actions"><button class="btn primary" id="saveLog">Save study log</button><button class="btn" id="clearLog">Clear fields</button></div>
 </section>
- <section class="card" data-page="plan">
+ <section class="card" data-page="plan" hidden>
   <div class="card-head"><h2>Study roadmap</h2><span class="chip">27 weeks</span></div>
   <div class="week-list" id="roadmap"></div>
  </section>
- <section class="card" data-page="logs">
+ <section class="card" data-page="logs" hidden>
   <div class="card-head"><div><div class="eyebrow">YOUR ACTIVITY</div><h2>Study history</h2><p class="subtitle">Review and edit your recent study records.</p></div><button class="btn" id="importBtn">Import backup</button></div>
  <div class="log-summary-grid"><div class="log-summary-item"><span>Total study hours</span><strong id="logTotalHours">0h</strong></div><div class="log-summary-item"><span>MCQs solved</span><strong id="logTotalMcqs">0</strong></div><div class="log-summary-item"><span>Logged days</span><strong id="logDaysCount">0</strong></div></div>
  <div class="log-list" id="recentLogs"><div class="empty">No logs saved yet.</div></div>
@@ -658,6 +659,16 @@ body.dark .today-topic-card .focus-desc{color:var(--muted)}
 <div class="toast" id="toast"></div>
 <script>
 "use strict";
+const workspaceNavigation = document.getElementById("workspaceNav");
+workspaceNavigation?.addEventListener("click", event => {
+ const label = event.target?.closest?.("label.cir-tabs__t");
+ if (!label || !workspaceNavigation.contains(label)) return;
+ const input = document.getElementById(label.htmlFor);
+ if (!input || input.type !== "radio" || input.name !== "workspace-view") return;
+ input.checked = true;
+ window.trackerView = input.value;
+ setWorkspaceView(input.value);
+});
 const SUBJECTS=[{"name":"History","topics":[["Modern India",91,"P1"],["Ancient Medieval",53,"P1"],["Indus Valley Sites",null,"P2"],["Harappan Culture",null,"P2"],["Early Vedic Period",null,"P2"],["Later Vedic Period",null,"P2"],["Mahajanapadas",null,"P2"],["Buddhist Councils",null,"P2"],["Buddhist Philosophy",null,"P2"],["Jain Sects",null,"P2"],["Mauryan Administration",null,"P2"],["Ashoka's Edicts",null,"P2"],["Post-Mauryan Kingdoms",null,"P2"],["Sangam Age",null,"P2"],["Gupta Administration",null,"P2"],["Harsha",null,"P2"],["Ancient Universities",null,"P2"],["Ancient Science",null,"P2"],["Rock-cut Architecture",null,"P2"],["Chola Administration",null,"P2"],["Delhi Sultanate",null,"P2"],["Vijayanagara Empire",null,"P2"],["Bahmani Kingdom",null,"P2"],["Mughal Mansabdari",null,"P2"],["Mughal Revenue System",null,"P2"],["Bhakti Movement",null,"P2"],["Sufi Orders",null,"P2"],["Rise of British Power and Expansion",null,"P2"],["Economic Impact of British Rule",null,"P2"],["Revolt of 1857",null,"P2"],["Administrative Changes after 1857",null,"P2"],["Socio-Religious Reform Movements",null,"P2"],["Education, Press and Intellectual Awakening",null,"P2"],["Formation of INC and Early Nationalism",null,"P2"],["Moderates and Extremists",null,"P2"],["Partition of Bengal and Swadeshi Movement",null,"P2"],["Revolutionary Activities and Home Rule",null,"P2"],["Gandhian Movements 1918–1922",null,"P2"],["National Movement 1923–1929",null,"P2"],["Prehistoric Cultures and Ancient Sites",null,"P2"],["Ancient Ports, Sites and Important Terms",null,"P2"],["Regional Kingdoms Overview",null,"P2"],["Mughal Rulers",null,"P2"],["Early Medieval Regional Powers",null,"P2"],["Medieval Architecture, Literature and Sources",null,"P2"]]},{"name":"Economy","topics":[["Money and Banking",63,"P1"],["Economic Planning",42,"P1"],["International Trade",40,"P1"],["Agriculture",31,"P1"],["Balance of Payments",14,"P1"],["Subsidies Welfare",12,"P1"],["Government Budget",11,"P1"],["Industrial Policy",6,"P1"],["National Income Accounting",5,"P1"],["Poverty Inequality",5,"P1"],["RBI Monetary Tools",null,"P2"],["Repo and Reverse Repo",null,"P2"],["CRR and SLR",null,"P2"],["Open Market Operations",null,"P2"],["Bank Regulation",null,"P2"],["NPAs",null,"P2"],["Priority Sector Lending",null,"P2"],["Payment Banks",null,"P2"],["Digital Payments and UPI",null,"P2"],["Financial Inclusion",null,"P2"],["Money Supply",null,"P2"],["CPI and WPI",null,"P2"],["Inflation Types",null,"P2"],["Fiscal Policy",null,"P2"],["Government Receipts",null,"P2"],["Direct and Indirect Taxes",null,"P2"],["GST",null,"P2"],["Public Debt",null,"P2"],["Disinvestment",null,"P2"],["Current Account",null,"P2"],["Capital Account",null,"P2"],["Exchange Rates",null,"P2"],["Forex Reserves",null,"P2"],["FDI and FPI",null,"P2"],["Trade Deficit",null,"P2"],["Trade Agreements and Trade Barriers",null,"P2"],["Export Promotion",null,"P2"],["IMF and World Bank",null,"P2"],["GDP and GVA",null,"P2"],["National Income",null,"P2"],["Capital Market and Securities",null,"P2"],["Money Market and Financial Instruments",null,"P2"],["Economic Reports and Schemes",null,"P2"],["Economic Indicators and Indices",null,"P2"]]},{"name":"Polity","topics":[["Governance",44,"P1"],["Fundamental Rights",25,"P1"],["Statutory Bodies",20,"P1"],["Judiciary",19,"P1"],["Executive",14,"P1"],["Federalism",13,"P1"],["Legislature",11,"P1"],["Philosophy of Constitution",7,"P1"],["Political Process",6,"P1"],["Constitutional Bodies",6,"P1"],["Polity International Relations",6,"P1"],["Election System",5,"P1"],["Scheduled Tribal Areas",5,"P1"],["Constitutional development",null,"P2"],["Constituent Assembly",null,"P2"],["Preamble",null,"P2"],["Union and Territory",null,"P2"],["Citizenship",null,"P2"],["Right to Equality",null,"P2"],["Right to Freedom",null,"P2"],["Right against Exploitation",null,"P2"],["Freedom of Religion",null,"P2"],["Cultural and Educational Rights",null,"P2"],["Constitutional Remedies and Writs",null,"P2"],["DPSP",null,"P2"],["Fundamental Duties",null,"P2"],["Basic Structure",null,"P2"],["Constitutional Amendments",null,"P2"],["Parliamentary Privileges",null,"P2"],["Lok Sabha",null,"P2"],["Rajya Sabha",null,"P2"],["Money Bill and Finance Bill",null,"P2"],["Parliamentary Committees",null,"P2"],["Anti-Defection Law",null,"P2"],["President",null,"P2"],["Vice-President",null,"P2"],["Prime Minister and Council",null,"P2"],["Governor",null,"P2"],["State Council of Ministers",null,"P2"],["Supreme Court",null,"P2"],["High Courts",null,"P2"],["Judicial Review",null,"P2"],["Tribunals",null,"P2"],["Emergency Provisions",null,"P2"],["Systems of Government",null,"P2"]]},{"name":"Environment","topics":[["Ecosystem",42,"P1"],["Biodiversity",36,"P1"],["Climate Change",30,"P1"],["Conservation",23,"P1"],["Environmental Issues",17,"P1"],["International Conventions",7,"P1"],["Food Chains and Webs",null,"P2"],["Ecological Pyramids",null,"P2"],["Energy Flow",null,"P2"],["Ecological Succession",null,"P2"],["Biomes",null,"P2"],["Species Interactions",null,"P2"],["Invasive Species",null,"P2"],["IUCN Categories",null,"P2"],["Keystone Species",null,"P2"],["Biodiversity Hotspots",null,"P2"],["Genetic Diversity",null,"P2"],["Biosphere Reserves",null,"P2"],["National Parks",null,"P2"],["Wildlife Sanctuaries",null,"P2"],["Ramsar Wetlands",null,"P2"],["Mangroves",null,"P2"],["Coral Conservation",null,"P2"],["Forest Conservation",null,"P2"],["Wildlife Protection Act",null,"P2"],["Forest Laws",null,"P2"],["Environment Protection Act",null,"P2"],["Biological Diversity Act",null,"P2"],["Environmental Impact Assessment",null,"P2"],["Air Pollution",null,"P2"],["Water Pollution",null,"P2"],["Soil Pollution",null,"P2"],["Noise Pollution",null,"P2"],["Renewable Energy and Sustainability",null,"P2"],["Environmental Reports and Indices",null,"P2"],["Agriculture and Environment",null,"P2"]]},{"name":"Geography","topics":[["Physical Geography",34,"P1"],["Climatology",21,"P1"],["Settlements",19,"P1"],["Human Geography",15,"P1"],["Population",15,"P1"],["India Water Resources",14,"P1"],["Hydrosphere",6,"P1"],["Geomorphology",6,"P1"],["Atmosphere",6,"P1"],["India Population",5,"P1"],["Earth Interior",null,"P2"],["Plate Tectonics",null,"P2"],["Continental Drift",null,"P2"],["Volcanoes and Earthquakes",null,"P2"],["Weathering",null,"P2"],["Fluvial Landforms",null,"P2"],["Glacial Landforms",null,"P2"],["Coastal Landforms",null,"P2"],["Atmospheric Layers",null,"P2"],["Heat Budget",null,"P2"],["Temperature Inversion",null,"P2"],["Pressure Belts",null,"P2"],["Jet Streams",null,"P2"],["Monsoon Mechanism",null,"P2"],["Western Disturbances",null,"P2"],["Cyclones",null,"P2"],["Air Masses",null,"P2"],["Clouds and Rainfall",null,"P2"],["Ocean Floor",null,"P2"],["Ocean Currents",null,"P2"],["Tides",null,"P2"],["Coral Reefs",null,"P2"],["El Nino and La Nina",null,"P2"],["Indian Drainage",null,"P2"],["Indian Soils",null,"P2"],["Natural Vegetation",null,"P2"],["World Mapping",null,"P2"],["Indian Mapping",null,"P2"],["Resources, Industries and Transport",null,"P2"],["Agriculture and Land Use",null,"P2"]]},{"name":"Science & Technology","topics":[["Space and Defence",27,"P1"],["Human Health",26,"P1"],["Digital and IT",18,"P1"],["Basic Science",17,"P1"],["Energy Tech",16,"P1"],["Emerging Tech",15,"P1"],["Ecology",13,"P1"],["Biotechnology",11,"P1"],["Food Production",8,"P1"],["Cell Biology",null,"P2"],["DNA and RNA",null,"P2"],["Genetic Engineering",null,"P2"],["CRISPR",null,"P2"],["Stem Cells",null,"P2"],["Vaccines",null,"P2"],["Immune System",null,"P2"],["Antibiotic Resistance",null,"P2"],["Pathogens",null,"P2"],["Medical Diagnostics",null,"P2"],["Nutrition and Deficiency",null,"P2"],["Communicable Diseases",null,"P2"],["Non-communicable Diseases",null,"P2"],["Human Physiology",null,"P2"],["Biotechnology Applications",null,"P2"],["Bioinformatics",null,"P2"],["Synthetic Biology",null,"P2"],["Nanomaterials",null,"P2"],["Semiconductors",null,"P2"],["Artificial Intelligence",null,"P2"],["Quantum Computing",null,"P2"],["Blockchain",null,"P2"],["Cybersecurity",null,"P2"],["5G Technology",null,"P2"],["Internet of Things",null,"P2"],["Nuclear Technology and Applications",null,"P2"]]},{"name":"International Relations","topics":[["United Nations",null,"P2"],["UN Security Council",null,"P2"],["WTO",null,"P2"],["IMF",null,"P2"],["World Bank",null,"P2"],["ASEAN",null,"P2"],["SAARC",null,"P2"],["BIMSTEC",null,"P2"],["BRICS",null,"P2"],["G20",null,"P2"],["International Court of Justice",null,"P2"],["International Criminal Court",null,"P2"]]},{"name":"Art & Culture","topics":[["Classical Dances",null,"P2"],["Folk Dances",null,"P2"],["Hindustani Music",null,"P2"],["Carnatic Music",null,"P2"],["Musical Instruments",null,"P2"],["Miniature Paintings",null,"P2"],["Mural Traditions",null,"P2"],["Buddhist Architecture",null,"P2"],["Jain Architecture",null,"P2"],["Nagara Temples",null,"P2"],["Dravida Temples",null,"P2"],["Vesara Temples",null,"P2"],["Indo-Islamic Architecture",null,"P2"],["UNESCO Heritage",null,"P2"]]},{"name":"Current-linked GS","topics":[["Government Schemes",null,"P2"],["International Reports",null,"P2"],["Indian Government Reports",null,"P2"],["Places in News",null,"P2"],["Species in News",null,"P2"],["Protected Areas in News",null,"P2"],["Space Missions in News",null,"P2"],["International Summits",null,"P2"],["Global Declarations",null,"P2"],["National Missions",null,"P2"],["Health Initiatives",null,"P2"],["Climate Initiatives",null,"P2"],["Energy Initiatives",null,"P2"],["Defence Developments",null,"P2"],["Digital Governance",null,"P2"],["Agriculture Initiatives",null,"P2"],["Social Sector Programmes",null,"P2"],["Important Indices",null,"P2"],["International Groupings",null,"P2"],["Current Science Developments",null,"P2"]]}];
 const ROADMAP=[
 ["17–23 Nov 2026","Polity","Constitution, Preamble, Parliament, Fundamental Rights, Miscellaneous Acts"],
