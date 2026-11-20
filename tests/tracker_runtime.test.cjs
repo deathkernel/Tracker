@@ -134,6 +134,37 @@ test("subject progress crosswalk targets only existing canonical syllabus topics
   assert.deepEqual(invalid, []);
 });
 
+test("Polity study-plan completion only marks topics covered by that lesson", () => {
+  const subjectData = JSON.parse(script.match(/const SUBJECTS=(\[[\s\S]*?\]);\r?\nconst ROADMAP/)[1]);
+  const resolverStart = script.indexOf("function normalizePlanTopic(");
+  const resolverEnd = script.indexOf("\nfunction syncSyllabusCompletionToStudyPlan", resolverStart);
+  assert.ok(resolverStart >= 0 && resolverEnd > resolverStart);
+  const sandbox = { SUBJECTS: subjectData, allSubjects: () => subjectData };
+  vm.runInNewContext(
+    script.slice(resolverStart, resolverEnd) + "\nthis.resolve=findMatchingSyllabusTopics;",
+    sandbox
+  );
+
+  assert.deepEqual(
+    Array.from(sandbox.resolve("Polity", "Constitutional development and historical background")),
+    ["Polity::Constitutional development"]
+  );
+  assert.deepEqual(
+    Array.from(sandbox.resolve("Polity", "Fundamental Rights: key cases + Basic Structure doctrine + PYQs")),
+    ["Polity::Fundamental Rights", "Polity::Basic Structure"]
+  );
+  assert.deepEqual(
+    Array.from(sandbox.resolve("Polity", "Parliament: legislative procedure, Constitutional Amendments + PYQs")),
+    [
+      "Polity::Legislature",
+      "Polity::Money Bill and Finance Bill",
+      "Polity::Parliamentary Committees",
+      "Polity::Anti-Defection Law",
+      "Polity::Constitutional Amendments"
+    ]
+  );
+});
+
 test("subject progress mapping supports explicit multi-topic aliases and safe exact fallback", () => {
   assert.match(script, /function findMatchingSyllabusTopics\(subject,topic\)/);
   assert.match(script, /const validKeys=new Set\(allSubjects\(\)\.flatMap/);
