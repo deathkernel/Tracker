@@ -622,7 +622,7 @@ test("workspace navigation keeps page content below navigation and scopes dashbo
   const navEnd = html.indexOf("</nav>", navStart);
   const headingStart = html.indexOf('<section class="page-context"');
   const mainStart = html.indexOf("<main>", navEnd);
-  const settingsStart = html.indexOf('<section class="settings-page" data-page="settings">');
+  const settingsStart = html.indexOf('<section class="settings-page" data-page="settings"');
   assert.ok(navStart >= 0 && navEnd > navStart);
   assert.ok(navEnd < headingStart && headingStart < mainStart);
   assert.ok(mainStart < settingsStart);
