@@ -135,3 +135,35 @@ test("completed and missed labels meet WCAG AA contrast for normal text", () => 
   assert.ok(contrastRatio("#526b5b", "#ffffff") >= 4.5);
   assert.ok(contrastRatio("#80551e", "#fff8f6") >= 4.5);
 });
+
+test("Uiverse Halo checkbox is the shared accessible completion control", () => {
+  const helperStart = html.indexOf("function createAnimatedCheckbox");
+  const helperEnd = html.indexOf("\\nfunction getTodayStudyActivities", helperStart);
+  assert.ok(helperStart >= 0 && helperEnd > helperStart);
+  const helper = html.slice(helperStart, helperEnd);
+  assert.match(helper, /wrapper\\.className="uiverse-checkbox"/);
+  assert.match(helper, /input\\.className="uiverse-checkbox__input"/);
+  assert.match(helper, /input\\.setAttribute\\("aria-label",ariaLabel\\)/);
+  assert.match(helper, /wrapper\\.append\\(input,mark\\)/);
+
+  const phaseStart = html.indexOf("function renderPhaseChecklist");
+  const phaseEnd = html.indexOf("\\nfunction ", phaseStart + 1);
+  assert.ok(phaseStart >= 0 && phaseEnd > phaseStart);
+  const phase = html.slice(phaseStart, phaseEnd);
+  assert.match(phase, /createAnimatedCheckbox\\(!!progress\\[field\\]\\?\\.\\[id\\],labelText\\+" · "\\+entry\\.topic\\)/);
+  assert.match(phase, /input\\.disabled=phaseDone\\|\\|locked/);
+  assert.match(phase, /row\\.append\\(check\\.wrapper,label\\)/);
+  assert.doesNotMatch(phase, /document\\.createElement\\("input"\\)/);
+
+  assert.match(css, /\\.uiverse-checkbox__input:checked\\+\\.uiverse-checkbox__mark/);
+  assert.match(css, /\\.uiverse-checkbox__input:focus-visible/);
+  assert.match(css, /\\.phase-check \\.uiverse-checkbox__input/);
+  assert.match(html, /Halo square checkbox by uiverse-astronaut/);
+});
+
+test("Uiverse checkbox, buttons and page transitions respect reduced motion", () => {
+  assert.match(css, /@keyframes tracker-page-enter/);
+  assert.match(css, /\\.main-grid\\.nav-mode \\[data-page\\]:not\\(\\[hidden\\]\\)\\{animation:tracker-page-enter/);
+  assert.match(css, /\\.btn:active:not\\(:disabled\\)/);
+  assert.match(css, /@media\\(prefers-reduced-motion:reduce\\)\\{[^}]*\\.uiverse-checkbox__input[^}]*animation:none!important/);
+});
