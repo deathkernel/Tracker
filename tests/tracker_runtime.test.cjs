@@ -171,3 +171,37 @@ test("study-plan recall always has a planner mastery fallback for unmapped or in
   assert.match(sync, /if\(!state\.topics\?\.\[key\]\)continue/);
   assert.match(sync, /if\(!trackedCanonical\)await recordMasteryProgress\("plan:"\+entry\.planIndex,quality,false\)/);
 });
+
+test("every curated syllabus topic maps to at least one first-pass study unit", () => {
+  const subjectData = JSON.parse(script.match(/const SUBJECTS=(\\[[\\s\\S]*?\\]);\\r?\\nconst ROADMAP/)[1]);
+  const mappingStart = script.indexOf("function normalizePlanTopic(");
+  const mappingEnd = script.indexOf("\\nfunction findMatchingSyllabusTopic(", mappingStart);
+  assert.ok(mappingStart >= 0 && mappingEnd > mappingStart);
+  const mappingSandbox = { SUBJECTS: subjectData, allSubjects: () => subjectData };
+  vm.runInNewContext(
+    script.slice(mappingStart, mappingEnd) + "\\nthis.resolve=findMatchingSyllabusTopics;",
+    mappingSandbox
+  );
+
+  const planStart = script.indexOf("const BASE_STUDY_PLAN=");
+  const planEnd = script.indexOf(";\\nconst STUDY_PLAN_TOPICS", planStart);
+  assert.ok(planStart >= 0 && planEnd > planStart);
+  const planSandbox = {};
+  vm.runInNewContext(
+    script.slice(planStart, planEnd) +
+      "\\nthis.studyUnits=BASE_STUDY_PLAN.flatMap(group=>group.days.map(topic=>({subject:group.subject,topic})));",
+    planSandbox
+  );
+  const firstPassUnits = planSandbox.studyUnits.filter(unit =>
+    !["Revision", "Full GS Revision", "Mock Tests", "Final Revision"].includes(unit.subject)
+  );
+  const missing = subjectData.flatMap(subject =>
+    subject.topics
+      .filter(([topic]) => !firstPassUnits.some(unit =>
+        mappingSandbox.resolve(unit.subject, unit.topic).includes(subject.name + "::" + topic)
+      ))
+      .map(([topic]) => subject.name + "::" + topic)
+  );
+
+  assert.deepEqual(missing, [], "Unmapped syllabus topics: " + missing.join(", "));
+});
