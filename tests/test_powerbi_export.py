@@ -191,4 +191,17 @@ def test_power_bi_schema_includes_mastery_retest_and_recovery_tables():
     assert "Mastery" in exporter.CSV_COLUMNS
     assert "RetestSchedule" in exporter.CSV_COLUMNS
     assert "RecoveryQueue" in exporter.CSV_COLUMNS
+    assert "PlanTopics" in exporter.CSV_COLUMNS
     assert "PlanKey" in exporter.CSV_COLUMNS["StudyPlan"]
+    assert "PlanKey" in exporter.CSV_COLUMNS["RecoveryQueue"]
+
+
+def test_recovery_queue_rows_keep_topic_level_plan_keys():
+    html = '''
+const BASE_STUDY_PLAN=[
+{subject:"Polity",days:["Constitution"]}
+];
+'''
+    rows = exporter.build_study_plan_rows(html, {})
+    assert rows[0]["PlanKey"] == "plan:0"
+    assert rows[1]["PlanKey"] == "plan:0"
