@@ -115,6 +115,15 @@ CSV_COLUMNS = {
 }
 
 
+def sanitize_csv_value(value: Any) -> Any:
+    """Prevent spreadsheet applications from evaluating untrusted text as a formula."""
+    if not isinstance(value, str):
+        return value
+    if re.match(r"^[\s\x00-\x1f]*[=+\-@]", value):
+        return "'" + value
+    return value
+
+
 def write_csv(name: str, rows: list[dict[str, Any]]) -> None:
     if name not in CSV_COLUMNS:
         raise ValueError(f"Unknown Power BI table: {name}")
@@ -122,7 +131,11 @@ def write_csv(name: str, rows: list[dict[str, Any]]) -> None:
     with path.open("w", newline="", encoding="utf-8-sig") as file:
         writer = csv.DictWriter(file, fieldnames=CSV_COLUMNS[name], extrasaction="ignore")
         writer.writeheader()
-        writer.writerows(rows)
+        safe_rows = (
+            {key: sanitize_csv_value(value) for key, value in row.items()}
+            for row in rows
+        )
+        writer.writerows(safe_rows)
     print(f"{path.name}: {len(rows)} rows")
 
 

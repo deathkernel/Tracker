@@ -408,3 +408,44 @@ const BASE_STUDY_PLAN=[
             "Status": "pending",
         },
     ]
+
+
+
+def test_csv_writer_neutralizes_formula_payloads_in_every_text_column(tmp_path, monkeypatch):
+    monkeypatch.setattr(exporter, "OUT", tmp_path)
+    exporter.write_csv("StudyLogs", [
+        {
+            "Date": "2026-11-20",
+            "StudyHours": 2,
+            "MCQs": 10,
+            "CSAT": 20,
+            "Notes": "=HYPERLINK(\"https://example.com\",\"open\")",
+        },
+        {
+            "Date": "2026-11-21",
+            "StudyHours": 1,
+            "MCQs": 5,
+            "CSAT": 10,
+            "Notes": "  +1+1",
+        },
+        {
+            "Date": "2026-11-22",
+            "StudyHours": 1,
+            "MCQs": 5,
+            "CSAT": 10,
+            "Notes": "\t@SUM(A1:A2)",
+        },
+    ])
+
+    with (tmp_path / "StudyLogs.csv").open(encoding="utf-8-sig", newline="") as file:
+        rows = list(csv.DictReader(file))
+
+    assert rows[0]["Notes"].startswith("'=")
+    assert rows[1]["Notes"] == "'  +1+1"
+    assert rows[2]["Notes"] == "'\t@SUM(A1:A2)"
+
+
+def test_csv_formula_sanitizer_preserves_safe_text_and_neutralizes_minus_prefix():
+    assert exporter.sanitize_csv_value("ordinary study note") == "ordinary study note"
+    assert exporter.sanitize_csv_value("-2+3") == "'-2+3"
+    assert exporter.sanitize_csv_value(42) == 42

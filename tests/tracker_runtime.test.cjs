@@ -526,3 +526,92 @@ test("every curated syllabus topic maps to at least one first-pass study unit", 
 
   assert.deepEqual(missing, [], "Unmapped syllabus topics: " + missing.join(", "));
 });
+
+
+
+test("nested backup review records reject malformed and unsafe schedule values", () => {
+  const start = script.indexOf("function isValidDateKey(value){");
+  const end = script.indexOf("const STORE=", start);
+  assert.ok(start >= 0 && end > start);
+  const sandbox = {
+    localDate: () => "2026-11-20",
+    localDateKey: date => [date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-")
+  };
+  vm.runInNewContext(
+    script.slice(start, end) +
+      "\nthis.validate=validateBackupReviewRecords;" +
+      "this.mastery=normalizeMasteryProgress;" +
+      "this.revision=normalizeRevisionSchedule;" +
+      "this.retest=normalizeRetestSchedule;",
+    sandbox
+  );
+
+  assert.throws(() => sandbox.validate({
+    masteryProgress: { "Polity::Rights": { qualityTotal: "Infinity" } }
+  }), /qualityTotal/);
+  assert.throws(() => sandbox.validate({
+    revisionSchedule: { "Polity::Rights": { interval_days: 99999 } }
+  }), /interval_days/);
+  assert.throws(() => sandbox.validate({
+    retestSchedule: { "Polity::Rights": { due_date: "2026-02-30" } }
+  }), /due_date/);
+  assert.throws(() => sandbox.validate({
+    masteryProgress: { "Polity::Rights": null }
+  }), /invalid masteryProgress record/);
+  assert.doesNotThrow(() => sandbox.validate({
+    masteryProgress: {
+      "Polity::Rights": {
+        reviews: 2,
+        qualityTotal: 8,
+        averageQuality: 4,
+        masteryLevel: 2,
+        consecutiveStrong: 1,
+        lastQuality: 4,
+        lastReviewedAt: "2026-11-20"
+      }
+    },
+    revisionSchedule: {
+      "Polity::Rights": {
+        due_date: "2026-11-21",
+        interval_days: 6,
+        repetitions: 2,
+        ease_factor: 2.5
+      }
+    },
+    retestSchedule: {
+      "Polity::Rights": {
+        due_date: "2026-11-23",
+        attempts: 1,
+        interval_days: 3,
+        last_quality: 4,
+        status: "scheduled"
+      }
+    }
+  }));
+
+  const mastery = sandbox.mastery({
+    key: {
+      reviews: 2,
+      qualityTotal: "Infinity",
+      averageQuality: 6,
+      masteryLevel: 99,
+      consecutiveStrong: -1
+    }
+  }).key;
+  assert.equal(mastery.qualityTotal, 0);
+  assert.equal(mastery.averageQuality, 0);
+  assert.equal(mastery.masteryLevel, 0);
+  assert.equal(mastery.consecutiveStrong, 0);
+
+  const revision = sandbox.revision({
+    key: { due_date: "invalid", interval_days: 99999, repetitions: 1000001, ease_factor: 8 }
+  }).key;
+  assert.equal(revision.due_date, "2026-11-20");
+  assert.equal(revision.interval_days, 1);
+  assert.equal(revision.repetitions, 0);
+  assert.equal(revision.ease_factor, 2.5);
+
+  const retest = sandbox.retest({ key: { due_date: "invalid", attempts: -1 } }).key;
+  assert.equal(retest.due_date, "");
+  assert.equal(retest.attempts, 0);
+});

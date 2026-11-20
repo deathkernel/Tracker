@@ -3,7 +3,41 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import math
 from typing import Any
+
+
+MAX_STUDY_REVIEW_COUNT = 1_000_000
+MAX_REVISION_INTERVAL_DAYS = 3_650
+
+
+def _bounded_int(value: Any, default: int, minimum: int, maximum: int) -> int:
+    if isinstance(value, bool):
+        return default
+    try:
+        number = int(value)
+        if isinstance(value, float) and not value.is_integer():
+            return default
+    except (TypeError, ValueError, OverflowError):
+        return default
+    return max(minimum, min(maximum, number))
+
+
+def _bounded_float(
+    value: Any,
+    default: float,
+    minimum: float,
+    maximum: float,
+) -> float:
+    if isinstance(value, bool):
+        return default
+    try:
+        number = float(value)
+    except (TypeError, ValueError, OverflowError):
+        return default
+    if not math.isfinite(number):
+        return default
+    return max(minimum, min(maximum, number))
 
 
 def next_revision_schedule(
@@ -14,19 +48,29 @@ def next_revision_schedule(
     """Return a deterministic SM-2-style next review date for a 0–5 recall score."""
     if isinstance(quality, bool) or not isinstance(quality, int) or not 0 <= quality <= 5:
         raise ValueError("Revision quality must be an integer between 0 and 5.")
-    review_date = datetime.strptime(today, "%Y-%m-%d").date()
+    try:
+        review_date = datetime.strptime(today, "%Y-%m-%d").date()
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Review date must use YYYY-MM-DD.") from exc
     prior = previous if isinstance(previous, dict) else {}
-    try:
-        repetitions = max(0, int(prior.get("repetitions", 0)))
-        interval_days = max(1, int(prior.get("interval_days", 1)))
-    except (TypeError, ValueError, OverflowError):
-        repetitions = 0
-        interval_days = 1
-    try:
-        ease_factor = float(prior.get("ease_factor", 2.5))
-    except (TypeError, ValueError):
-        ease_factor = 2.5
-    ease_factor = max(1.3, min(3.0, ease_factor))
+    repetitions = _bounded_int(
+        prior.get("repetitions", 0),
+        0,
+        0,
+        MAX_STUDY_REVIEW_COUNT,
+    )
+    interval_days = _bounded_int(
+        prior.get("interval_days", 1),
+        1,
+        1,
+        MAX_REVISION_INTERVAL_DAYS,
+    )
+    ease_factor = _bounded_float(
+        prior.get("ease_factor", 2.5),
+        2.5,
+        1.3,
+        3.0,
+    )
 
     difficulty = 5 - quality
     ease_factor = max(
@@ -38,13 +82,16 @@ def next_revision_schedule(
         repetitions = 0
         interval_days = 1
     else:
-        repetitions += 1
+        repetitions = min(MAX_STUDY_REVIEW_COUNT, repetitions + 1)
         if repetitions == 1:
             interval_days = 1
         elif repetitions == 2:
             interval_days = 6
         else:
-            interval_days = max(1, round(interval_days * ease_factor))
+            interval_days = min(
+                MAX_REVISION_INTERVAL_DAYS,
+                max(1, round(interval_days * ease_factor)),
+            )
 
     due_date = review_date + timedelta(days=interval_days)
     return {
@@ -120,36 +167,48 @@ def update_mastery_progress(
         raise ValueError("Review date must use YYYY-MM-DD.") from exc
 
     prior = previous if isinstance(previous, dict) else {}
-    try:
-        reviews = max(0, int(prior.get("reviews", 0)))
-    except (TypeError, ValueError, OverflowError):
-        reviews = 0
-    try:
-        quality_total = float(prior.get("quality_total", prior.get("qualityTotal", 0)))
-    except (TypeError, ValueError, OverflowError):
-        quality_total = 0.0
-    if quality_total < 0 or quality_total != quality_total:
-        quality_total = 0.0
+    reviews = _bounded_int(
+        prior.get("reviews", 0),
+        0,
+        0,
+        MAX_STUDY_REVIEW_COUNT,
+    )
+    quality_total = _bounded_float(
+        prior.get("quality_total", prior.get("qualityTotal", 0)),
+        0.0,
+        0.0,
+        MAX_STUDY_REVIEW_COUNT * 5.0,
+    )
     if quality_total == 0 and reviews:
-        try:
-            quality_total = max(0.0, float(prior.get("average_quality", prior.get("averageQuality", 0)))) * reviews
-        except (TypeError, ValueError, OverflowError):
-            quality_total = 0.0
+        average_quality = _bounded_float(
+            prior.get("average_quality", prior.get("averageQuality", 0)),
+            0.0,
+            0.0,
+            5.0,
+        )
+        quality_total = average_quality * reviews
 
-    try:
-        mastery_level = int(prior.get("mastery_level", prior.get("masteryLevel", 0)))
-    except (TypeError, ValueError, OverflowError):
-        mastery_level = 0
-    mastery_level = max(0, min(5, mastery_level))
-    try:
-        consecutive_strong = max(0, int(prior.get("consecutive_strong", prior.get("consecutiveStrong", 0))))
-    except (TypeError, ValueError, OverflowError):
-        consecutive_strong = 0
+    mastery_level = _bounded_int(
+        prior.get("mastery_level", prior.get("masteryLevel", 0)),
+        0,
+        0,
+        5,
+    )
+    consecutive_strong = _bounded_int(
+        prior.get("consecutive_strong", prior.get("consecutiveStrong", 0)),
+        0,
+        0,
+        MAX_STUDY_REVIEW_COUNT,
+    )
 
-    reviews += 1
-    quality_total += quality
+    reviews = min(MAX_STUDY_REVIEW_COUNT, reviews + 1)
+    quality_total = min(MAX_STUDY_REVIEW_COUNT * 5.0, quality_total + quality)
     mastery_level = max(0, min(5, mastery_level + (1 if quality >= 4 else -1 if quality < 3 else 0)))
-    consecutive_strong = consecutive_strong + 1 if quality >= 4 else 0
+    consecutive_strong = (
+        min(MAX_STUDY_REVIEW_COUNT, consecutive_strong + 1)
+        if quality >= 4
+        else 0
+    )
     return {
         "reviews": reviews,
         "quality_total": quality_total,
@@ -177,12 +236,14 @@ def next_retest_schedule(
         raise ValueError("Review date must use YYYY-MM-DD.") from exc
 
     prior = previous if isinstance(previous, dict) else {}
-    try:
-        attempts = max(0, int(prior.get("attempts", 0)))
-    except (TypeError, ValueError, OverflowError):
-        attempts = 0
+    attempts = _bounded_int(
+        prior.get("attempts", 0),
+        0,
+        0,
+        MAX_STUDY_REVIEW_COUNT,
+    )
     if is_retest:
-        attempts += 1
+        attempts = min(MAX_STUDY_REVIEW_COUNT, attempts + 1)
 
     interval_days = 1 if quality < 3 else 3 if quality < 4 else 7
     return {

@@ -107,3 +107,41 @@ def test_mastery_and_retest_reject_invalid_quality_and_dates():
         update_mastery_progress(None, "20-11-2026", 3)
     with pytest.raises(ValueError, match="between 0 and 5"):
         next_retest_schedule(None, "2026-11-20", 6)
+
+
+
+def test_revision_engine_bounds_extreme_prior_schedule_values():
+    previous = {
+        "repetitions": 10**30,
+        "interval_days": 10**30,
+        "ease_factor": float("inf"),
+    }
+    result = next_revision_schedule("2026-11-20", previous, 4)
+
+    assert result["repetitions"] == 1_000_000
+    assert result["interval_days"] == 3_650
+    assert result["ease_factor"] == 2.5
+    assert result["due_date"] == "2036-11-17"
+
+
+def test_mastery_engine_recovers_from_non_finite_and_out_of_range_prior_values():
+    from revision_engine import update_mastery_progress
+
+    result = update_mastery_progress({
+        "reviews": 1,
+        "quality_total": float("inf"),
+        "average_quality": 4,
+        "mastery_level": 99,
+        "consecutive_strong": 10**30,
+    }, "2026-11-20", 5)
+
+    assert result["reviews"] == 2
+    assert result["quality_total"] == 9
+    assert result["average_quality"] == 4.5
+    assert result["mastery_level"] == 5
+    assert result["consecutive_strong"] == 1_000_000
+
+
+def test_revision_engine_rejects_non_string_review_dates_as_value_errors():
+    with pytest.raises(ValueError, match="YYYY-MM-DD"):
+        next_revision_schedule(None, None, 3)
