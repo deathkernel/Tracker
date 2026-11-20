@@ -25,7 +25,7 @@ body.dark{--bg:#10141d;--surface:#191f2b;--ink:#edf1f8;--muted:#a1acbd;--line:#2
 .data-table-wrap{width:100%;overflow-x:auto;border:1px solid var(--line);border-radius:10px}.data-table{width:100%;border-collapse:collapse;text-align:left;font-size:12px}.data-table th{background:#f5f7fb;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;white-space:nowrap}.data-table th,.data-table td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:middle}.data-table tbody tr:last-child td{border-bottom:0}.data-table tbody tr:hover{background:#f8faff}.data-table td:first-child{font-weight:650}.topic-table td:nth-child(3){text-align:center;font-variant-numeric:tabular-nums}.table-status{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;color:var(--muted);font-size:11px}.table-status input{width:15px;height:15px;margin:0;accent-color:var(--green)}.table-status.done{color:var(--green);font-weight:700}.table-progress{display:inline-block;vertical-align:middle;width:min(150px,65%);height:7px;background:#edf0f5;border-radius:20px;overflow:hidden;margin-right:8px}.table-progress span{display:block;height:100%;background:var(--green);border-radius:20px}.data-table td small{color:var(--muted);font-size:10px}.current-row{background:#f1f4ff}.data-table .badge{margin:0 0 0 5px;white-space:nowrap}body.dark .data-table th{background:#202838}body.dark .data-table tbody tr:hover{background:#202a3b}body.dark .current-row{background:#202b42}
 
 .exam-countdown-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;margin:-2px 0 16px}.exam-countdown-card{padding:16px 18px;border:1px solid var(--line);border-radius:12px;background:var(--surface);display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:12px;row-gap:3px}.exam-countdown-label{font-size:10px;letter-spacing:.09em;font-weight:850;color:var(--muted)}.exam-countdown-date{font-size:12px;color:var(--ink);font-weight:650}.exam-countdown-remaining{grid-column:2;grid-row:1/3;font-size:27px;line-height:1;font-weight:800;letter-spacing:-.04em;color:var(--blue);font-variant-numeric:tabular-nums}.exam-countdown-caption{grid-column:2;grid-row:3;text-align:right;font-size:10px;color:var(--muted)}body.dark .exam-countdown-card{background:var(--surface)}@media(max-width:650px){.exam-countdown-grid{grid-template-columns:1fr}.exam-countdown-card{padding:14px}}
-.grid-stats{grid-template-columns:repeat(4,minmax(0,1fr))@media(max-width:1100px){.grid-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.missed-plan-row{background:#fff8f6}.missing-target-row{outline:2px solid var(--blue);outline-offset:-2px;background:var(--blue-soft)!important}.missed-plan-row td:nth-child(5){color:#b54735;font-weight:750}body.dark .missed-plan-row{background:#332522}
+.missed-plan-row{background:#fff8f6}.missing-target-row{outline:2px solid var(--blue);outline-offset:-2px;background:var(--blue-soft)!important}.missed-plan-row td:nth-child(5){color:#80551e;font-weight:750}body.dark .missed-plan-row{background:#332522}
 .daily-plan-table{min-width:760px}.daily-plan-table th:first-child,.daily-plan-table td:first-child{white-space:nowrap}.daily-plan-table td:nth-child(2){white-space:nowrap;color:var(--muted)}.daily-plan-table td:nth-child(4){min-width:320px}.daily-plan-table input{width:16px;height:16px;accent-color:var(--green)}.daily-plan-table .current-row{outline:2px solid #aabaff;outline-offset:-2px}
 
 /* Progress analytics */
@@ -44,14 +44,14 @@ body.dark .donut{background:conic-gradient(var(--green) calc(var(--pct)*1%),#343
 .progress.green>span{background:#57977d}
 .task input,.topic input,.weekly-check input,.daily-plan-table input{accent-color:#57977d}
 .task.completed{background:#f3f8f5;border-color:#dcebe2}
-.task.completed .task-title{color:#718b7c}
-.topic.done span{color:#718b7c}
+.task.completed .task-title{color:#526b5b}
+.topic.done span{color:#526b5b}
 .table-status.done,.today-topic-card.is-complete .today-topic-status{color:#39846b}
 .today-topic-subject,.badge{background:#eef2fb;color:#4967b2}
 .today-topic-card.is-complete{border-color:#dcebe2}
 .today-topic-card.is-complete .today-topic-footer{border-top-color:#dcebe2}
 .missed-plan-row{background:#fbf7f1}
-.missed-plan-row td:nth-child(5){color:#a87938}
+.missed-plan-row td:nth-child(5){color:#80551e}
 .exam-countdown-remaining,.exam-chart-number{color:#536b9f}
 .stat{border-top:2px solid #e2e8f3}
 .stat:nth-child(2){border-top-color:#cbd7ec}
@@ -346,7 +346,7 @@ body.dark .btn.primary{background:#547eb4;border-color:#547eb4;color:#fff}
 body.dark .btn.danger{border-color:#5a3938}
 .btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid color-mix(in srgb,var(--blue) 28%,transparent);outline-offset:2px}
 
-.grid-stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 14px
+.grid-stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 14px}
 .stat,.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
 .stat{min-width:0;padding:16px 17px}
 .stat-label{font-size:11px;font-weight:650;letter-spacing:.015em;color:var(--muted)}
@@ -457,7 +457,7 @@ body.dark .settings-section{background:var(--surface)}
 body.dark .today-topic-card .focus-desc{color:var(--muted)}
 
 @media(max-width:1100px){
- .grid-stats{grid-template-columns:repeat(2,minmax(0,1fr))
+ .grid-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
  #workspaceNav.cir-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}
  .subject-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
@@ -520,6 +520,9 @@ body.dark .today-topic-card .focus-desc{color:var(--muted)}
  *,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}
 }
 
+.data-table-wrap,.analytics-table-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-gutter:stable}
+.data-table-wrap:focus-visible,.analytics-table-wrap:focus-visible{outline:3px solid color-mix(in srgb,var(--blue) 35%,transparent);outline-offset:2px}
+@media(max-width:760px){.daily-plan-table{min-width:680px}.data-table{min-width:560px}}
 [data-page][hidden]{display:none!important}
 </style>
 </head>
@@ -532,7 +535,7 @@ body.dark .today-topic-card .focus-desc{color:var(--muted)}
 <section class="phone-access-panel" id="phoneAccessPanel" hidden><div class="phone-access-copy"><strong>Open Tracker on your phone</strong><span>Connect both devices to the same Wi-Fi and scan this QR code.</span><small id="phoneAccessUrl">Finding your local address…</small></div><img id="phoneAccessQr" alt="QR code to open this Tracker on your phone"><button class="btn" id="closePhoneAccess" type="button">Close</button></section>
 <section class="grid-stats">
  <div class="stat"><div class="stat-label">Days to target</div><div class="stat-value" id="daysLeft">—</div><div class="stat-foot">Target: 23 May 2027</div></div>
- <div class="stat"><div class="stat-label">PYQ topics completed</div><div class="stat-value" id="topicsDone">0/65</div><div class="stat-foot" id="topicSub">0% of mapped topics</div>
+ <div class="stat"><div class="stat-label">Syllabus topics completed</div><div class="stat-value" id="topicsDone">0/291</div><div class="stat-foot" id="topicSub">0% of mapped topics</div>
   <div class="stat-completion-track is-low" id="topicProgressTrack" role="progressbar" aria-label="PYQ topics completed" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="topicProgressFill"></span></div></div>
  <div class="stat"><div class="stat-label">Study days recorded</div><div class="stat-value" id="daysDone">0</div><div class="stat-foot">Days with a saved study log</div></div>
  <div class="stat"><div class="stat-label">Missed study days</div><div class="stat-value" id="missedDays">0</div><div class="stat-foot">Past plan days not completed</div></div>
@@ -599,18 +602,18 @@ body.dark .today-topic-card .focus-desc{color:var(--muted)}
  </section>
  <section class="card" data-page="missing" hidden>
   <div class="card-head"><div><h2>Missing Topics</h2><p class="small-note">Only past scheduled topics with incomplete study or MCQ + revision are shown. Today’s and future topics stay out of this list.</p></div><span class="chip" id="missingTopicCount">0 remaining</span></div>
-  <div class="toolbar"><input id="missingTopicSearch" type="search" placeholder="Search missing topics…"><select id="missingSubjectFilter"><option value="all">All subjects</option></select><select id="missingPriorityFilter"><option value="all">All overdue phases</option><option value="study">Study pending</option><option value="mcq_revision">MCQ + Revision pending</option></select></div>
+  <div class="toolbar"><input id="missingTopicSearch" aria-label="Search missing topics" type="search" placeholder="Search missing topics…"><select id="missingSubjectFilter" aria-label="Filter missing topics by subject"><option value="all">All subjects</option></select><select id="missingPriorityFilter" aria-label="Filter missing topics by overdue phase"><option value="all">All overdue phases</option><option value="study">Study pending</option><option value="mcq_revision">MCQ + Revision pending</option></select></div>
   <div id="missingTopicList"></div>
  </section>
  <section class="card" data-page="syllabus" hidden>
   <div class="card-head"><h2>PYQ topic checklist</h2><span class="chip" id="topicCompletion">0 of 65</span></div>
-  <div class="toolbar"><input id="topicSearch" type="search" placeholder="Search topics…"><select id="subjectFilter"><option value="all">All subjects</option></select><select id="topicStatus"><option value="all">All topics</option><option value="pending">Pending</option><option value="done">Completed</option></select></div>
+  <div class="toolbar"><input id="topicSearch" aria-label="Search syllabus topics" type="search" placeholder="Search topics…"><select id="subjectFilter" aria-label="Filter syllabus topics by subject"><option value="all">All subjects</option></select><select id="topicStatus" aria-label="Filter syllabus topics by completion status"><option value="all">All topics</option><option value="pending">Pending</option><option value="done">Completed</option></select></div>
   <div id="topicChecklist"></div>
   <p class="small-note">Mapped question counts are approximate editorial classifications, not official UPSC topic-wise counts. Mark a topic complete after concept study, PYQs and a quick revision.</p>
  </section>
  <section class="card" data-page="revision" hidden>
   <div class="card-head"><h2>Topics to revise</h2><span class="chip" id="revisionCount">0 completed topics</span></div>
-  <div class="toolbar"><input id="revisionSearch" type="search" placeholder="Search completed topics…"><select id="revisionSubject"><option value="all">All subjects</option></select><select id="revisionStatus"><option value="all">All revision status</option><option value="pending">Needs revision</option><option value="done">Revised</option></select></div>
+  <div class="toolbar"><input id="revisionSearch" aria-label="Search topics to revise" type="search" placeholder="Search completed topics…"><select id="revisionSubject" aria-label="Filter revision topics by subject"><option value="all">All subjects</option></select><select id="revisionStatus" aria-label="Filter topics by revision status"><option value="all">All revision status</option><option value="pending">Needs revision</option><option value="done">Revised</option></select></div>
   <div id="revisionChecklist"></div>
   <p class="small-note">Every topic you complete in Syllabus or through the daily study plan appears here automatically. Revision ticks are separate from original completion.</p>
  </section>
@@ -622,9 +625,6 @@ body.dark .today-topic-card .focus-desc{color:var(--muted)}
   <div class="chart-card analytics-graph-card" style="margin-top:14px"><div class="chart-heading-row"><h3 class="chart-title">Subject-wise syllabus progress</h3><span class="analytics-subtitle">Completion percentage</span></div><div id="subjectProgressChart"></div></div>
   <div class="analytics-extra-grid" id="extraAnalyticsCharts"></div>
  </section>
- </section>
-</main>
-<aside>
  <section class="card study-log-entry" data-page="logs" hidden>
  <div class="card-head"><div><div class="eyebrow">DAILY ACTIVITY</div><h2>Log daily activity</h2><p class="subtitle">Record MCQ attempts and notes for the day.</p></div><span class="chip">Activity log</span></div>
  <div class="log-entry-grid">
@@ -642,17 +642,15 @@ body.dark .today-topic-card .focus-desc{color:var(--muted)}
   <div class="card-head"><div><div class="eyebrow">YOUR ACTIVITY</div><h2>Daily activity history</h2><p class="subtitle">Review and edit your MCQ and notes records.</p></div><button class="btn" id="importBtn">Import backup</button></div>
  <div class="log-summary-grid"><div class="log-summary-item"><span>MCQs solved</span><strong id="logTotalMcqs">0</strong></div><div class="log-summary-item"><span>Logged days</span><strong id="logDaysCount">0</strong></div></div>
  <div class="log-list" id="recentLogs"><div class="empty">No logs saved yet.</div></div>
-  <input type="file" id="importFile" accept="application/json" hidden>
+  <input type="file" id="importFile" aria-label="Choose a Tracker backup file to import" accept="application/json" hidden>
   <p class="small-note">Progress is saved to the local SQLite database while the Python app is running. Export a backup before changing computers.</p>
   <div class="form-actions"><button class="btn danger" id="resetBtn">Reset all progress</button></div>
  </section>
-</aside>
+</main>
 </div>
 <div class="footer">UPSC Prelims 2027 · Personal checklist dashboard · Works offline after the page is loaded</div>
 </div>
-
-</aside>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 <script>
 "use strict";
 const workspaceNavigation = document.getElementById("workspaceNav");
