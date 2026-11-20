@@ -92,7 +92,11 @@ def test_real_browser_navigation_and_mobile_layout(tracker_url):
             page.locator('label[for="nav-syllabus"]').click()
             assert page.locator("#pageTitle").inner_text() == "Syllabus"
             assert page.locator('[data-page="syllabus"]').is_visible()
-            assert page.locator('[data-page="overview"]').is_hidden()
+            overview_sections = page.locator('[data-page="overview"]')
+            assert overview_sections.count() == 2
+            assert overview_sections.evaluate_all(
+                "(sections) => sections.every(section => section.hidden)"
+            )
 
             page.locator('label[for="nav-settings"]').click()
             assert page.locator("#pageTitle").inner_text() == "Settings"
