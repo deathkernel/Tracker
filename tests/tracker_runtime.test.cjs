@@ -83,7 +83,7 @@ test("revision quality updates shared mastery and retest state", () => {
   assert.match(script, /fetch\("\/api\/study\/review"/);
   assert.match(script, /previous_mastery:state\.masteryProgress/);
   assert.match(script, /previous_retest:state\.retestSchedule/);
-  assert.match(script, /completeScheduledRetest\(subject,topic\)/);
+  assert.match(script, /async function completeScheduledRetest\(subject,topic,progressKey=null\)/);
   assert.match(script, /Record retest/);
 });
 
