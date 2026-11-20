@@ -703,11 +703,6 @@ function buildSubjectRotatedStudyPlan(entries){
  });
  return ordered;
 }
-const SHUFFLED_STUDY_PLAN=buildSubjectRotatedStudyPlan(STUDY_PLAN_TOPICS);
-const DAILY_STUDY_PLAN=SHUFFLED_STUDY_PLAN.flatMap(entry=>[
- {...entry,phase:"study",label:"Study"},
- {...entry,phase:"mcq_revision",label:"MCQ + Revision"}
-]);
 function hasCompletedStudyCycleForSyllabusTopic(subject,topic){
  const key=subject+"::"+topic;
  const contributors=STUDY_PLAN_TOPICS.map((entry,planIndex)=>({entry,planIndex})).filter(({entry})=>findMatchingSyllabusTopics(entry.subject,entry.topic).includes(key));
@@ -963,6 +958,11 @@ const BASE_STUDY_PLAN=[
 const CYCLE_START_DATE="2026-11-20";
 const LEGACY_CYCLE_START_DATE="2026-11-17";
 const STUDY_PLAN_TOPICS=BASE_STUDY_PLAN.flatMap(week=>week.days.map(topic=>({subject:week.subject,topic})));
+const SHUFFLED_STUDY_PLAN=buildSubjectRotatedStudyPlan(STUDY_PLAN_TOPICS);
+const DAILY_STUDY_PLAN=SHUFFLED_STUDY_PLAN.flatMap(entry=>[
+ {...entry,phase:"study",label:"Study"},
+ {...entry,phase:"mcq_revision",label:"MCQ + Revision"}
+]);
 function getStudyPlanRotationSubject(entry){
  const topic=String(entry.topic||"").toLowerCase();
  const prefixes=["Science & Technology","Ancient + Medieval History","Modern History","Ancient History","Medieval History","Art & Culture","Polity","Economy","Environment","Geography"];
