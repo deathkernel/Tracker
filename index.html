@@ -664,6 +664,45 @@ body.dark .stat::after{border-color:rgba(145,168,255,.14);box-shadow:0 0 0 13px 
 @media(max-width:700px){.nav-caption{display:none}#workspaceNav.cir-tabs{margin:12px 0 14px}.page-context{margin:8px 0 12px}.page-context h2{font-size:22px}}
 @media(prefers-reduced-motion:reduce){#workspaceNav .cir-tabs__t,.stat,.btn{transition:none!important}}
 
+
+/* Refined navigation system — icon-led sidebar and compact mobile dock */
+#workspaceNav.cir-tabs{gap:4px}
+#workspaceNav .nav-brand{display:flex;align-items:center;gap:11px;padding:7px 10px 17px;margin:0 2px 8px;border-bottom:1px solid var(--line)}
+#workspaceNav .nav-brand-mark{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:var(--ink);color:var(--surface);font-size:17px;font-weight:850;letter-spacing:-.06em}
+#workspaceNav .nav-brand strong,#workspaceNav .nav-brand small{display:block;line-height:1.25}
+#workspaceNav .nav-brand strong{font-size:11px;letter-spacing:.12em;color:var(--ink)}
+#workspaceNav .nav-brand small{margin-top:3px;font-size:8px;font-weight:750;letter-spacing:.14em;color:var(--muted)}
+#workspaceNav .nav-section-label{padding:9px 12px 5px;color:var(--muted);font-size:9px;font-weight:850;letter-spacing:.13em}
+#workspaceNav .nav-divider{height:1px;margin:8px 8px 3px;background:var(--line)}
+#workspaceNav .cir-tabs__t{position:relative;gap:12px;min-height:44px;padding:0 12px;overflow:hidden}
+#workspaceNav .cir-tabs__t::before{content:none!important;display:none!important}
+#workspaceNav .nav-icon{width:19px;height:19px;flex:none;opacity:.78;transition:transform .22s cubic-bezier(.2,.8,.2,1),opacity .22s ease}
+#workspaceNav .nav-label{flex:1;text-align:left}
+#workspaceNav .cir-tabs__t:hover .nav-icon{transform:scale(1.08);opacity:1}
+#workspaceNav .cir-tabs__r:checked+.cir-tabs__t .nav-icon{opacity:1}
+#workspaceNav .cir-tabs__t::after{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:0 4px 4px 0;background:var(--blue);transform:scaleY(.25);opacity:0;transition:transform .22s ease,opacity .22s ease}
+#workspaceNav .cir-tabs__r:checked+.cir-tabs__t::after{transform:scaleY(1);opacity:1}
+#workspaceNav .nav-count{margin-left:auto}
+body.dark #workspaceNav .nav-brand-mark{background:var(--blue);color:#10141d}
+@media(max-width:1000px){
+ #workspaceNav .nav-brand,#workspaceNav .nav-section-label,#workspaceNav .nav-divider{display:none}
+ #workspaceNav .cir-tabs__t{gap:7px}
+}
+@media(max-width:760px){
+ #workspaceNav.cir-tabs{display:flex;align-items:stretch;justify-content:flex-start;gap:2px;padding:6px 7px;border-radius:17px;background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+ #workspaceNav .cir-tabs__t{flex:1 0 67px;min-width:67px;min-height:48px;height:48px;flex-direction:column;gap:3px;padding:5px 3px;border-radius:11px;font-size:9px}
+ #workspaceNav .nav-icon{width:18px;height:18px}
+ #workspaceNav .nav-label{flex:none;text-align:center;line-height:1.1}
+ #workspaceNav .nav-count{position:absolute;top:2px;right:8px;min-width:15px;height:15px;padding:0 4px;font-size:9px}
+ #workspaceNav .cir-tabs__t::after{left:calc(50% - 9px);right:calc(50% - 9px);top:auto;bottom:0;width:auto;height:2px;border-radius:3px;transform:scaleX(.3);transition:transform .22s ease,opacity .22s ease}
+ #workspaceNav .cir-tabs__r:checked+.cir-tabs__t::after{transform:scaleX(1)}
+}
+@media(max-width:380px){
+ #workspaceNav .cir-tabs__t{flex-basis:60px;min-width:60px}
+}
+@media(prefers-reduced-motion:reduce){
+ #workspaceNav .nav-icon,#workspaceNav .cir-tabs__t::after{transition:none!important}
+}
 </style>
 </head>
 <body data-view="overview">
@@ -696,14 +735,20 @@ body.dark .stat::after{border-color:rgba(145,168,255,.14);box-shadow:0 0 0 13px 
 </section>
 <div class="nav-caption">Workspace navigation</div>
 <nav class="cir-tabs" id="workspaceNav" aria-label="Tracker sections">
- <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-overview" value="overview" checked><label class="cir-tabs__t" for="nav-overview" data-view="overview">Overview</label>
- <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-syllabus" value="syllabus"><label class="cir-tabs__t" for="nav-syllabus" data-view="syllabus">Syllabus</label>
- <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-missing" value="missing"><label class="cir-tabs__t" for="nav-missing" data-view="missing">Missing Topics <span id="missingNavCount" class="nav-count">0</span></label>
- <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-logs" value="logs"><label class="cir-tabs__t" for="nav-logs" data-view="logs">Study Log</label>
- <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-plan" value="plan"><label class="cir-tabs__t" for="nav-plan" data-view="plan">Study Plan</label>
- <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-settings" value="settings"><label class="cir-tabs__t" for="nav-settings" data-view="settings">Settings</label>
- <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-revision" value="revision"><label class="cir-tabs__t" for="nav-revision" data-view="revision">Revision</label>
- <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-charts" value="charts"><label class="cir-tabs__t" for="nav-charts" data-view="charts">Charts</label>
+ <div class="nav-brand"><span class="nav-brand-mark">T</span><span><strong>TRACKER</strong><small>STUDY WORKSPACE</small></span></div>
+ <div class="nav-section-label">YOUR PREPARATION</div>
+ <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-overview" value="overview" checked><label class="cir-tabs__t" for="nav-overview" data-view="overview"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span class="nav-label">Overview</span></label>
+ <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-syllabus" value="syllabus"><label class="cir-tabs__t" for="nav-syllabus" data-view="syllabus"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span class="nav-label">Syllabus</span></label>
+ <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-missing" value="missing"><label class="cir-tabs__t" for="nav-missing" data-view="missing"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2.8 19a1.4 1.4 0 0 0 1.2 2h16a1.4 1.4 0 0 0 1.2-2L12 3Z"/><path d="M12 9v4m0 3h.01"/></svg><span class="nav-label">Missing Topics</span><span id="missingNavCount" class="nav-count">0</span></label>
+ <div class="nav-divider"></div>
+ <div class="nav-section-label">DAILY WORK</div>
+ <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-logs" value="logs"><label class="cir-tabs__t" for="nav-logs" data-view="logs"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h3m-3 3h7"/></svg><span class="nav-label">Study Log</span></label>
+ <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-plan" value="plan"><label class="cir-tabs__t" for="nav-plan" data-view="plan"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M7 8h4v4H7zM14 8h3M14 12h3M7 16h10"/></svg><span class="nav-label">Study Plan</span></label>
+ <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-revision" value="revision"><label class="cir-tabs__t" for="nav-revision" data-view="revision"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M4 17a8 8 0 0 0 13.7 2.3L20 17M4 7l2.3-2.3A8 8 0 0 1 20 7"/></svg><span class="nav-label">Revision</span></label>
+ <div class="nav-divider"></div>
+ <div class="nav-section-label">INSIGHTS & TOOLS</div>
+ <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-charts" value="charts"><label class="cir-tabs__t" for="nav-charts" data-view="charts"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5m0 14h17"/><rect x="7" y="11" width="3" height="5" rx=".5"/><rect x="13" y="7" width="3" height="9" rx=".5"/><rect x="19" y="3" width="2" height="13" rx=".5"/></svg><span class="nav-label">Analytics</span></label>
+ <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-settings" value="settings"><label class="cir-tabs__t" for="nav-settings" data-view="settings"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="m19.4 15 .1.1 1.1 1.9-1.8 1.8-1.9-1.1-.1.1-2.1.9-.5 2.2h-2.5l-.5-2.2-2.1-.9-.1-.1-1.9 1.1-1.8-1.8 1.1-1.9-.1-.1-.9-2.1L3 12.4V9.9l2.2-.5.9-2.1.1-.1-1.1-1.9 1.8-1.8 1.9 1.1.1-.1 2.1-.9.5-2.2H14l.5 2.2 2.1.9.1.1 1.9-1.1 1.8 1.8-1.1 1.9.1.1.9 2.1 2.2.5v2.5l-2.2.5-.9 2.1Z"/></svg><span class="nav-label">Settings</span></label>
 </nav>
 <section class="page-context" aria-live="polite">
  <div class="page-context-copy">
