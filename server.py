@@ -199,6 +199,57 @@ def update_study_review(request: StudyReviewRequest) -> dict[str, Any]:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+class StudyReviewBatchItem(BaseModel):
+    key: str = Field(min_length=1, max_length=256)
+    previous_revision: dict[str, Any] | None = None
+    previous_mastery: dict[str, Any] | None = None
+    previous_retest: dict[str, Any] | None = None
+    quality: int = Field(strict=True, ge=0, le=5)
+    is_retest: bool = False
+    update_revision: bool = False
+
+
+class StudyReviewBatchRequest(BaseModel):
+    today: str
+    reviews: list[StudyReviewBatchItem] = Field(min_length=1, max_length=50)
+
+
+@app.post("/api/study/review-batch")
+def update_study_review_batch(request: StudyReviewBatchRequest) -> dict[str, Any]:
+    keys = [item.key for item in request.reviews]
+    if len(keys) != len(set(keys)):
+        raise HTTPException(status_code=422, detail="Review batch keys must be unique.")
+
+    try:
+        updates = []
+        for item in request.reviews:
+            revision = (
+                next_revision_schedule(request.today, item.previous_revision, item.quality)
+                if item.update_revision
+                else None
+            )
+            mastery = update_mastery_progress(
+                item.previous_mastery,
+                request.today,
+                item.quality,
+            )
+            retest = next_retest_schedule(
+                item.previous_retest,
+                request.today,
+                item.quality,
+                is_retest=item.is_retest,
+            )
+            updates.append({
+                "key": item.key,
+                "revision_schedule": revision,
+                "mastery": mastery,
+                "retest": retest,
+            })
+        return {"updates": updates}
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
 @app.get("/api/state")
 def get_state() -> dict[str, Any]:
     initialize_database()
