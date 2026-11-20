@@ -48,3 +48,62 @@ def test_due_revision_queue_includes_only_completed_topics_due_today_or_earlier(
         "topic": "Fundamental Rights",
         "due_date": "2026-11-19",
     }]
+
+
+def test_mastery_progress_increases_on_strong_recall_and_tracks_average():
+    from revision_engine import update_mastery_progress
+
+    first = update_mastery_progress(None, "2026-11-20", 5)
+    assert first["reviews"] == 1
+    assert first["average_quality"] == 5
+    assert first["mastery_level"] == 1
+    assert first["consecutive_strong"] == 1
+
+    second = update_mastery_progress(first, "2026-11-21", 4)
+    assert second["reviews"] == 2
+    assert second["average_quality"] == 4.5
+    assert second["mastery_level"] == 2
+    assert second["consecutive_strong"] == 2
+
+
+def test_mastery_progress_weak_recall_reduces_level_and_resets_streak():
+    from revision_engine import update_mastery_progress
+
+    previous = {
+        "reviews": 3,
+        "quality_total": 12,
+        "mastery_level": 4,
+        "consecutive_strong": 3,
+    }
+    result = update_mastery_progress(previous, "2026-11-20", 1)
+    assert result["mastery_level"] == 3
+    assert result["consecutive_strong"] == 0
+    assert result["average_quality"] == 3.25
+
+
+def test_retest_schedule_uses_quality_based_intervals_and_counts_attempts():
+    from revision_engine import next_retest_schedule
+
+    weak = next_retest_schedule({"attempts": 2}, "2026-11-20", 1, is_retest=True)
+    normal = next_retest_schedule(weak, "2026-11-21", 3)
+    strong = next_retest_schedule(normal, "2026-11-24", 5)
+
+    assert weak["due_date"] == "2026-11-21"
+    assert weak["attempts"] == 3
+    assert weak["interval_days"] == 1
+    assert normal["due_date"] == "2026-11-24"
+    assert normal["attempts"] == 3
+    assert normal["interval_days"] == 3
+    assert strong["due_date"] == "2026-12-01"
+    assert strong["interval_days"] == 7
+
+
+def test_mastery_and_retest_reject_invalid_quality_and_dates():
+    from revision_engine import next_retest_schedule, update_mastery_progress
+
+    with pytest.raises(ValueError, match="between 0 and 5"):
+        update_mastery_progress(None, "2026-11-20", True)
+    with pytest.raises(ValueError, match="YYYY-MM-DD"):
+        update_mastery_progress(None, "20-11-2026", 3)
+    with pytest.raises(ValueError, match="between 0 and 5"):
+        next_retest_schedule(None, "2026-11-20", 6)
