@@ -76,7 +76,7 @@ test("uncompletion invalidates linked study but preserves MCQ history", () => {
   assert.match(script, /function syncSyllabusUncompletionToStudyPlan\(subject,topic\)/);
   assert.match(script, /const progress=\{\.\.\.getStudyPlanProgress\(entry\),studyDone:false,mcqDone:false,revisionDone:false,studyReset:true\}/);
   assert.match(script, /mcqCount:Number\.isInteger\(item\.mcqCount\)/);
-  assert.match(script, /mcqDone:!!\(current\.mcqDone/);
+  assert.match(script, /mcqDone:!reset&&!!\(current\.mcqDone/);
 });
 
 test("revision quality updates shared mastery and retest state", () => {
