@@ -408,6 +408,42 @@ test("overview subject progress uses a dedicated scrollable table wrapper", () =
   assert.match(script, /table\.setAttribute\("aria-label","Subject completion by topic"\)/);
 });
 
+test("manual syllabus completion updates its mapped Day 1 phase without completing Day 2", () => {
+  const start = script.indexOf("function syncSyllabusCompletionToStudyPlan(");
+  const end = script.indexOf("\\nfunction syncSyllabusUncompletionToStudyPlan", start);
+  assert.ok(start >= 0 && end > start);
+  const key = "Polity::Constitutional development";
+  const entry = {
+    subject: "Polity",
+    topic: "Constitutional development and historical background",
+    phase: "study",
+    planIndex: 0
+  };
+  const items = [["source", "Read"], ["concepts", "Understand"], ["notes", "Notes"], ["recall", "Recall"]];
+  const sandbox = {
+    state: { topics: { [key]: true }, studyPlanProgress: {} },
+    DAILY_STUDY_PLAN: [entry, { ...entry, phase: "mcq_revision" }],
+    STUDY_DAY_CHECKLIST: items,
+    validTopicKeys: () => new Set([key]),
+    findMatchingSyllabusTopics: () => [key],
+    getStudyPlanProgressDateKey: item => "plan:" + item.planIndex,
+    getStudyPlanProgress: () => ({ revisionDone: false, mcqDone: false })
+  };
+  vm.runInNewContext(
+    script.slice(start, end) + "\\nthis.sync=syncSyllabusCompletionToStudyPlan;",
+    sandbox
+  );
+  sandbox.sync("Polity", "Constitutional development");
+  const progress = sandbox.state.studyPlanProgress["plan:0"];
+  assert.equal(progress.studyDone, true);
+  assert.equal(progress.studyReset, false);
+  assert.deepEqual(JSON.parse(JSON.stringify(progress.studyChecklist)), {
+    source: true, concepts: true, notes: true, recall: true
+  });
+  assert.equal(progress.revisionDone, false);
+  assert.equal(progress.mcqDone, false);
+});
+
 test("analytics count phase completion and distinct missed dates", () => {
   assert.match(script, /const planTotal=DAILY_STUDY_PLAN\.length/);
   assert.match(script, /missedDates\.add\(dateKey\)/);
