@@ -25,7 +25,10 @@ DB_PATH = Path(os.environ.get("TRACKER_DB_PATH", str(BASE_DIR / "tracker.db")))
 INDEX_PATH = BASE_DIR / "index.html"
 LAN_ACCESS_TOKEN = os.environ.get("TRACKER_ACCESS_TOKEN") or secrets.token_urlsafe(32)
 STUDY_CYCLE_START_DATE = date(2026, 11, 20)
-MIN_STUDY_WINDOW_DAYS = 95  # 189 planned units, with at most two new topics per day.
+# Must stay in sync with BASE_STUDY_PLAN length in index.html (client uses
+# Math.ceil(STUDY_PLAN_TOPICS.length / 2) for the same capacity rule).
+PLANNED_STUDY_UNITS = 189
+MIN_STUDY_WINDOW_DAYS = (PLANNED_STUDY_UNITS + 1) // 2  # at most two new topics per day
 
 def validate_target_date_settings(settings: dict[str, Any]) -> None:
     target = settings.get("targetDate")
