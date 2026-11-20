@@ -160,6 +160,15 @@ def safe_number(value: Any, *, integer: bool = False) -> int | float | str:
     except (TypeError, ValueError, OverflowError):
         return ""
 
+def pick_field(value: dict[str, Any], *names: str) -> Any:
+    """Return the first present key among camelCase / snake_case aliases."""
+    for name in names:
+        if name in value:
+            return value[name]
+    return None
+
+
+
 
 def normalize_plan_topic(value: Any) -> str:
     text = str(value or "").lower()
@@ -542,10 +551,16 @@ def main() -> None:
                 "PlanKey": key if is_plan_key else "",
                 "Subject": topic["Subject"],
                 "Topic": topic["Topic"],
-                "Reviews": safe_number(value.get("reviews"), integer=True),
-                "MasteryLevel": safe_number(value.get("masteryLevel"), integer=True),
-                "AverageQuality": safe_number(value.get("averageQuality")),
-                "LastQuality": safe_number(value.get("lastQuality"), integer=True),
+                "Reviews": safe_number(pick_field(value, "reviews"), integer=True),
+                "MasteryLevel": safe_number(
+                    pick_field(value, "masteryLevel", "mastery_level"), integer=True
+                ),
+                "AverageQuality": safe_number(
+                    pick_field(value, "averageQuality", "average_quality")
+                ),
+                "LastQuality": safe_number(
+                    pick_field(value, "lastQuality", "last_quality"), integer=True
+                ),
             })
 
     retest_rows: list[dict[str, Any]] = []
@@ -555,7 +570,7 @@ def main() -> None:
             topic = known_topics.get(key) or plan_topics.get(key)
             if not topic or not isinstance(value, dict):
                 continue
-            due_date = value.get("due_date", "")
+            due_date = pick_field(value, "due_date", "dueDate") or ""
             is_plan_key = key.startswith("plan:")
             retest_rows.append({
                 "TopicKey": "" if is_plan_key else key,
@@ -563,9 +578,11 @@ def main() -> None:
                 "Subject": topic["Subject"],
                 "Topic": topic["Topic"],
                 "DueDate": due_date if valid_iso_date(due_date) else "",
-                "Attempts": safe_number(value.get("attempts"), integer=True),
-                "Status": str(value.get("status") or ""),
-                "LastQuality": safe_number(value.get("last_quality"), integer=True),
+                "Attempts": safe_number(pick_field(value, "attempts"), integer=True),
+                "Status": str(pick_field(value, "status") or ""),
+                "LastQuality": safe_number(
+                    pick_field(value, "last_quality", "lastQuality"), integer=True
+                ),
             })
 
     OUT.mkdir(exist_ok=True)
