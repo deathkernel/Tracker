@@ -173,23 +173,23 @@ test("study-plan recall always has a planner mastery fallback for unmapped or in
 });
 
 test("every curated syllabus topic maps to at least one first-pass study unit", () => {
-  const subjectData = JSON.parse(script.match(/const SUBJECTS=(\\[[\\s\\S]*?\\]);\\r?\\nconst ROADMAP/)[1]);
+  const subjectData = JSON.parse(script.match(/const SUBJECTS=(\[[\s\S]*?\]);\r?\nconst ROADMAP/)[1]);
   const mappingStart = script.indexOf("function normalizePlanTopic(");
-  const mappingEnd = script.indexOf("\\nfunction findMatchingSyllabusTopic(", mappingStart);
+  const mappingEnd = script.indexOf("\nfunction findMatchingSyllabusTopic(", mappingStart);
   assert.ok(mappingStart >= 0 && mappingEnd > mappingStart);
   const mappingSandbox = { SUBJECTS: subjectData, allSubjects: () => subjectData };
   vm.runInNewContext(
-    script.slice(mappingStart, mappingEnd) + "\\nthis.resolve=findMatchingSyllabusTopics;",
+    script.slice(mappingStart, mappingEnd) + "\nthis.resolve=findMatchingSyllabusTopics;",
     mappingSandbox
   );
 
   const planStart = script.indexOf("const BASE_STUDY_PLAN=");
-  const planEnd = script.indexOf(";\\nconst STUDY_PLAN_TOPICS", planStart);
+  const planEnd = script.indexOf(";\nconst STUDY_PLAN_TOPICS", planStart);
   assert.ok(planStart >= 0 && planEnd > planStart);
   const planSandbox = {};
   vm.runInNewContext(
     script.slice(planStart, planEnd) +
-      "\\nthis.studyUnits=BASE_STUDY_PLAN.flatMap(group=>group.days.map(topic=>({subject:group.subject,topic})));",
+      "\nthis.studyUnits=BASE_STUDY_PLAN.flatMap(group=>group.days.map(topic=>({subject:group.subject,topic})));",
     planSandbox
   );
   const firstPassUnits = planSandbox.studyUnits.filter(unit =>
