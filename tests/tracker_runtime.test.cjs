@@ -94,7 +94,16 @@ test("priority-first scheduling retains compressed 184-day coverage and two-phas
   const end = script.indexOf("\nfunction getStudyPlanDateKey(entry){", start);
   assert.ok(start >= 0 && end > start);
   const dateOffset = script.slice(start, end);
-  assert.match(dateOffset, /Math\.floor\(scheduleIndex\*finalStudyOffset\/\(STUDY_PLAN_TOPICS\.length-1\)\)/);
+  assert.match(dateOffset, /Math\.round\(scheduleIndex\*finalStudyOffset\/\(STUDY_PLAN_TOPICS\.length-1\)\)/);
+  const offsets = Array.from({length:189}, (_,index) => Math.round(index*183/188));
+  assert.equal(new Set(offsets).size, 184);
+  assert.equal(offsets[0], 0);
+  assert.equal(offsets[1], 1);
+  assert.equal(offsets[offsets.length-1], 183);
+  const counts = new Map();
+  offsets.forEach(offset => counts.set(offset,(counts.get(offset)||0)+1));
+  assert.equal(Array.from(counts.values()).filter(count => count===2).length, 5);
+  assert.ok(Array.from(counts.values()).every(count => count===1||count===2));
   assert.match(script, /const DAILY_STUDY_PLAN=SHUFFLED_STUDY_PLAN\.flatMap/);
   assert.match(script, /entry\.phase==="mcq_revision"\?1:0/);
   assert.match(script, /priority:isPriority\?"P1":"P2"/);
