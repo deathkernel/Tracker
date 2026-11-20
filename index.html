@@ -1092,6 +1092,7 @@ function normalizeProgressState(value){
  }
  next.settings.deviceThemes=deviceThemes;
  for(const key of ["topics","daily","weekly","logs","studyPlanDone","revisionDone"]){if(!next[key]||typeof next[key]!=="object"||Array.isArray(next[key]))next[key]={};}
+ delete next.settings.studyGoal;
  next.logs=normalizeStudyLogs(next.logs);
  if(!isValidTargetDate(next.settings.targetDate))next.settings.targetDate="2027-05-23";
  next.version=Number.isInteger(Number(source.version))&&Number(source.version)>=0?Number(source.version):0;
