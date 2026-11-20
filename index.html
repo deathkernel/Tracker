@@ -2152,7 +2152,8 @@ function setWorkspaceView(view){
 function activeDevice(){
  const userAgent=navigator.userAgent||"";
  const appleTablet=navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1;
- const mobile=typeof navigator.userAgentData?.mobile==="boolean"?navigator.userAgentData.mobile:/Android|iPhone|iPad|iPod|Mobile/i.test(userAgent)||appleTablet;
+ const userAgentMobile=/Android|iPhone|iPad|iPod|Mobile/i.test(userAgent)||appleTablet;
+ const mobile=navigator.userAgentData?.mobile===true||userAgentMobile;
  return mobile?"mobile":"desktop";
 }
 function applyDeviceTheme(){
