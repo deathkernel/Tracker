@@ -174,13 +174,69 @@ def test_health_reports_database_query_failure(client, monkeypatch):
 
 def test_state_rejects_stale_writes_without_overwriting_newer_data(client):
     first = client.get("/api/state").json()
-    payload = {**first, "logs": {"2026-11-18": {"hours": 4}}}
+    payload = {
+        **first,
+        "settings": {**first["settings"], "studyGoal": 5},
+        "logs": {
+            "2026-11-18": {
+                "hours": 4,
+                "csat": 30,
+                "mcqs": 20,
+                "notes": "attempted set",
+            }
+        },
+    }
     assert client.put("/api/state", json=payload).status_code == 200
 
-    stale_payload = {**first, "logs": {"2026-11-18": {"hours": 1}}}
+    restored = client.get("/api/state").json()
+    assert restored["logs"]["2026-11-18"] == {
+        "mcqs": 20,
+        "notes": "attempted set",
+    }
+    assert "studyGoal" not in restored["settings"]
+
+    stale_payload = {**first, "logs": {"2026-11-18": {"hours": 1, "mcqs": 1}}}
     response = client.put("/api/state", json=stale_payload)
     assert response.status_code == 409
-    assert client.get("/api/state").json()["logs"]["2026-11-18"]["hours"] == 4
+    assert client.get("/api/state").json()["logs"]["2026-11-18"] == {
+        "mcqs": 20,
+        "notes": "attempted set",
+    }
+
+
+def test_database_startup_migrates_existing_study_duration_records(client):
+    legacy = client.get("/api/state").json()
+    legacy["settings"]["studyGoal"] = 5
+    legacy["logs"] = {
+        "2026-11-18": {
+            "hours": 3.5,
+            "mcqs": 25,
+            "csat": 20,
+            "notes": "saved notes",
+        },
+        "2026-11-19": {"hours": 2, "csat": 15},
+    }
+    with sqlite3.connect(server.DB_PATH) as database:
+        database.execute(
+            "UPDATE app_state SET payload = ? WHERE id = 1",
+            (json.dumps(legacy),),
+        )
+
+    server.initialize_database()
+    with sqlite3.connect(server.DB_PATH) as database:
+        stored = json.loads(
+            database.execute(
+                "SELECT payload FROM app_state WHERE id = 1"
+            ).fetchone()[0]
+        )
+
+    assert "studyGoal" not in stored["settings"]
+    assert stored["logs"] == {
+        "2026-11-18": {
+            "mcqs": 25,
+            "notes": "saved notes",
+        }
+    }
 
 
 def test_state_rejects_negative_version(client):

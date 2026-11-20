@@ -116,6 +116,33 @@ def database_session():
         connection.close()
 
 
+def strip_retired_study_time_tracking(data: dict[str, Any]) -> dict[str, Any]:
+    cleaned = dict(data)
+
+    settings = cleaned.get("settings")
+    if isinstance(settings, dict):
+        settings = dict(settings)
+        settings.pop("studyGoal", None)
+        cleaned["settings"] = settings
+
+    logs = cleaned.get("logs")
+    if isinstance(logs, dict):
+        cleaned_logs: dict[str, dict[str, Any]] = {}
+        for day, entry in logs.items():
+            if not isinstance(entry, dict):
+                continue
+            record: dict[str, Any] = {}
+            if "mcqs" in entry:
+                record["mcqs"] = entry["mcqs"]
+            if "notes" in entry:
+                record["notes"] = entry["notes"]
+            if record:
+                cleaned_logs[day] = record
+        cleaned["logs"] = cleaned_logs
+
+    return cleaned
+
+
 def initialize_database() -> None:
     with database_session() as connection:
         connection.execute("PRAGMA journal_mode = WAL")
@@ -131,6 +158,21 @@ def initialize_database() -> None:
         connection.execute(
             "INSERT OR IGNORE INTO app_state (id, payload) VALUES (1, '{}')"
         )
+        row = connection.execute(
+            "SELECT payload FROM app_state WHERE id = 1"
+        ).fetchone()
+        if row is not None:
+            try:
+                current = json.loads(row[0])
+                if isinstance(current, dict):
+                    cleaned = strip_retired_study_time_tracking(current)
+                    if cleaned != current:
+                        connection.execute(
+                            "UPDATE app_state SET payload = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1",
+                            (json.dumps(cleaned, ensure_ascii=False),),
+                        )
+            except (json.JSONDecodeError, TypeError):
+                pass
 
 
 
@@ -316,7 +358,7 @@ def get_state() -> dict[str, Any]:
         return TrackerState().model_dump()
     try:
         data = json.loads(row[0])
-        return TrackerState.model_validate(data).model_dump()
+        return TrackerState.model_validate(strip_retired_study_time_tracking(data)).model_dump()
     except (json.JSONDecodeError, ValueError) as exc:
         raise HTTPException(status_code=500, detail="Saved tracker data is invalid.") from exc
 
@@ -360,7 +402,7 @@ def save_state(state: TrackerState) -> dict[str, Any]:
 
         next_version = current_version + 1
         payload = json.dumps(
-            {**state.model_dump(), "version": next_version},
+            strip_retired_study_time_tracking({**state.model_dump(), "version": next_version}),
             ensure_ascii=False,
         )
         connection.execute(
