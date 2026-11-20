@@ -273,3 +273,21 @@ def test_study_retest_endpoint_counts_attempts_without_resetting_mastery(client)
     assert payload["mastery"]["mastery_level"] == 1
     assert payload["retest"]["attempts"] == 3
     assert payload["retest"]["due_date"] == "2026-11-21"
+
+
+
+@pytest.mark.parametrize("quality", [True, 3.0, "3"])
+def test_legacy_revision_endpoint_rejects_non_integer_quality(client, quality):
+    response = client.post("/api/revision/next", json={
+        "today": "2026-11-20",
+        "quality": quality,
+    })
+    assert response.status_code == 422
+
+
+def test_legacy_revision_endpoint_accepts_strict_integer_quality(client):
+    response = client.post("/api/revision/next", json={
+        "today": "2026-11-20",
+        "quality": 3,
+    })
+    assert response.status_code == 200
