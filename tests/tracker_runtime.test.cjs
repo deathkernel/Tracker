@@ -150,7 +150,7 @@ test("target date validation protects the two-phase schedule capacity", () => {
     ].join("-")
   };
   vm.runInNewContext(
-    script.slice(start, end) + "\\nthis.valid=isValidTargetDate;",
+    script.slice(start, end) + "\nthis.valid=isValidTargetDate;",
     sandbox
   );
   assert.equal(sandbox.valid("2027-02-22"), false);
@@ -256,7 +256,7 @@ test("Missing Topics resolves shuffled schedule rows by stable original plan ind
   ];
   const sandbox = { DAILY_STUDY_PLAN: entries };
   vm.runInNewContext(
-    script.slice(start, end) + "\\nthis.lookup=getStudyPlanEntryByPlanIndex;",
+    script.slice(start, end) + "\nthis.lookup=getStudyPlanEntryByPlanIndex;",
     sandbox
   );
   assert.equal(sandbox.lookup(0, "study").topic, "first");
