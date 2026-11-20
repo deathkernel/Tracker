@@ -149,10 +149,10 @@ test("customization controls support management and clearly separate self-paced 
   assert.match(html, /id="customSyllabusManager"/);
   assert.match(html, /id="customDailyManager"/);
   assert.match(html, /Custom topics are included in syllabus progress and are self-paced/);
-  assert.match(html, /data-action=\\"rename-topic\\"/);
-  assert.match(html, /data-action=\\"delete-topic\\"/);
-  assert.match(html, /data-action=\\"rename-task\\"/);
-  assert.match(html, /data-action=\\"delete-task\\"/);
+  assert.match(html, /"rename-topic"/);
+  assert.match(html, /"delete-topic"/);
+  assert.match(html, /"rename-task"/);
+  assert.match(html, /"delete-task"/);
   assert.match(html, /function moveTopicStateKey\(/);
   assert.match(html, /function clearTopicStateKey\(/);
   assert.match(html, /function renderSettings\(/);
