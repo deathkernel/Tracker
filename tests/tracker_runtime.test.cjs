@@ -61,7 +61,7 @@ test("only overdue study phases enter the recovery queue", () => {
 
 test("missing-topic action opens and highlights the exact overdue roadmap phase", () => {
   assert.match(script, /setWorkspaceView\("plan"\)/);
-  assert.match(script, /"plan-"\\+dateKey/);
+  assert.match(script, /"plan-"\+dateKey/);
   assert.match(script, /missing-target-row/);
 });
 
