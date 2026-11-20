@@ -153,3 +153,11 @@ test("weekly plan analytics use the new scheduled phase dates", () => {
   assert.match(script, /Completed planned phases · first 8 weeks/);
   assert.doesNotMatch(script, /new Date\(2026,10,17\)/);
 });
+
+
+
+test("legacy migration resets Day 2 flags but retains MCQ count", () => {
+  assert.match(script, /mcqDone:!reset&&!!\(current\.mcqDone/);
+  assert.match(script, /revisionDone:!reset&&!!\(current\.revisionDone/);
+  assert.match(script, /mcqCount:Number\.isInteger\(current\.mcqCount\)/);
+});
