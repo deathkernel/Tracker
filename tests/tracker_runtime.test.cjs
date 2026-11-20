@@ -539,7 +539,7 @@ test("nested backup review records reject malformed and unsafe schedule values",
   };
   vm.runInNewContext(
     script.slice(start, end) +
-      "\\nthis.validate=validateBackupReviewRecords;" +
+      "\nthis.validate=validateBackupReviewRecords;" +
       "this.mastery=normalizeMasteryProgress;" +
       "this.revision=normalizeRevisionSchedule;" +
       "this.retest=normalizeRetestSchedule;",
