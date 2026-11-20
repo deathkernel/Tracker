@@ -615,3 +615,20 @@ test("nested backup review records reject malformed and unsafe schedule values",
   assert.equal(retest.due_date, "");
   assert.equal(retest.attempts, 0);
 });
+
+
+test("workspace navigation keeps page content below navigation and scopes dashboard metrics to Overview", () => {
+  const navStart = html.indexOf('<nav class="cir-tabs" id="workspaceNav"');
+  const navEnd = html.indexOf("</nav>", navStart);
+  const headingStart = html.indexOf('<section class="page-context"');
+  const mainStart = html.indexOf("<main>", navEnd);
+  const settingsStart = html.indexOf('<section class="settings-page" data-page="settings">');
+  assert.ok(navStart >= 0 && navEnd > navStart);
+  assert.ok(navEnd < headingStart && headingStart < mainStart);
+  assert.ok(mainStart < settingsStart);
+  assert.match(script, /document\.body\.dataset\.view=activeView/);
+  assert.match(script, /\$\("pageTitle"\)\.textContent=titles\[activeView\]/);
+  assert.match(html, /body\[data-view\]:not\(\[data-view="overview"\]\) \.grid-stats/);
+  assert.match(html, /#workspaceNav\.cir-tabs\{[^}]*grid-template-columns:repeat\(8,minmax\(0,1fr\)\)/);
+  assert.match(html, /grid-auto-rows:minmax\(40px,auto\)/);
+});
