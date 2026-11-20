@@ -13,7 +13,6 @@ The exporter reads the SQLite saved state and syllabus/planner definitions. It n
 - Calendar[Date] → StudyLogs[Date]
 - Calendar[Date] → DailyChecklist[Date]
 - Calendar[Date] → StudyPlan[Date]
-Topics[TopicKey] → TopicProgress[TopicKey]
 Topics[TopicKey] → Mastery[TopicKey]
 Topics[TopicKey] → RetestSchedule[TopicKey]
 PlanTopics[PlanKey] → StudyPlan[PlanKey]
