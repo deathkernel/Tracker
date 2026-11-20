@@ -93,15 +93,15 @@ test("legacy completed phases retain completed checklist ticks after upgrade", (
 
 test("checklist completion helper requires every item in the selected phase", () => {
   const definitionsStart = script.indexOf("const STUDY_DAY_CHECKLIST=");
-  const definitionsEnd = script.indexOf("\\nconst STORE", definitionsStart);
+  const definitionsEnd = script.indexOf("const STORE=", definitionsStart);
   const helperStart = script.indexOf("function isPhaseChecklistComplete(progress,phase)");
-  const helperEnd = script.indexOf("\\nfunction getPhaseChecklistCount", helperStart);
+  const helperEnd = script.indexOf("function getPhaseChecklistCount", helperStart);
   assert.ok(definitionsStart >= 0 && definitionsEnd > definitionsStart && helperEnd > helperStart);
   const sandbox = {};
   vm.runInNewContext(
     script.slice(definitionsStart, definitionsEnd) +
-      "\\n" + script.slice(helperStart, helperEnd) +
-      "\\nthis.studyItems=STUDY_DAY_CHECKLIST;this.revisionItems=REVISION_DAY_CHECKLIST;this.isComplete=isPhaseChecklistComplete;this.normalize=normalizePhaseChecklist;",
+      "\n" + script.slice(helperStart, helperEnd) +
+      "\nthis.studyItems=STUDY_DAY_CHECKLIST;this.revisionItems=REVISION_DAY_CHECKLIST;this.isComplete=isPhaseChecklistComplete;this.normalize=normalizePhaseChecklist;",
     sandbox
   );
   const allStudy = sandbox.normalize(null, sandbox.studyItems, true);
