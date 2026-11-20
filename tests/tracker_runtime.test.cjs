@@ -841,3 +841,148 @@ test("LAN API calls use a per-tab bearer token captured from the QR URL fragment
   assert.match(script, /headers\.set\("Authorization","Bearer "\+token\)/);
   assert.doesNotMatch(script, /fetch\("\/api\/(?:state|study\/review-batch|network-info)"/);
 });
+
+
+test("customization normalization preserves invalid-settings progress and sparse device theme fallbacks", () => {
+  const start = script.indexOf("const defaultState=()=>");
+  const end = script.indexOf("\nlet saveQueue=", start);
+  assert.ok(start >= 0 && end > start);
+  const subjects = JSON.parse(script.match(/const SUBJECTS=(\[[\s\S]*?\]);\r?\nconst ROADMAP/)[1]);
+  const sandbox = {
+    SUBJECTS: subjects,
+    STUDY_PLAN_TOPICS: [],
+    STUDY_DAY_CHECKLIST: [],
+    REVISION_DAY_CHECKLIST: [],
+    LEGACY_CYCLE_START_DATE: "2026-11-20",
+    normalizeRevisionSchedule: value => value && typeof value === "object" ? value : {},
+    normalizeMasteryProgress: value => value && typeof value === "object" ? value : {},
+    normalizeRetestSchedule: value => value && typeof value === "object" ? value : {},
+    normalizePhaseChecklist: value => value && typeof value === "object" ? value : {},
+    normalizeStudyLogs: value => value && typeof value === "object" ? value : {},
+    addDaysToDateKey: value => value,
+    isValidTargetDate: () => true
+  };
+
+  vm.runInNewContext(
+    script.slice(start, end) + "\nthis.normalize=normalizeProgressState;",
+    sandbox
+  );
+
+  const recovered = sandbox.normalize({
+    version: 4,
+    settings: null,
+    topics: { "Polity::Fundamental Rights": true },
+    customSubjects: [{
+      name: "polity",
+      topics: [
+        ["Fundamental Rights", 25, "P1"],
+        ["Essay", 1, "P2"],
+        ["Essay", 2, "P2"]
+      ]
+    }],
+    studyPlanProgressSchema: 2
+  });
+
+  assert.equal(recovered.topics["Polity::Fundamental Rights"], true);
+  assert.equal(recovered.settings.targetDate, "2027-05-23");
+  assert.equal(recovered.customSubjects.length, 1);
+  assert.equal(recovered.customSubjects[0].name, "Polity");
+  assert.deepEqual(
+    Array.from(recovered.customSubjects[0].topics, topic => topic[0]),
+    ["Essay"]
+  );
+
+  const sparseTheme = sandbox.normalize({
+    settings: {
+      theme: "dark",
+      deviceThemes: { desktop: "dark", mobile: "auto" }
+    },
+    studyPlanProgressSchema: 2
+  });
+  assert.equal(sparseTheme.settings.deviceThemes.desktop, "dark");
+  assert.equal(Object.hasOwn(sparseTheme.settings.deviceThemes, "mobile"), false);
+  assert.equal(
+    sparseTheme.settings.deviceThemes.mobile || sparseTheme.settings.theme,
+    "dark"
+  );
+});
+
+test("custom topic identity migration uses canonical subject keys and rejects cross-subject collisions", () => {
+  const subjectsStart = script.indexOf("const allSubjects=()=>{");
+  const subjectsEnd = script.indexOf("\nfunction appendSettingsAction", subjectsStart);
+  const helpersStart = script.indexOf("function canonicalSubjectName(");
+  const helpersEnd = script.indexOf("\nfunction renderSettings(", helpersStart);
+  assert.ok(subjectsStart >= 0 && subjectsEnd > subjectsStart);
+  assert.ok(helpersStart >= 0 && helpersEnd > helpersStart);
+  const subjects = JSON.parse(script.match(/const SUBJECTS=(\[[\s\S]*?\]);\r?\nconst ROADMAP/)[1]);
+
+  const builtInState = {
+    customSubjects: [{ name: "polity", topics: [["Essay", 1, "P2"]] }],
+    topics: { "Polity::Essay": true },
+    topicEvidence: { "Polity::Essay": { score: 4 } },
+    pendingTopicEvidence: { "Polity::Essay": { pending: true } },
+    revisionSchedule: { "Polity::Essay": { due_date: "2026-11-21" } },
+    revisionDone: { "Polity::Essay": true },
+    masteryProgress: { "Polity::Essay": { reviews: 2 } },
+    retestSchedule: { "Polity::Essay": { due_date: "2026-11-22" } },
+    recoveryQueue: [{ key: "Polity::Essay" }]
+  };
+  const canonicalSandbox = { state: builtInState, SUBJECTS: subjects };
+  vm.runInNewContext(
+    script.slice(subjectsStart, subjectsEnd) + "\n" +
+    script.slice(helpersStart, helpersEnd) +
+    "\nthis.rename=renameCustomTopic;this.remove=removeCustomTopic;",
+    canonicalSandbox
+  );
+
+  assert.equal(canonicalSandbox.rename("polity", "Essay", "Optional Essay"), true);
+  for (const key of [
+    "topics",
+    "topicEvidence",
+    "pendingTopicEvidence",
+    "revisionSchedule",
+    "revisionDone",
+    "masteryProgress",
+    "retestSchedule"
+  ]) {
+    assert.ok(Object.hasOwn(builtInState[key], "Polity::Optional Essay"), key + " was not migrated");
+    assert.equal(Object.hasOwn(builtInState[key], "Polity::Essay"), false, key + " kept the old key");
+  }
+  assert.equal(builtInState.recoveryQueue[0].key, "Polity::Optional Essay");
+  assert.equal(canonicalSandbox.remove("polity", "Optional Essay"), true);
+  for (const key of [
+    "topics",
+    "topicEvidence",
+    "pendingTopicEvidence",
+    "revisionSchedule",
+    "revisionDone",
+    "masteryProgress",
+    "retestSchedule"
+  ]) {
+    assert.equal(Object.hasOwn(builtInState[key], "Polity::Optional Essay"), false, key + " was not cleared");
+  }
+  assert.equal(builtInState.recoveryQueue.length, 0);
+
+  const collisionState = {
+    customSubjects: [
+      { name: "A", topics: [["X", 0, "P2"]] },
+      { name: "A::B", topics: [["C", 0, "P2"]] }
+    ],
+    topics: { "A::X": true, "A::B::C": true }
+  };
+  const collisionSandbox = { state: collisionState, SUBJECTS: [] };
+  vm.runInNewContext(
+    script.slice(subjectsStart, subjectsEnd) + "\n" +
+    script.slice(helpersStart, helpersEnd) +
+    "\nthis.rename=renameCustomTopic;",
+    collisionSandbox
+  );
+
+  assert.equal(collisionSandbox.rename("A", "X", "B::C"), false);
+  assert.equal(collisionState.topics["A::X"], true);
+  assert.equal(collisionState.topics["A::B::C"], true);
+  assert.deepEqual(
+    collisionState.customSubjects[0].topics.map(topic => topic[0]),
+    ["X"]
+  );
+});

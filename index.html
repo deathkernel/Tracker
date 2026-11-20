@@ -1050,6 +1050,8 @@ const defaultState=()=>({version:0,topics:{},daily:{},weekly:{},logs:{},studyPla
 function normalizeProgressState(value){
  const source=value&&typeof value==="object"&&!Array.isArray(value)?value:{};
  const next={...defaultState(),...source};
+ const sourceSettings=source.settings&&typeof source.settings==="object"&&!Array.isArray(source.settings)?source.settings:{};
+ next.settings={...defaultState().settings,...sourceSettings};
  next.topicEvidence=source.topicEvidence&&typeof source.topicEvidence==="object"&&!Array.isArray(source.topicEvidence)?source.topicEvidence:{};
  next.revisionSchedule=normalizeRevisionSchedule(source.revisionSchedule);
  next.testResults=Array.isArray(source.testResults)?source.testResults:[];
@@ -1059,10 +1061,37 @@ function normalizeProgressState(value){
  next.retestSchedule=normalizeRetestSchedule(source.retestSchedule);
  next.recoveryQueue=Array.isArray(source.recoveryQueue)?source.recoveryQueue:[];
  next.studyPlanProgress=Object.fromEntries(Object.entries(source.studyPlanProgress&&typeof source.studyPlanProgress==="object"&&!Array.isArray(source.studyPlanProgress)?source.studyPlanProgress:{}).filter(([key,item])=>(/^\d{4}-\d{2}-\d{2}$/.test(key)||/^plan:\d+$/.test(key))&&item&&typeof item==="object"&&!Array.isArray(item)).map(([key,item])=>[key,{studyDone:!!item.studyDone,mcqDone:!!item.mcqDone,revisionDone:!!item.revisionDone,mcqCount:Number.isInteger(item.mcqCount)&&item.mcqCount>=0&&item.mcqCount<=500?item.mcqCount:0,mcqLogged:!!item.mcqLogged,studyReset:!!item.studyReset,studyChecklist:normalizePhaseChecklist(item.studyChecklist,STUDY_DAY_CHECKLIST,!!item.studyDone),revisionChecklist:normalizePhaseChecklist(item.revisionChecklist,REVISION_DAY_CHECKLIST,!!item.revisionDone)}]));
- next.customSubjects=(Array.isArray(source.customSubjects)?source.customSubjects:[]).filter(item=>item&&typeof item.name==="string"&&item.name.trim()).map(item=>({name:item.name.trim(),topics:(Array.isArray(item.topics)?item.topics:[]).filter(topic=>Array.isArray(topic)&&typeof topic[0]==="string"&&topic[0].trim()).map(topic=>[topic[0].trim(),Number.isFinite(Number(topic[1]))?Number(topic[1]):null,typeof topic[2]==="string"?topic[2]:"P2"])}));
+ const customGroups=[];
+ (Array.isArray(source.customSubjects)?source.customSubjects:[]).forEach(item=>{
+  if(!item||typeof item.name!=="string"||!item.name.trim())return;
+  const requestedName=item.name.trim();
+  const builtIn=SUBJECTS.find(subject=>subject.name.toLowerCase()===requestedName.toLowerCase());
+  const canonicalName=builtIn?.name||requestedName;
+  let group=customGroups.find(subject=>subject.name.toLowerCase()===canonicalName.toLowerCase());
+  if(!group){group={name:canonicalName,topics:[]};customGroups.push(group)}
+  const existingNames=new Set([
+   ...(builtIn?.topics||[]).map(topic=>topic[0].toLowerCase()),
+   ...group.topics.map(topic=>topic[0].toLowerCase())
+  ]);
+  (Array.isArray(item.topics)?item.topics:[]).forEach(topic=>{
+   if(!Array.isArray(topic)||typeof topic[0]!=="string"||!topic[0].trim())return;
+   const topicName=topic[0].trim(),normalizedName=topicName.toLowerCase();
+   if(existingNames.has(normalizedName))return;
+   existingNames.add(normalizedName);
+   group.topics.push([topicName,Number.isFinite(Number(topic[1]))?Number(topic[1]):null,typeof topic[2]==="string"?topic[2]:"P2"]);
+  });
+ });
+ next.customSubjects=customGroups.filter(group=>group.topics.length>0);
  next.customDaily=(Array.isArray(source.customDaily)?source.customDaily:[]).filter(item=>Array.isArray(item)&&item.length>=2&&typeof item[0]==="string"&&typeof item[1]==="string"&&item[1].trim()).map(item=>[item[0],item[1].trim(),"",String(item[3]||"Personal task")]);
- next.settings.deviceThemes=source.settings?.deviceThemes&&typeof source.settings.deviceThemes==="object"&&!Array.isArray(source.settings.deviceThemes)?{desktop:source.settings.deviceThemes.desktop==="dark"?"dark":"light",mobile:source.settings.deviceThemes.mobile==="dark"?"dark":"light"}:{};
- for(const key of ["topics","daily","weekly","logs","studyPlanDone","revisionDone","settings"]){if(!next[key]||typeof next[key]!=="object"||Array.isArray(next[key]))next[key]={};}
+ const savedDeviceThemes=sourceSettings.deviceThemes;
+ const deviceThemes={};
+ if(savedDeviceThemes&&typeof savedDeviceThemes==="object"&&!Array.isArray(savedDeviceThemes)){
+  for(const device of ["desktop","mobile"]){
+   if(savedDeviceThemes[device]==="dark"||savedDeviceThemes[device]==="light")deviceThemes[device]=savedDeviceThemes[device];
+  }
+ }
+ next.settings.deviceThemes=deviceThemes;
+ for(const key of ["topics","daily","weekly","logs","studyPlanDone","revisionDone"]){if(!next[key]||typeof next[key]!=="object"||Array.isArray(next[key]))next[key]={};}
  delete next.settings.studyGoal;
  next.logs=normalizeStudyLogs(next.logs);
  if(!isValidTargetDate(next.settings.targetDate))next.settings.targetDate="2027-05-23";
@@ -1193,6 +1222,19 @@ function renderCustomDailyManager(){
   item.append(copy,actions);host.append(item);
  });
 }
+function canonicalSubjectName(subjectName){
+ const requested=String(subjectName??"");
+ return allSubjects().find(subject=>subject.name.toLowerCase()===requested.toLowerCase())?.name||requested;
+}
+function topicStateKey(subjectName,topicName){
+ return canonicalSubjectName(subjectName)+"::"+topicName;
+}
+function hasTopicStateKeyCollision(destinationKey,sourceKey){
+ return allSubjects().some(subject=>subject.topics.some(([topicName])=>{
+  const key=subject.name+"::"+topicName;
+  return key===destinationKey&&key!==sourceKey;
+ }));
+}
 function moveTopicStateKey(oldKey,newKey){
  for(const mapName of ["topics","topicEvidence","pendingTopicEvidence","revisionSchedule","revisionDone","masteryProgress","retestSchedule"]){
   const map=state[mapName];if(!map||typeof map!=="object"||Array.isArray(map)||!Object.prototype.hasOwnProperty.call(map,oldKey))continue;
@@ -1213,7 +1255,7 @@ function removeCustomTopic(subjectName,topicName){
  const topic=group.topics.find(item=>item[0].toLowerCase()===topicName.toLowerCase());
  if(!topic)return false;
  group.topics=group.topics.filter(item=>item!==topic);
- clearTopicStateKey(group.name+"::"+topic[0]);
+ clearTopicStateKey(topicStateKey(group.name,topic[0]));
  if(!group.topics.length&&!SUBJECTS.some(item=>item.name.toLowerCase()===group.name.toLowerCase())){
   state.customSubjects=state.customSubjects.filter(item=>item!==group);
  }
@@ -1222,10 +1264,12 @@ function removeCustomTopic(subjectName,topicName){
 function renameCustomTopic(subjectName,oldTopic,newTopic){
  const group=(state.customSubjects||[]).find(item=>item.name.toLowerCase()===subjectName.toLowerCase());
  if(!group)return false;
- if(allSubjects().find(item=>item.name.toLowerCase()===subjectName.toLowerCase())?.topics.some(item=>item[0].toLowerCase()===newTopic.toLowerCase()))return false;
  const topic=group.topics.find(item=>item[0].toLowerCase()===oldTopic.toLowerCase());
  if(!topic)return false;
- moveTopicStateKey(group.name+"::"+topic[0],group.name+"::"+newTopic);
+ const oldKey=topicStateKey(group.name,topic[0]);
+ const newKey=topicStateKey(group.name,newTopic);
+ if(hasTopicStateKeyCollision(newKey,oldKey))return false;
+ moveTopicStateKey(oldKey,newKey);
  topic[0]=newTopic;return true;
 }
 function renderSettings(){
@@ -1255,14 +1299,14 @@ function handleCustomSyllabusAction(event){
   const name=value.trim();if(!name){notify("Subject name cannot be empty.");return}
   if(allSubjects().some(item=>item.name.toLowerCase()===name.toLowerCase())){notify("That subject already exists.");return}
   if(!group)return;
-  const oldName=group.name;
-  group.topics.forEach(([topicName])=>moveTopicStateKey(oldName+"::"+topicName,name+"::"+topicName));
+  const oldName=canonicalSubjectName(group.name);
+  group.topics.forEach(([topicName])=>moveTopicStateKey(topicStateKey(oldName,topicName),name+"::"+topicName));
   group.name=name;persist();renderAll();notify("Custom subject renamed; topic progress was kept.");return;
  }
  if(action==="delete-subject"){
   if(!confirm("Delete the custom subject \""+subject+"\" and all its custom topics and related progress?"))return;
   if(!group)return;
-  group.topics.forEach(([topicName])=>clearTopicStateKey(group.name+"::"+topicName));
+  group.topics.forEach(([topicName])=>clearTopicStateKey(topicStateKey(group.name,topicName)));
   state.customSubjects=state.customSubjects.filter(item=>item!==group);
   persist();renderAll();notify("Custom subject deleted.");return;
  }
@@ -2109,7 +2153,8 @@ function setWorkspaceView(view){
 function activeDevice(){
  const userAgent=navigator.userAgent||"";
  const appleTablet=navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1;
- const mobile=typeof navigator.userAgentData?.mobile==="boolean"?navigator.userAgentData.mobile:/Android|iPhone|iPad|iPod|Mobile/i.test(userAgent)||appleTablet;
+ const userAgentMobile=/Android|iPhone|iPad|iPod|Mobile/i.test(userAgent)||appleTablet;
+ const mobile=navigator.userAgentData?.mobile===true||userAgentMobile;
  return mobile?"mobile":"desktop";
 }
 function applyDeviceTheme(){
