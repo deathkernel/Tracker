@@ -264,6 +264,21 @@ body.dark .stat-completion-track{background:#30394a}
 body.dark .topic-completion-value.is-low{color:#ff857d}
 body.dark .topic-completion-value.is-medium{color:#f3bd63}
 body.dark .topic-completion-value.is-high{color:#61c49b}
+
+/* Separate Day 1 preparation and Day 2 MCQ/revision checklists */
+.phase-checklist{display:grid;gap:10px;padding:13px 0 4px;border-top:1px solid var(--line)}
+.phase-checklist-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:10px;letter-spacing:.06em}
+.phase-checklist-heading strong{color:var(--muted);font-weight:850}
+.phase-checklist-count{font-size:11px;font-weight:750;color:var(--blue);white-space:nowrap;letter-spacing:0}
+.phase-checklist-list{display:grid;gap:7px}
+.phase-check{display:flex;align-items:flex-start;gap:9px;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:12px;cursor:pointer}
+.phase-check input{width:15px;height:15px;flex:none;margin:1px 0 0;accent-color:var(--green)}
+.phase-check span{flex:1}
+.phase-check.done span{text-decoration:line-through;color:var(--muted)}
+.phase-check.locked{opacity:.55;cursor:not-allowed}
+.phase-checklist.is-locked{opacity:.9}
+.phase-checklist-note{margin:0;color:var(--muted);font-size:10px}
+body.dark .phase-check{background:#151b26}
 </style>
 </head>
 <body>
@@ -375,11 +390,6 @@ body.dark .topic-completion-value.is-high{color:#61c49b}
  </div>
  <div class="form-actions log-form-actions"><button class="btn primary" id="saveLog">Save study log</button><button class="btn" id="clearLog">Clear fields</button></div>
 </section>
-<section class="card" data-page="plan">
-  <div class="card-head"><h2>Weekly targets</h2><span class="chip" id="weekLabel">This week</span></div>
-  <div class="weekly-checks" id="weeklyTasks"></div>
-  <div class="overall-row"><span>Weekly targets</span><b id="weeklyPercent">0%</b></div><div class="progress green"><span id="weeklyBar"></span></div>
- </section>
  <section class="card" data-page="plan">
   <div class="card-head"><h2>Study roadmap</h2><span class="chip">27 weeks</span></div>
   <div class="week-list" id="roadmap"></div>
@@ -570,6 +580,15 @@ function findMatchingSyllabusTopic(subject,topic){
  const keys=findMatchingSyllabusTopics(subject,topic);
  return keys.length===1?keys[0]:null;
 }
+function hasCompletedStudyCycleForSyllabusTopic(subject,topic){
+ const key=subject+"::"+topic;
+ const contributors=STUDY_PLAN_TOPICS.map((entry,planIndex)=>({entry,planIndex})).filter(({entry})=>findMatchingSyllabusTopics(entry.subject,entry.topic).includes(key));
+ if(!contributors.length)return true;
+ return contributors.every(({planIndex})=>{
+  const progress=state.studyPlanProgress?.["plan:"+planIndex]||{};
+  return !!progress.studyDone&&!!progress.revisionDone&&isPhaseChecklistComplete(progress,"study")&&isPhaseChecklistComplete(progress,"mcq_revision");
+ });
+}
 function syncSyllabusCompletionToStudyPlan(subject,topic){
  const key=subject+"::"+topic;
  if(!validTopicKeys().has(key))return;
@@ -587,20 +606,23 @@ function syncSyllabusUncompletionToStudyPlan(subject,topic){
  DAILY_STUDY_PLAN.forEach(entry=>{
   if(entry.phase!=="study"||!findMatchingSyllabusTopics(entry.subject,entry.topic).includes(key))return;
   const progressKey=getStudyPlanProgressDateKey(entry);
-  const progress={...getStudyPlanProgress(entry),studyDone:false,mcqDone:false,revisionDone:false,studyReset:true};
+  const progress={...getStudyPlanProgress(entry),studyDone:false,mcqDone:false,revisionDone:false,studyChecklist:normalizePhaseChecklist(null,STUDY_DAY_CHECKLIST,false),revisionChecklist:normalizePhaseChecklist(null,REVISION_DAY_CHECKLIST,false),studyReset:true};
   state.studyPlanProgress=state.studyPlanProgress||{};
   state.studyPlanProgress[progressKey]=progress;
  });
 }
 function syncStudyPlanCompletionToSyllabus(entry){
- if(!entry||entry.phase!=="study")return;
+ if(!entry||!["study","mcq_revision"].includes(entry.phase))return;
  const keys=findMatchingSyllabusTopics(entry.subject,entry.topic);
  if(!keys.length)return;
  state.topics=state.topics||{};
  state.revisionSchedule=state.revisionSchedule||{};
  keys.forEach(key=>{
   const contributors=STUDY_PLAN_TOPICS.map((planEntry,planIndex)=>({planEntry,planIndex})).filter(({planEntry})=>findMatchingSyllabusTopics(planEntry.subject,planEntry.topic).includes(key));
-  const allDone=contributors.length>0&&contributors.every(({planIndex})=>!!state.studyPlanProgress?.["plan:"+planIndex]?.studyDone);
+  const allDone=contributors.length>0&&contributors.every(({planIndex})=>{
+   const progress=state.studyPlanProgress?.["plan:"+planIndex]||{};
+   return !!progress.studyDone&&!!progress.revisionDone&&isPhaseChecklistComplete(progress,"study")&&isPhaseChecklistComplete(progress,"mcq_revision");
+  });
   if(!allDone)return;
   state.topics[key]=true;
   if(!state.revisionSchedule[key])state.revisionSchedule[key]={due_date:revisionDateAfter(1),interval_days:1,repetitions:0,ease_factor:2.5,last_reviewed_at:null,last_quality:null};
@@ -613,7 +635,6 @@ async function syncStudyPlanRevisionToSyllabus(entry,quality=3){
  let trackedCanonical=false;
  try{
   for(const key of keys){
-   if(!state.topics?.[key])continue;
    const previous=state.revisionSchedule[key]||{interval_days:1,repetitions:0,ease_factor:2.5};
    const response=await fetch("/api/revision/next",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({today:localDate(),previous,quality})});
    if(!response.ok)throw new Error("Revision schedule could not be updated.");
@@ -631,6 +652,7 @@ function revisionDateAfter(days){
 }
 function completeTopicWithMastery(subject,topic){
  const key=subject+"::"+topic;
+ if(!hasCompletedStudyCycleForSyllabusTopic(subject,topic)){notify("Complete both Day 1 preparation and Day 2 MCQ + revision checklists before completing this topic.");renderTopics();return;}
  state.topics=state.topics||{};
  state.topics[key]=true;
  state.revisionSchedule=state.revisionSchedule||{};
@@ -781,7 +803,6 @@ function renderRevision(){
  table.append(body);const wrap=document.createElement("div");wrap.className="data-table-wrap";wrap.append(table);host.append(wrap);
  if(!shown)host.innerHTML='<div class="empty">No completed topics match this filter yet. Complete a topic in Syllabus to add it here.</div>';
 }
-function renderWeekly(){const idx=weekIndex(),key="week-"+idx,items=state.weekly[key]||{},host=$("weeklyTasks");host.innerHTML="";WEEKLY.forEach(([id,title])=>{const label=document.createElement("div");label.className="weekly-check"+(items[id]?" done":"");const check=createAnimatedCheckbox(!!items[id],"Mark "+title+" complete"),cb=check.input;cb.addEventListener("change",()=>{state.weekly[key]=state.weekly[key]||{};state.weekly[key][id]=cb.checked;persist();renderWeekly()});const span=document.createElement("span");span.textContent=title;label.append(check.wrapper,span);host.append(label)});const count=WEEKLY.filter(x=>items[x[0]]).length,p=count/WEEKLY.length*100;$("weeklyPercent").textContent=Math.round(p)+"%";$("weeklyBar").style.width=p+"%";$("weekLabel").textContent="Week "+(idx+1)}
 const BASE_STUDY_PLAN=[
 {subject:"Polity",days:["Constitutional development and historical background","Constituent Assembly and making of the Constitution","Preamble: keywords and philosophy","Union and its Territory","Citizenship provisions","Fundamental Rights: overview and Articles","Fundamental Rights: key cases + Basic Structure doctrine + PYQs"]},
 {subject:"Polity",days:["Right to Equality","Right against Exploitation","Right to Constitutional Remedies","Directive Principles of State Policy","Fundamental Duties and their comparison with DPSP","Parliament: composition, sessions and officers","Parliament: legislative procedure, Constitutional Amendments + PYQs"]},
@@ -840,7 +861,26 @@ function getStudyPlanProgressDateKey(entry){
  return "plan:"+entry.planIndex;
 }
 function getStudyPlanProgress(entry){
- return state.studyPlanProgress?.[getStudyPlanProgressDateKey(entry)]||{};
+ return state.studyPlanProgress?.[getStudyPlanProgressDateKey(entry)]||{
+  studyChecklist:normalizePhaseChecklist(null,STUDY_DAY_CHECKLIST,false),
+  revisionChecklist:normalizePhaseChecklist(null,REVISION_DAY_CHECKLIST,false)
+ };
+}
+function isPhaseChecklistComplete(progress,phase){
+ const items=phase==="study"?STUDY_DAY_CHECKLIST:REVISION_DAY_CHECKLIST;
+ const field=phase==="study"?"studyChecklist":"revisionChecklist";
+ return items.every(([id])=>progress?.[field]?.[id]===true);
+}
+function getPhaseChecklistCount(progress,phase){
+ const items=phase==="study"?STUDY_DAY_CHECKLIST:REVISION_DAY_CHECKLIST;
+ const field=phase==="study"?"studyChecklist":"revisionChecklist";
+ return items.filter(([id])=>progress?.[field]?.[id]===true).length;
+}
+function canCompleteStudyPlanPhase(entry,phase){
+ const progress=getStudyPlanProgress(entry);
+ if(phase==="study")return isPhaseChecklistComplete(progress,"study");
+ if(phase==="mcq_revision")return !!progress.studyDone&&isPhaseChecklistComplete(progress,"mcq_revision");
+ return false;
 }
 function getStudyPlanEntriesForDate(dateKey,phase){
  return DAILY_STUDY_PLAN.filter(entry=>getStudyPlanDateKey(entry)===dateKey&&(!phase||entry.phase===phase));
@@ -920,6 +960,7 @@ function askRecallQuality(topic,kind="revision"){
 }
 function markStudyPlanPhaseComplete(entry){
  if(!entry||entry.phase!=="study")return;
+ if(!canCompleteStudyPlanPhase(entry,"study")){notify("Complete every Day 1 preparation checklist item before finishing this phase.");return;}
  const key=getStudyPlanProgressDateKey(entry);
  const progress={...getStudyPlanProgress(entry),studyDone:true,studyReset:false};
  state.studyPlanProgress=state.studyPlanProgress||{};
@@ -931,7 +972,8 @@ function markStudyPlanPhaseComplete(entry){
 async function completePlanRevision(entry){
  const key=getStudyPlanProgressDateKey(entry);
  const progress={...getStudyPlanProgress(entry)};
- if(!progress.studyDone){notify("Complete this topic's study phase before Day 2 revision.");return;}
+ if(!progress.studyDone){notify("Complete this topic's Day 1 preparation phase before Day 2 revision.");return;}
+ if(!canCompleteStudyPlanPhase(entry,"mcq_revision")){notify("Complete every Day 2 MCQ + revision checklist item before finishing this topic.");return;}
  if(!progress.mcqDone){
   const rawAmount=prompt("How many MCQs did you attempt for "+entry.topic+"?","0");
   if(rawAmount===null)return;
@@ -943,7 +985,6 @@ async function completePlanRevision(entry){
   persist();
  }
  if(!progress.revisionDone){
-  if(!confirm("Have you revised "+entry.topic+"?")){notify("MCQ count saved. Finish revision when ready.");return;}
   const quality=askRecallQuality(entry.topic,"revision");
   if(quality===null)return;
   if(!await syncStudyPlanRevisionToSyllabus(entry,quality))return;
@@ -960,8 +1001,39 @@ async function completePlanRevision(entry){
  }
  state.studyPlanDone=state.studyPlanDone||{};
  state.studyPlanDone[getStudyPlanDateKey(entry)]=true;
+ syncStudyPlanCompletionToSyllabus(entry);
  persist();
  renderAll();
+}
+function renderPhaseChecklist(entry,phase,progress){
+ const isStudy=phase==="study",items=isStudy?STUDY_DAY_CHECKLIST:REVISION_DAY_CHECKLIST;
+ const field=isStudy?"studyChecklist":"revisionChecklist";
+ const phaseDone=isStudy?!!progress.studyDone:!!progress.revisionDone;
+ const locked=!isStudy&&!progress.studyDone;
+ const checkedCount=getPhaseChecklistCount(progress,phase);
+ const section=document.createElement("section");section.className="phase-checklist"+(locked?" is-locked":"");
+ const heading=document.createElement("div");heading.className="phase-checklist-heading";
+ const title=document.createElement("strong");title.textContent=isStudy?"DAY 1 · PREPARATION CHECKLIST":"DAY 2 · MCQ + REVISION CHECKLIST";
+ const count=document.createElement("span");count.className="phase-checklist-count";count.textContent=checkedCount+"/"+items.length+" done";
+ heading.append(title,count);
+ const list=document.createElement("div");list.className="phase-checklist-list";
+ items.forEach(([id,labelText])=>{
+  const row=document.createElement("label");row.className="phase-check"+(progress[field]?.[id]?" done":"")+(locked?" locked":"");
+  const input=document.createElement("input");input.type="checkbox";input.checked=!!progress[field]?.[id];input.disabled=phaseDone||locked;input.setAttribute("aria-label",labelText+" · "+entry.topic);
+  const label=document.createElement("span");label.textContent=labelText;
+  input.addEventListener("change",()=>{
+   const current={...getStudyPlanProgress(entry)};
+   current[field]={...normalizePhaseChecklist(current[field],items,false),[id]:input.checked};
+   state.studyPlanProgress=state.studyPlanProgress||{};
+   state.studyPlanProgress[getStudyPlanProgressDateKey(entry)]=current;
+   persist();
+   renderOverviewSchedule();
+  });
+  row.append(input,label);list.append(row);
+ });
+ section.append(heading,list);
+ if(locked){const lockNote=document.createElement("p");lockNote.className="phase-checklist-note";lockNote.textContent="Unlocks after the Day 1 preparation phase is completed.";section.append(lockNote);}
+ return section;
 }
 function renderOverviewSchedule(){
  const host=$("overviewDailySchedule");if(!host)return;host.innerHTML="";
@@ -972,29 +1044,31 @@ function renderOverviewSchedule(){
  ];
  if(!activities.length){host.textContent="No study topic is scheduled for today.";return;}
  activities.forEach(({entry,phase})=>{
-  const progress=getStudyPlanProgress(entry);
-  const done=isStudyPlanEntryDone(entry);
-  const isStudy=phase==="study";
-  const card=document.createElement("div");card.className="today-topic-card"+(done?" is-complete":"");
+  const progress=getStudyPlanProgress(entry),isStudy=phase==="study";
+  const phaseDone=isStudy?!!progress.studyDone:isStudyPlanEntryDone(entry);
+  const ready=canCompleteStudyPlanPhase(entry,phase);
+  const card=document.createElement("div");card.className="today-topic-card"+(phaseDone?" is-complete":"");
   const meta=document.createElement("div");meta.className="today-topic-meta";
   const dateLabel=document.createElement("span");dateLabel.textContent=new Date(today+"T00:00:00").toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short",year:"numeric"});
-  const dayLabel=document.createElement("span");dayLabel.textContent=isStudy?"Day 1 · New topic":"Day 2 · Previous topic revision";
+  const dayLabel=document.createElement("span");dayLabel.textContent=isStudy?"Day 1 · Preparation":"Day 2 · MCQ + Revision";
   meta.append(dateLabel,dayLabel);
   const subject=document.createElement("div");subject.className="today-topic-subject";subject.textContent=entry.subject;
-  const topicLabel=document.createElement("div");topicLabel.className="today-topic-label";topicLabel.textContent=isStudy?"TODAY'S STUDY TOPIC":"TODAY'S MCQ + REVISION";
+  const topicLabel=document.createElement("div");topicLabel.className="today-topic-label";topicLabel.textContent=isStudy?"NEW TOPIC · PREPARATION":"PREVIOUS TOPIC · MCQ + REVISION";
   const topicName=document.createElement("div");topicName.className="today-topic-name";topicName.textContent=entry.topic;
   const description=document.createElement("div");description.className="focus-desc";
-  description.textContent=isStudy?"Study this topic and complete your notes. Its MCQ practice and revision are scheduled for tomorrow.":"Attempt and record your MCQ count, then revise the same topic studied on its Day 1.";
+  description.textContent=isStudy?"Finish the preparation checklist today. The topic becomes completed only after its Day 2 checklist is also finished.":"Finish all MCQ and revision tasks, then record your MCQ count and recall score to complete this topic cycle.";
+  const checklist=renderPhaseChecklist(entry,phase,progress);
   const footer=document.createElement("div");footer.className="today-topic-footer";
-  const status=document.createElement("span");status.className="today-topic-status";status.textContent=done?"Completed":(isStudy?"Study pending":(!progress.studyDone?"Locked · Day 1 pending":"MCQ + revision pending"));
+  const status=document.createElement("span");status.className="today-topic-status";
+  if(isStudy)status.textContent=phaseDone?"Day 1 complete · Day 2 pending":getPhaseChecklistCount(progress,"study")+"/"+STUDY_DAY_CHECKLIST.length+" preparation tasks done";
+  else status.textContent=phaseDone?"Topic cycle completed":(!progress.studyDone?"Locked · Day 1 pending":getPhaseChecklistCount(progress,"mcq_revision")+"/"+REVISION_DAY_CHECKLIST.length+" MCQ + revision tasks done");
   const button=document.createElement("button");button.type="button";button.className="btn primary study-complete-btn";
-  button.textContent=done?"Completed":(isStudy?"Mark study complete":"Record MCQ + revision");
-  button.disabled=done||(!isStudy&&!progress.studyDone);
+  button.textContent=phaseDone?(isStudy?"Day 1 completed":"Topic completed"):(isStudy?"Complete Day 1":"Complete Day 2");
+  button.disabled=phaseDone||!ready;
   button.addEventListener("click",()=>{if(isStudy)markStudyPlanPhaseComplete(entry);else completePlanRevision(entry)});
-  footer.append(status,button);card.append(meta,subject,topicLabel,topicName,description,footer);host.append(card);
+  footer.append(status,button);card.append(meta,subject,topicLabel,topicName,description,checklist,footer);host.append(card);
  });
 }
-
 function renderRoadmap(){
  const host=$("roadmap");host.innerHTML="";
  const table=document.createElement("table");table.className="data-table daily-plan-table";
@@ -1126,10 +1200,10 @@ function renderCharts(){
  }
  $("chartsUpdated").textContent="Updated "+new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
 }
-function setWorkspaceView(view){const names={overview:"Your daily preparation at a glance.",syllabus:"Track 291 PYQ-focused topics: 50 priority topics plus 241 curated micro-topics.",logs:"Record focused hours, MCQs and daily study notes.",plan:"Follow your weekly targets and full preparation roadmap.",settings:"Personalize your target date, study hours and workspace.",revision:"Revisit every topic you have already completed.",charts:"Visualize your syllabus, revision, study plan and study-time progress.",missing:"Review every syllabus topic that is still pending."};document.querySelectorAll("[data-page]").forEach(card=>{card.hidden=card.dataset.page!==view});document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input=>{input.checked=input.value===view});$("pageHint").textContent=names[view]||names.overview}
+function setWorkspaceView(view){const names={overview:"Your daily preparation at a glance.",syllabus:"Track 291 PYQ-focused topics: 50 priority topics plus 241 curated micro-topics.",logs:"Record focused hours, MCQs and daily study notes.",plan:"Follow the daily two-phase study cycle and full preparation roadmap.",settings:"Personalize your target date, study hours and workspace.",revision:"Revisit every topic you have already completed.",charts:"Visualize your syllabus, revision, study plan and study-time progress.",missing:"Review every syllabus topic that is still pending."};document.querySelectorAll("[data-page]").forEach(card=>{card.hidden=card.dataset.page!==view});document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input=>{input.checked=input.value===view});$("pageHint").textContent=names[view]||names.overview}
 function activeDevice(){return window.matchMedia("(max-width: 760px)").matches?"mobile":"desktop"}
 function applyDeviceTheme(){state.settings=state.settings||{};state.settings.deviceThemes=state.settings.deviceThemes||{};const device=activeDevice();const theme=state.settings.deviceThemes[device]||(state.settings.theme||"light");document.body.classList.toggle("dark",theme==="dark");$("themeToggle").checked=theme==="dark"}
-function renderAll(){syncSubjectFilter();applyDeviceTheme();renderStats();renderDaily();renderOverviewSchedule();renderSubjectOverview();renderTopics();renderMissingTopics();renderRevision();renderCharts();renderWeekly();renderRoadmap();renderLogs();setWorkspaceView(window.trackerView||"overview")}
+function renderAll(){syncSubjectFilter();applyDeviceTheme();renderStats();renderDaily();renderOverviewSchedule();renderSubjectOverview();renderTopics();renderMissingTopics();renderRevision();renderCharts();renderRoadmap();renderLogs();setWorkspaceView(window.trackerView||"overview")}
 async function showPhoneAccess(){
  const panel=$("phoneAccessPanel"),button=$("phoneAccessBtn");if(!panel)return;
  panel.hidden=false;button?.setAttribute("aria-expanded","true");
