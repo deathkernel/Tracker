@@ -171,7 +171,9 @@ def test_customization_management_and_device_theme_profiles(tracker_url):
 
             page.once("dialog", lambda dialog: dialog.accept("Extra Studies"))
             page.locator('#customSyllabusManager button[data-action="rename-subject"]').click()
-            assert page.locator("#customSyllabusManager").get_by_text("Extra Studies").count() == 1
+            subject_names = page.locator("#customSyllabusManager .settings-manage-copy > strong").all_text_contents()
+            assert subject_names.count("Extra Studies") == 1
+            assert "Optional Studies" not in subject_names
 
             page.locator("#newTaskName").fill("Review flashcards")
             page.locator("#addDailyTask").click()
