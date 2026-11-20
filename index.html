@@ -352,7 +352,7 @@ body.dark .phase-check{background:#151b26}
     <p class="small-note">Your daily habits and topic-specific Day 1 / Day 2 checklists all live here.</p>
    </div>
    <div class="overview-topic-column">
-    <div class="card-head schedule-overview-head"><h2>Today’s study cycle</h2><span class="chip">Rotating subjects · 2-day cycle</span></div>
+    <div class="card-head schedule-overview-head"><h2>Today’s study cycle</h2><span class="chip">Top 50 first · 2-day cycle</span></div>
     <div id="overviewDailySchedule"></div>
    </div>
   </div>
@@ -588,13 +588,13 @@ function renderDaily(){
  if(activities.length){
   const section=document.createElement("section");section.className="daily-topic-work";
   const heading=document.createElement("div");heading.className="daily-topic-work-heading";heading.textContent="Today's topic work";
-  const hint=document.createElement("p");hint.className="small-note";hint.textContent="Complete the preparation or MCQ + revision tasks for every subject scheduled today.";
+  const hint=document.createElement("p");hint.className="small-note";hint.textContent="Top 50 P1 topics are scheduled first. Complete the preparation or MCQ + revision tasks for today's subjects.";
   section.append(heading,hint);
   activities.forEach(({entry,phase})=>{
    const group=document.createElement("div");group.className="daily-topic-group";
    const groupHead=document.createElement("div");groupHead.className="daily-topic-group-head";
    const title=document.createElement("strong");title.textContent=entry.rotationSubject||entry.subject;
-   const phaseLabel=document.createElement("span");phaseLabel.textContent=phase==="study"?"Day 1 · Preparation":"Day 2 · MCQ + Revision";
+   const phaseLabel=document.createElement("span");phaseLabel.textContent=(entry.priority==="P1"?"TOP 50 · ":"")+(phase==="study"?"Day 1 · Preparation":"Day 2 · MCQ + Revision");
    groupHead.append(title,phaseLabel);
    const topic=document.createElement("div");topic.className="daily-topic-group-topic";topic.textContent=entry.topic;
    group.append(groupHead,topic,renderPhaseChecklist(entry,phase,getStudyPlanProgress(entry)));
@@ -661,6 +661,53 @@ function findMatchingSyllabusTopic(subject,topic){
  const keys=findMatchingSyllabusTopics(subject,topic);
  return keys.length===1?keys[0]:null;
 }
+const PRELIMS_TOP_50_KEYS=new Set(allSubjects().flatMap(subject=>
+ subject.topics.filter(topic=>topic[2]==="P1").map(topic=>subject.name+"::"+topic[0])
+));
+function buildSubjectRotatedStudyPlan(entries){
+ const tiers={priority:new Map(),standard:new Map()};
+ entries.forEach((entry,planIndex)=>{
+  const matchedKeys=findMatchingSyllabusTopics(entry.subject,entry.topic);
+  const isPriority=matchedKeys.some(key=>PRELIMS_TOP_50_KEYS.has(key));
+  const subject=getStudyPlanRotationSubject(entry);
+  const tier=isPriority?"priority":"standard";
+  if(!tiers[tier].has(subject))tiers[tier].set(subject,[]);
+  tiers[tier].get(subject).push({
+   ...entry,
+   planIndex,
+   rotationSubject:subject,
+   priority:isPriority?"P1":"P2",
+   priorityKeys:matchedKeys.filter(key=>PRELIMS_TOP_50_KEYS.has(key))
+  });
+ });
+ const ordered=[];
+ let lastSubject="";
+ ["priority","standard"].forEach(tier=>{
+  const queues=tiers[tier],subjects=Array.from(queues.keys());
+  if(subjects.length>1&&subjects[0]===lastSubject){
+   const nextDifferent=subjects.findIndex(subject=>subject!==lastSubject);
+   subjects.push(...subjects.splice(0,nextDifferent));
+  }
+  let round=0,hasMore=true;
+  while(hasMore){
+   hasMore=false;
+   subjects.forEach(subject=>{
+    const entry=queues.get(subject)[round];
+    if(!entry)return;
+    ordered.push({...entry,scheduleIndex:ordered.length});
+    lastSubject=subject;
+    hasMore=true;
+   });
+   round++;
+  }
+ });
+ return ordered;
+}
+const SHUFFLED_STUDY_PLAN=buildSubjectRotatedStudyPlan(STUDY_PLAN_TOPICS);
+const DAILY_STUDY_PLAN=SHUFFLED_STUDY_PLAN.flatMap(entry=>[
+ {...entry,phase:"study",label:"Study"},
+ {...entry,phase:"mcq_revision",label:"MCQ + Revision"}
+]);
 function hasCompletedStudyCycleForSyllabusTopic(subject,topic){
  const key=subject+"::"+topic;
  const contributors=STUDY_PLAN_TOPICS.map((entry,planIndex)=>({entry,planIndex})).filter(({entry})=>findMatchingSyllabusTopics(entry.subject,entry.topic).includes(key));
@@ -922,32 +969,6 @@ function getStudyPlanRotationSubject(entry){
  const match=prefixes.find(subject=>topic.startsWith(subject.toLowerCase()+":"));
  return match||entry.subject;
 }
-function buildSubjectRotatedStudyPlan(entries){
- const queues=new Map();
- entries.forEach((entry,planIndex)=>{
-  const subject=getStudyPlanRotationSubject(entry);
-  if(!queues.has(subject))queues.set(subject,[]);
-  queues.get(subject).push({...entry,planIndex});
- });
- const subjects=Array.from(queues.keys()),ordered=[];
- let round=0,hasMore=true;
- while(hasMore){
-  hasMore=false;
-  subjects.forEach(subject=>{
-   const entry=queues.get(subject)[round];
-   if(!entry)return;
-   ordered.push({...entry,rotationSubject:subject,scheduleIndex:ordered.length});
-   hasMore=true;
-  });
-  round++;
- }
- return ordered;
-}
-const SHUFFLED_STUDY_PLAN=buildSubjectRotatedStudyPlan(STUDY_PLAN_TOPICS);
-const DAILY_STUDY_PLAN=SHUFFLED_STUDY_PLAN.flatMap(entry=>[
- {...entry,phase:"study",label:"Study"},
- {...entry,phase:"mcq_revision",label:"MCQ + Revision"}
-]);
 function addDaysToDateKey(dateKey,days){
  const date=new Date(dateKey+"T00:00:00");
  date.setDate(date.getDate()+days);
@@ -1152,7 +1173,7 @@ function renderOverviewSchedule(){
  if(!activities.length){host.textContent="No topic is scheduled today. Keep your daily habits going above.";return;}
  const subjects=Array.from(new Set(activities.map(({entry})=>entry.rotationSubject||entry.subject)));
  const summary=document.createElement("p");summary.className="today-subject-summary";
- summary.textContent="Today's subject mix: "+subjects.join(" · ");host.append(summary);
+ summary.textContent="Today's subject mix: "+subjects.join(" · ")+" · "+activities.filter(({entry})=>entry.priority==="P1").length+" Top 50 topic(s)";host.append(summary);
  activities.forEach(({entry,phase})=>{
   const progress=getStudyPlanProgress(entry),isStudy=phase==="study";
   const phaseDone=isStudy?!!progress.studyDone:isStudyPlanEntryDone(entry);
@@ -1163,7 +1184,7 @@ function renderOverviewSchedule(){
   const dayLabel=document.createElement("span");dayLabel.textContent=isStudy?"Day 1 · Preparation":"Day 2 · MCQ + Revision";
   meta.append(dateLabel,dayLabel);
   const subject=document.createElement("div");subject.className="today-topic-subject";subject.textContent=entry.rotationSubject||entry.subject;
-  const topicLabel=document.createElement("div");topicLabel.className="today-topic-label";topicLabel.textContent=isStudy?"NEW TOPIC":"PREVIOUS TOPIC · MCQ + REVISION";
+  const topicLabel=document.createElement("div");topicLabel.className="today-topic-label";topicLabel.textContent=(entry.priority==="P1"?"TOP 50 PRIORITY · ":"")+(isStudy?"NEW TOPIC":"PREVIOUS TOPIC · MCQ + REVISION");
   const topicName=document.createElement("div");topicName.className="today-topic-name";topicName.textContent=entry.topic;
   const description=document.createElement("div");description.className="focus-desc";
   description.textContent=isStudy?"Complete its Day 1 preparation tasks in Daily routine. MCQ + revision follows on Day 2.":"Complete its Day 2 MCQ + revision tasks in Daily routine, then record your MCQ count and recall score.";
@@ -1181,7 +1202,7 @@ function renderOverviewSchedule(){
 function renderRoadmap(){
  const host=$("roadmap");host.innerHTML="";
  const table=document.createElement("table");table.className="data-table daily-plan-table";
- table.innerHTML="<thead><tr><th>Date</th><th>Day</th><th>Subject</th><th>Topic</th><th>Plan</th><th>Status</th><th>Done</th></tr></thead>";
+ table.innerHTML="<thead><tr><th>Date</th><th>Day</th><th>Subject</th><th>Priority</th><th>Topic</th><th>Plan</th><th>Status</th><th>Done</th></tr></thead>";
  const body=document.createElement("tbody"),today=localDate();
  DAILY_STUDY_PLAN.forEach(entry=>{
   const dateKey=getStudyPlanDateKey(entry),date=new Date(dateKey+"T00:00:00");
@@ -1191,12 +1212,13 @@ function renderRoadmap(){
   const dateCell=document.createElement("td");dateCell.textContent=date.toLocaleDateString("en-IN",{day:"2-digit",month:"short"});
   const dayCell=document.createElement("td");dayCell.textContent=date.toLocaleDateString("en-IN",{weekday:"long"});
   const subjectCell=document.createElement("td");subjectCell.textContent=entry.subject;
+  const priorityCell=document.createElement("td");priorityCell.textContent=entry.priority==="P1"?"TOP 50":"Standard";
   const topicCell=document.createElement("td");topicCell.textContent=entry.topic;topicCell.className="single-daily-topic";
   const planCell=document.createElement("td");planCell.textContent=entry.phase==="study"?"Day 1 · Study":"Day 2 · MCQ + Revision";
   const statusCell=document.createElement("td"),status=document.createElement("span");status.className="table-status"+(done?" done":"");status.textContent=done?"Completed":(isPast?"Missed":(entry.phase==="study"?"Study pending":"MCQ + revision pending"));statusCell.append(status);
   const doneCell=document.createElement("td"),check=document.createElement("input");check.type="checkbox";check.checked=done;check.disabled=done||!isToday||entry.phase!=="study";check.title=done?"Completed":(isToday&&entry.phase==="study"?"Complete today's study phase":"Complete from today's study/revision cards");check.setAttribute("aria-label","Completion status for "+dateKey+" "+entry.phase);
   if(isToday&&entry.phase==="study")check.addEventListener("change",()=>{if(!check.checked){check.checked=true;return;}markStudyPlanPhaseComplete(entry)});
-  doneCell.append(check);row.append(dateCell,dayCell,subjectCell,topicCell,planCell,statusCell,doneCell);body.append(row);
+  doneCell.append(check);row.append(dateCell,dayCell,subjectCell,priorityCell,topicCell,planCell,statusCell,doneCell);body.append(row);
  });
  table.append(body);const wrap=document.createElement("div");wrap.className="data-table-wrap";wrap.append(table);host.append(wrap);
  const todayRow=Array.from(body.rows).find(row=>row.classList.contains("current-row"));
