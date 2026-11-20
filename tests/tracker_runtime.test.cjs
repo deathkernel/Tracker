@@ -74,7 +74,7 @@ test("subject progress synchronization covers mapped syllabus topics", () => {
 
 test("uncompletion invalidates linked study but preserves MCQ history", () => {
   assert.match(script, /function syncSyllabusUncompletionToStudyPlan\(subject,topic\)/);
-  assert.match(script, /const progress=\{\.\.\.getStudyPlanProgress\(entry\),studyDone:false,studyReset:true\}/);
+  assert.match(script, /const progress=\{\.\.\.getStudyPlanProgress\(entry\),studyDone:false,mcqDone:false,revisionDone:false,studyReset:true\}/);
   assert.match(script, /mcqCount:Number\.isInteger\(item\.mcqCount\)/);
   assert.match(script, /mcqDone:!!\(current\.mcqDone/);
 });
