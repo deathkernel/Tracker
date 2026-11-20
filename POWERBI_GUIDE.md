@@ -13,6 +13,11 @@ The exporter reads the SQLite saved state and syllabus/planner definitions. It n
 - Calendar[Date] → StudyLogs[Date]
 - Calendar[Date] → DailyChecklist[Date]
 - Calendar[Date] → StudyPlan[Date]
+Topics[TopicKey] → Mastery[TopicKey]
+Topics[TopicKey] → RetestSchedule[TopicKey]
+StudyPlan[PlanKey] → Mastery[PlanKey]
+StudyPlan[PlanKey] → RetestSchedule[PlanKey]
+StudyPlan[PlanKey] → RecoveryQueue[PlanKey]
 
 Use one-to-many, single-direction relationships from dimensions to facts.
 
@@ -34,10 +39,15 @@ Use one-to-many, single-direction relationships from dimensions to facts.
 - Line chart: study-plan days completed by week.
 - Calendar heatmap: daily checklist activity.
 
-### Revision
+### Revision and mastery
 - Gauge/progress ring: revised topics vs completed topics.
 - Dot plot: revision completion by subject.
 - Matrix: topic-level revision status.
+- Mastery level and average recall quality by topic.
+- Retests due by date and attempt count.
+- Recovery queue by overdue study/revision phase.
+
+The StudyPlan table uses a stable PlanKey for each planned topic. Mastery and RetestSchedule rows use TopicKey for mapped syllabus topics and PlanKey for planner-only activities.
 
 ## DAX measures
 ```DAX
