@@ -332,16 +332,16 @@ body.dark .phase-check{background:#151b26}
 <div class="main-grid nav-mode">
 <main>
  <section class="card" data-page="overview">
-  <div class="card-head"><h2>Today's checklist</h2><span class="chip" id="todayProgress">0/5 done</span></div>
+  <div class="card-head"><h2>Daily routine</h2><span class="chip" id="todayProgress">0/5 done</span></div>
   <div class="overview-focus-grid">
    <div class="overview-week-column">
-    <div class="today-focus"><div class="focus-label">This week's focus</div><div class="focus-title" id="focusTitle">Loading your study plan…</div><div class="focus-desc" id="focusDesc"></div></div>
+    <div class="today-focus"><div class="focus-label">Topic completion rule</div><div class="focus-title" id="focusTitle">Day 1 + Day 2 are required</div><div class="focus-desc" id="focusDesc">Finish both topic-specific checklists. A topic is marked completed only after Day 1 preparation and Day 2 MCQ + revision are complete.</div></div>
     <div class="task-list" id="dailyTasks"></div>
-    <div class="overall-row"><span>Daily completion</span><b id="dailyPercent">0%</b></div><div class="progress green"><span id="dailyBar"></span></div>
-    <p class="small-note">Tick tasks as you finish them. Your checklist saves automatically in this browser.</p>
+    <div class="overall-row"><span>Daily routine completion</span><b id="dailyPercent">0%</b></div><div class="progress green"><span id="dailyBar"></span></div>
+    <p class="small-note">These general routine tasks are saved by date. Topic completion is controlled separately by the Day 1 and Day 2 checklists.</p>
    </div>
    <div class="overview-topic-column">
-    <div class="card-head schedule-overview-head"><h2>Today’s study topic</h2><span class="chip">Only today</span></div>
+    <div class="card-head schedule-overview-head"><h2>Today’s study cycle</h2><span class="chip">Day by day</span></div>
     <div id="overviewDailySchedule"></div>
    </div>
   </div>
@@ -442,7 +442,23 @@ const ROADMAP=[
 ["18–22 May 2027","Final revision","Short notes, maps, important facts, light revision"]
 ];
 const DAILY=[["reading","Main topic study","7:00–8:15 AM","Read concepts from the primary source"],["pyq","Notes + PYQs","8:25–9:10 AM","Make concise notes and solve topic PYQs"],["mcq","MCQ practice","9:20–9:50 AM","Solve 15–20 questions and review explanations"],["current","Current affairs","9:50–10:10 AM","Read and connect news to static syllabus"],["csat","CSAT / revision","10:10–10:40 AM","CSAT on Mon/Wed/Fri; revision on other days"]];
-const WEEKLY=[["topics","Finish planned topics"],["pyqs","Solve relevant PYQs"],["test","Take one sectional test"],["review","Review mistakes and backlog"]];
+const STUDY_DAY_CHECKLIST=[
+ ["source","Read the topic from the primary source"],
+ ["concepts","Understand key concepts, facts, articles and examples"],
+ ["notes","Prepare concise notes for tomorrow's revision"],
+ ["recall","Recall the main points without looking at the source"]
+];
+const REVISION_DAY_CHECKLIST=[
+ ["mcqs","Attempt topic-wise PYQs / MCQs"],
+ ["answers","Check every answer and read its explanation"],
+ ["mistakes","Record incorrect answers and weak concepts"],
+ ["revision","Revise Day 1 notes and test your recall"]
+];
+function normalizePhaseChecklist(value,items,legacyComplete=false){
+ const source=value&&typeof value==="object"&&!Array.isArray(value)?value:{};
+ const hasSavedChecklist=Object.keys(source).length>0;
+ return Object.fromEntries(items.map(([id])=>[id,hasSavedChecklist?source[id]===true:legacyComplete]));
+}
 const STORE="upsc-dashboard-v2";
 const $=id=>document.getElementById(id);
 const localDate=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-")};
@@ -459,7 +475,7 @@ function normalizeProgressState(value){
  next.masteryProgress=source.masteryProgress&&typeof source.masteryProgress==="object"&&!Array.isArray(source.masteryProgress)?source.masteryProgress:{};
  next.retestSchedule=source.retestSchedule&&typeof source.retestSchedule==="object"&&!Array.isArray(source.retestSchedule)?source.retestSchedule:{};
  next.recoveryQueue=Array.isArray(source.recoveryQueue)?source.recoveryQueue:[];
- next.studyPlanProgress=Object.fromEntries(Object.entries(source.studyPlanProgress&&typeof source.studyPlanProgress==="object"&&!Array.isArray(source.studyPlanProgress)?source.studyPlanProgress:{}).filter(([key,item])=>(/^\d{4}-\d{2}-\d{2}$/.test(key)||/^plan:\d+$/.test(key))&&item&&typeof item==="object"&&!Array.isArray(item)).map(([key,item])=>[key,{studyDone:!!item.studyDone,mcqDone:!!item.mcqDone,revisionDone:!!item.revisionDone,mcqCount:Number.isInteger(item.mcqCount)&&item.mcqCount>=0&&item.mcqCount<=500?item.mcqCount:0,mcqLogged:!!item.mcqLogged,studyReset:!!item.studyReset}]));
+ next.studyPlanProgress=Object.fromEntries(Object.entries(source.studyPlanProgress&&typeof source.studyPlanProgress==="object"&&!Array.isArray(source.studyPlanProgress)?source.studyPlanProgress:{}).filter(([key,item])=>(/^\d{4}-\d{2}-\d{2}$/.test(key)||/^plan:\d+$/.test(key))&&item&&typeof item==="object"&&!Array.isArray(item)).map(([key,item])=>[key,{studyDone:!!item.studyDone,mcqDone:!!item.mcqDone,revisionDone:!!item.revisionDone,mcqCount:Number.isInteger(item.mcqCount)&&item.mcqCount>=0&&item.mcqCount<=500?item.mcqCount:0,mcqLogged:!!item.mcqLogged,studyReset:!!item.studyReset,studyChecklist:normalizePhaseChecklist(item.studyChecklist,STUDY_DAY_CHECKLIST,!!item.studyDone),revisionChecklist:normalizePhaseChecklist(item.revisionChecklist,REVISION_DAY_CHECKLIST,!!item.revisionDone)}]));
  next.customSubjects=(Array.isArray(source.customSubjects)?source.customSubjects:[]).filter(item=>item&&typeof item.name==="string"&&item.name.trim()).map(item=>({name:item.name.trim(),topics:(Array.isArray(item.topics)?item.topics:[]).filter(topic=>Array.isArray(topic)&&typeof topic[0]==="string"&&topic[0].trim()).map(topic=>[topic[0].trim(),Number.isFinite(Number(topic[1]))?Number(topic[1]):null,typeof topic[2]==="string"?topic[2]:"P2"])}));
  next.customDaily=(Array.isArray(source.customDaily)?source.customDaily:[]).filter(item=>Array.isArray(item)&&item.length>=2&&typeof item[0]==="string"&&typeof item[1]==="string"&&item[1].trim()).map(item=>[item[0],item[1].trim(),String(item[2]||""),String(item[3]||"Personal task")]);
  for(const key of ["topics","daily","weekly","logs","studyPlanDone","revisionDone","settings"]){if(!next[key]||typeof next[key]!=="object"||Array.isArray(next[key]))next[key]={};}
@@ -487,6 +503,7 @@ function normalizeProgressState(value){
    if(migrated.studyDone||migrated.mcqDone||migrated.revisionDone||migrated.mcqCount||migrated.mcqLogged||migrated.studyReset)next.studyPlanProgress[key]=migrated;
   });
  }
+ next.studyPlanProgress=Object.fromEntries(Object.entries(next.studyPlanProgress).map(([key,item])=>[key,{...item,studyChecklist:normalizePhaseChecklist(item.studyChecklist,STUDY_DAY_CHECKLIST,!!item.studyDone),revisionChecklist:normalizePhaseChecklist(item.revisionChecklist,REVISION_DAY_CHECKLIST,!!item.revisionDone)}]));
  next.studyPlanProgressSchema=2;
 
  const subjects=SUBJECTS.map(subject=>({name:subject.name,topics:[...subject.topics]}));
@@ -531,7 +548,7 @@ function createAnimatedCheckbox(checked=false,ariaLabel="Toggle checkbox"){
  const path=document.createElementNS("http://www.w3.org/2000/svg","path");path.setAttribute("d","M1.5 5.5 4.5 8.5 10.5 1.5");svg.append(path);
  cbx.append(input,label,svg);wrapper.append(cbx);return{wrapper,input};
 }
-function renderDaily(){const day=localDate(),items=state.daily[day]||{};const host=$("dailyTasks");host.innerHTML="";dailyItems().forEach(([id,title,time,desc])=>{const row=document.createElement("div");row.className="task"+(items[id]?" completed":"");const check=createAnimatedCheckbox(!!items[id],"Mark "+title+" complete"),cb=check.input;cb.id="daily-"+id;cb.addEventListener("change",()=>{state.daily[day]=state.daily[day]||{};state.daily[day][id]=cb.checked;persist();renderDaily();renderCharts()});const label=document.createElement("label");label.htmlFor=cb.id;const t=document.createElement("div");t.className="task-title";t.textContent=title;const m=document.createElement("div");m.className="task-meta";m.textContent=desc;label.append(t,m);const tm=document.createElement("span");tm.className="task-time";tm.textContent=time;row.append(check.wrapper,label,tm);host.append(row)});const count=dailyItems().filter(x=>items[x[0]]).length,p=count/dailyItems().length*100;$("todayProgress").textContent=count+"/"+dailyItems().length+" done";$("dailyPercent").textContent=Math.round(p)+"%";$("dailyBar").style.width=p+"%";const w=ROADMAP[weekIndex()];$("focusTitle").textContent=w[1]+" · Week "+(weekIndex()+1);$("focusDesc").textContent=w[2]}
+function renderDaily(){const day=localDate(),items=state.daily[day]||{};const host=$("dailyTasks");host.innerHTML="";dailyItems().forEach(([id,title,time,desc])=>{const row=document.createElement("div");row.className="task"+(items[id]?" completed":"");const check=createAnimatedCheckbox(!!items[id],"Mark "+title+" complete"),cb=check.input;cb.id="daily-"+id;cb.addEventListener("change",()=>{state.daily[day]=state.daily[day]||{};state.daily[day][id]=cb.checked;persist();renderDaily();renderCharts()});const label=document.createElement("label");label.htmlFor=cb.id;const t=document.createElement("div");t.className="task-title";t.textContent=title;const m=document.createElement("div");m.className="task-meta";m.textContent=desc;label.append(t,m);const tm=document.createElement("span");tm.className="task-time";tm.textContent=time;row.append(check.wrapper,label,tm);host.append(row)});const count=dailyItems().filter(x=>items[x[0]]).length,p=count/dailyItems().length*100;$("todayProgress").textContent=count+"/"+dailyItems().length+" done";$("dailyPercent").textContent=Math.round(p)+"%";$("dailyBar").style.width=p+"%";$("focusTitle").textContent="Day 1 + Day 2 are required";$("focusDesc").textContent="Finish each topic's preparation checklist and its next-day MCQ + revision checklist before the topic is marked completed."}
 function renderSubjectOverview(){
  const host=$("subjectOverview");host.innerHTML="";
  const table=document.createElement("table");table.className="data-table";
