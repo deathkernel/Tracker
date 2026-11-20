@@ -20,7 +20,7 @@ Keep the command window open while using the tracker. Press Ctrl+C to stop the l
 - Subject-wise progress, topic search and completion filters.
 - Weekly roadmap with date, subject and study focus.
 - Study log for focused hours, MCQs, CSAT and notes.
-- Weekly targets and JSON backup/restore.
+- JSON backup/restore.
 - Customize the exam target date and daily study-hour goal.
 - Switch between light and dark themes.
 - Add your own subjects, topics and daily checklist tasks.
