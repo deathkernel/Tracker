@@ -97,7 +97,7 @@ test("priority-first scheduling retains compressed 184-day coverage and two-phas
   assert.match(dateOffset, /Math\.floor\(scheduleIndex\*finalStudyOffset\/\(STUDY_PLAN_TOPICS\.length-1\)\)/);
   assert.match(script, /const DAILY_STUDY_PLAN=SHUFFLED_STUDY_PLAN\.flatMap/);
   assert.match(script, /entry\.phase==="mcq_revision"\?1:0/);
-  assert.match(script, /priority: isPriority\?"P1":"P2"/);
+  assert.match(script, /priority:isPriority\?"P1":"P2"/);
 });
 test("topic checklists render under Daily routine, not Today’s study cycle", () => {
   const routine = script.slice(script.indexOf("function renderDaily(){"), script.indexOf("\nfunction renderSubjectOverview(){"));
