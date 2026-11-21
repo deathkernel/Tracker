@@ -1538,18 +1538,18 @@ function syncStudyPlanCompletionToSyllabus(entry){
  if(!entry||!["study","mcq_revision"].includes(entry.phase))return;
  const keys=findMatchingSyllabusTopics(entry.subject,entry.topic);
  if(!keys.length)return;
+ // One scheduled topic may cover several syllabus aliases. Count its completion once.
+ const key=keys[0];
+ const contributors=STUDY_PLAN_TOPICS.map((planEntry,planIndex)=>({planEntry,planIndex})).filter(({planEntry})=>findMatchingSyllabusTopics(planEntry.subject,planEntry.topic).includes(key));
+ const allDone=contributors.length>0&&contributors.every(({planIndex})=>{
+  const progress=state.studyPlanProgress?.["plan:"+planIndex]||{};
+  return !!progress.studyDone&&!!progress.revisionDone&&isPhaseChecklistComplete(progress,"study")&&isPhaseChecklistComplete(progress,"mcq_revision");
+ });
+ if(!allDone)return;
  state.topics=state.topics||{};
  state.revisionSchedule=state.revisionSchedule||{};
- keys.forEach(key=>{
-  const contributors=STUDY_PLAN_TOPICS.map((planEntry,planIndex)=>({planEntry,planIndex})).filter(({planEntry})=>findMatchingSyllabusTopics(planEntry.subject,planEntry.topic).includes(key));
-  const allDone=contributors.length>0&&contributors.every(({planIndex})=>{
-   const progress=state.studyPlanProgress?.["plan:"+planIndex]||{};
-   return !!progress.studyDone&&!!progress.revisionDone&&isPhaseChecklistComplete(progress,"study")&&isPhaseChecklistComplete(progress,"mcq_revision");
-  });
-  if(!allDone)return;
-  state.topics[key]=true;
-  if(!state.revisionSchedule[key])state.revisionSchedule[key]={due_date:revisionDateAfter(1),interval_days:1,repetitions:0,ease_factor:2.5,last_reviewed_at:null,last_quality:null};
- });
+ state.topics[key]=true;
+ if(!state.revisionSchedule[key])state.revisionSchedule[key]={due_date:revisionDateAfter(1),interval_days:1,repetitions:0,ease_factor:2.5,last_reviewed_at:null,last_quality:null};
 }
 async function recordStudyReviewBatch(keys,quality,{isRetest=false,updateRevision=false}={}){
  const uniqueKeys=[...new Set(keys)];
