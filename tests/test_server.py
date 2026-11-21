@@ -392,12 +392,13 @@ def test_remote_lan_api_protects_revision_and_state_endpoints(lan_client):
     assert batch.status_code == 401
 
 
-def test_qr_endpoint_is_loopback_only_and_never_puts_token_in_request_url(
+def test_qr_endpoint_uses_server_generated_lan_url_and_disables_caching(
     client, monkeypatch
 ):
     import qrcode
 
     monkeypatch.setattr(server, "LAN_ACCESS_TOKEN", "qr-secret-test-token")
+    monkeypatch.setattr(server, "get_lan_ip", lambda: "192.168.1.45")
     captured = {}
 
     class FakeQrCode:
@@ -409,18 +410,22 @@ def test_qr_endpoint_is_loopback_only_and_never_puts_token_in_request_url(
         return FakeQrCode()
 
     monkeypatch.setattr(qrcode, "make", capture_qr_payload)
-    base_url = "http://192.168.1.45:8000"
-    response = client.get("/api/qr-code", params={"url": base_url})
+    response = client.get(
+        "/api/qr-code",
+        params={"url": "https://attacker.example/collect"},
+    )
 
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("image/svg+xml")
-    assert captured["value"] == base_url + "#access_token=qr-secret-test-token"
+    assert response.headers["cache-control"] == "no-store, private"
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert captured["value"] == (
+        "http://192.168.1.45:8000#access_token=qr-secret-test-token"
+    )
+    assert "attacker.example" not in captured["value"]
     assert "qr-secret-test-token" not in str(response.request.url)
 
 
 def test_remote_clients_cannot_generate_phone_access_qr_codes(lan_client):
-    response = lan_client.get(
-        "/api/qr-code",
-        params={"url": "http://192.168.1.45:8000"},
-    )
+    response = lan_client.get("/api/qr-code")
     assert response.status_code == 403

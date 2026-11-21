@@ -8,7 +8,6 @@ import secrets
 import socket
 import sqlite3
 from contextlib import asynccontextmanager, contextmanager
-from urllib.parse import quote, urlsplit, urlunsplit
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
@@ -223,17 +222,14 @@ def network_info() -> dict[str, Any]:
 
 
 @app.get("/api/qr-code")
-def qr_code(url: str, request: Request) -> Response:
+def qr_code(request: Request) -> Response:
     if not is_loopback_request(request):
         raise HTTPException(
             status_code=403,
             detail="Generate the phone-access QR code from the Tracker host PC.",
         )
-    parts = urlsplit(url)
-    if parts.scheme not in {"http", "https"} or not parts.netloc:
-        raise HTTPException(status_code=422, detail="A valid HTTP(S) URL is required.")
-    destination = urlunsplit((parts.scheme, parts.netloc, parts.path, parts.query, ""))
-    destination += f"#access_token={quote(LAN_ACCESS_TOKEN, safe='')}"
+    destination = network_info()["url"]
+    destination += f"#access_token={LAN_ACCESS_TOKEN}"
     from io import BytesIO
     import qrcode
     from qrcode.image.svg import SvgPathImage
@@ -241,7 +237,14 @@ def qr_code(url: str, request: Request) -> Response:
     image = qrcode.make(destination, image_factory=SvgPathImage, box_size=8, border=4)
     output = BytesIO()
     image.save(output)
-    return Response(content=output.getvalue(), media_type="image/svg+xml")
+    return Response(
+        content=output.getvalue(),
+        media_type="image/svg+xml",
+        headers={
+            "Cache-Control": "no-store, private",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @app.get("/api/health")
