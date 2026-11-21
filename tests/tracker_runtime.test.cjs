@@ -288,30 +288,38 @@ test("subject progress synchronization covers mapped syllabus topics", () => {
   assert.match(script, /async function syncStudyPlanRevisionToSyllabus\(entry,quality=3\)/);
 });
 
-test("legacy Day 1 + Day 2 alias completions are deduplicated during progress normalization", () => {
+test("legacy alias progress migrates when completion flags are true even if revision checklist is stale", () => {
   const start = script.indexOf("function removeDuplicateStudyPlanSyllabusCompletions(progress){");
-  const end = script.indexOf("\nfunction normalizeProgressState(value){", start);
+  const end = script.indexOf("\\nfunction normalizeProgressState(value){", start);
   assert.ok(start >= 0 && end > start);
-  const first = { subject: "Polity", topic: "Preamble keywords philosophy" };
+  const entries = [
+    { subject: "Polity", topic: "Constitutional development and historical background" },
+    { subject: "Polity", topic: "Constituent Assembly and making of the Constitution" },
+    { subject: "Polity", topic: "Preamble: keywords and philosophy" }
+  ];
   const sandbox = {
-    STUDY_PLAN_TOPICS: [first],
-    findMatchingSyllabusTopics: () => ["Polity::Preamble", "Polity::Philosophy of Constitution"],
-    isPhaseChecklistComplete: () => true
+    STUDY_PLAN_TOPICS: entries,
+    findMatchingSyllabusTopics: (subject, topic) => topic.includes("Preamble:")
+      ? ["Polity::Preamble", "Polity::Philosophy of Constitution"]
+      : []
   };
-  vm.runInNewContext(script.slice(start, end) + "\nthis.migrate=removeDuplicateStudyPlanSyllabusCompletions;", sandbox);
+  vm.runInNewContext(script.slice(start, end) + "\\nthis.migrate=removeDuplicateStudyPlanSyllabusCompletions;", sandbox);
   const progress = {
     topics: {
       "Polity::Preamble": true,
-      "Polity::Philosophy of Constitution": true,
-      "Polity::Fundamental Rights": true
+      "Polity::Philosophy of Constitution": true
     },
-    studyPlanProgress: { "plan:0": { studyDone: true, revisionDone: true } }
+    studyPlanProgress: {
+      "plan:2": {
+        studyDone: true,
+        revisionDone: true,
+        studyChecklist: { source: true, concepts: true, notes: true, recall: true },
+        revisionChecklist: { notes: false, recall: false, "weak-points": false, "quick-review": false }
+      }
+    }
   };
   sandbox.migrate(progress);
-  assert.deepEqual(Object.keys(progress.topics).sort(), [
-    "Polity::Fundamental Rights",
-    "Polity::Preamble"
-  ]);
+  assert.deepEqual(Object.keys(progress.topics), ["Polity::Preamble"]);
 });
 
 test("one completed Day 1 + Day 2 study-plan topic counts once in subject progress", () => {
