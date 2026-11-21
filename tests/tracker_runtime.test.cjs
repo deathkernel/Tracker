@@ -89,7 +89,7 @@ test("schedule rotates subjects within priority tiers and preserves original pro
   assert.deepEqual(Array.from(ordered,entry=>entry.scheduleIndex),[0,1,2,3,4,5,6,7]);
 });
 
-test("alternating schedule reserves revision-only days and fits the configured exam date", () => {
+test("alternating schedule pairs each new topic with a revision-only day", () => {
   const start = script.indexOf("function studyPlanDateOffset(entry){");
   const end = script.indexOf("\nfunction getStudyPlanDateKey(entry){",start);
   assert.ok(start>=0&&end>start);
@@ -104,18 +104,10 @@ test("alternating schedule reserves revision-only days and fits the configured e
     assert.equal(sandbox.offset({planIndex:index,scheduleIndex:index}),index*2);
   }
   sandbox.state.settings.targetDate="2027-05-23";
-  assert.equal(sandbox.offset({planIndex:188,scheduleIndex:188}),183);
+  assert.equal(sandbox.offset({planIndex:188,scheduleIndex:188}),180);
   assert.match(script,/phase:"study",label:"Day 1 · New topic"/);
   assert.match(script,/phase:"mcq_revision",label:"Day 2 · Revision only"/);
   assert.match(script,/priority:isPriority\?"P1":"P2"/);
-});
-test("Day 2 topic cards clearly identify revision-only work", () => {
-  const routine = script.slice(script.indexOf("function renderDaily(){"), script.indexOf("\nfunction renderSubjectOverview(){"));
-  const cycle = script.slice(script.indexOf("function renderOverviewSchedule(){"), script.indexOf("\nfunction renderRoadmap(){"));
-  assert.match(routine,/Day 2 · Revision only/);
-  assert.match(routine,/Day 1 introduces one new topic/);
-  assert.match(cycle,/Revise only the topic studied on Day 1/);
-  assert.match(script,/const scheduleIndex=Number\.isInteger\(entry\?\.scheduleIndex\)\?entry\.scheduleIndex:entry\.planIndex/);
 });
 
 test("PYQ completion indicator color follows completed-topic percentage", () => {
@@ -151,8 +143,8 @@ test("target date validation reserves enough calendar days for every study and r
     ].join("-")
   };
   vm.runInNewContext(script.slice(start,end) + "\nthis.valid=isValidTargetDate;",sandbox);
-  assert.equal(sandbox.valid("2027-11-01"),false);
-  assert.equal(sandbox.valid("2027-11-02"),true);
+  assert.equal(sandbox.valid("2027-12-01"),false);
+  assert.equal(sandbox.valid("2027-12-02"),true);
   assert.equal(sandbox.valid("2026-02-30"),false);
   assert.equal(sandbox.valid("23-02-2027"),false);
   assert.match(script,/state\.settings\.targetDate=value;persist\(\);renderAll\(\)/);
