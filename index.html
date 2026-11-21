@@ -2262,7 +2262,7 @@ async function showPhoneAccess(){
  panel.hidden=false;button?.setAttribute("aria-expanded","true");
  const label=$("phoneAccessUrl"),image=$("phoneAccessQr");
  label.textContent="Finding your local address…";image.removeAttribute("src");
- try{const response=await apiFetch("/api/network-info");if(!response.ok)throw new Error("Network info unavailable");const info=await response.json();if(!info.network_access_enabled){label.textContent="Phone access is disabled by default. Set TRACKER_HOST=0.0.0.0 before running run.bat to enable trusted-LAN access.";return}label.textContent=info.url;image.src="/api/qr-code?url="+encodeURIComponent(info.url)+"&t="+Date.now()}
+ try{const response=await apiFetch("/api/network-info");if(!response.ok)throw new Error("Network info unavailable");const info=await response.json();if(!info.network_access_enabled){label.textContent="Phone access is disabled by default. Set TRACKER_HOST=0.0.0.0 before running run.bat to enable trusted-LAN access.";return}label.textContent=info.url;image.src="/api/qr-code?t="+Date.now()}
  catch(error){label.textContent="Could not generate QR. Check that the app is running."}
 }
 $("missingTopicSearch")?.addEventListener("input",renderMissingTopics);
