@@ -2196,7 +2196,7 @@ function getMcqAssessment(percentage){
 function renderMcqTracker(){
  const panel=$("mcqTestPanel"),history=$("mcqHistory");
  if(!panel||!history)return;
- const entries=DAILY_STUDY_PLAN.filter(entry=>entry.phase==="mcq_revision");
+ const entries=DAILY_STUDY_PLAN.filter(entry=>entry.phase==="study"&&!!getStudyPlanProgress(entry).studyDone);
  panel.replaceChildren();
  if(!entries.length){panel.textContent="No Day 2 topics are scheduled.";return;}
  const wrap=document.createElement("div");wrap.className="data-table-wrap";
