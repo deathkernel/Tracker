@@ -89,19 +89,25 @@ test("schedule rotates subjects within priority tiers and preserves original pro
   assert.deepEqual(Array.from(ordered,entry=>entry.scheduleIndex),[0,1,2,3,4,5,6,7]);
 });
 
-test("alternating schedule assigns a new topic on Day 1 and revision only on Day 2", () => {
+test("alternating schedule reserves revision-only days and fits the configured exam date", () => {
   const start = script.indexOf("function studyPlanDateOffset(entry){");
-  const end = script.indexOf("\nfunction getStudyPlanDateKey(entry){", start);
-  assert.ok(start >= 0 && end > start);
-  const sandbox = { STUDY_PLAN_TOPICS: Array.from({ length:189 }, () => ({})) };
-  vm.runInNewContext(script.slice(start,end) + "\nthis.offset=studyPlanDateOffset;", sandbox);
-  for (let index=0; index<189; index++) {
-    assert.equal(sandbox.offset({planIndex:index,scheduleIndex:index}), index*2);
+  const end = script.indexOf("\nfunction getStudyPlanDateKey(entry){",start);
+  assert.ok(start>=0&&end>start);
+  const sandbox={
+    CYCLE_START_DATE:"2026-11-20",
+    STUDY_PLAN_TOPICS:Array.from({length:189},()=>({})),
+    state:{settings:{targetDate:"2027-11-02"}},
+    isValidTargetDate:()=>true
+  };
+  vm.runInNewContext(script.slice(start,end)+"\nthis.offset=studyPlanDateOffset;",sandbox);
+  for(let index=0;index<189;index++){
+    assert.equal(sandbox.offset({planIndex:index,scheduleIndex:index}),index*2);
   }
-  assert.match(script, /const DAILY_STUDY_PLAN=SHUFFLED_STUDY_PLAN\.flatMap/);
-  assert.match(script, /phase:"study",label:"Day 1/);
-  assert.match(script, /phase:"mcq_revision",label:"Day 2 · Revision only"/);
-  assert.match(script, /priority:isPriority\?"P1":"P2"/);
+  sandbox.state.settings.targetDate="2027-05-23";
+  assert.equal(sandbox.offset({planIndex:188,scheduleIndex:188}),182);
+  assert.match(script,/phase:"study",label:"Day 1 · New topic"/);
+  assert.match(script,/phase:"mcq_revision",label:"Day 2 · Revision only"/);
+  assert.match(script,/priority:isPriority\?"P1":"P2"/);
 });
 test("Day 2 topic cards clearly identify revision-only work", () => {
   const routine = script.slice(script.indexOf("function renderDaily(){"), script.indexOf("\nfunction renderSubjectOverview(){"));
