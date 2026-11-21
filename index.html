@@ -901,10 +901,10 @@ const STUDY_DAY_CHECKLIST=[
  ["recall","Recall the main points without looking at the source"]
 ];
 const REVISION_DAY_CHECKLIST=[
- ["mcqs","Attempt topic-wise PYQs / MCQs"],
- ["answers","Check every answer and read its explanation"],
- ["mistakes","Record incorrect answers and weak concepts"],
- ["revision","Revise Day 1 notes and test your recall"]
+ ["notes","Revise the concise notes prepared on Day 1"],
+ ["recall","Recall the topic from memory without opening notes"],
+ ["weak-points","Revisit confusing concepts, facts and examples"],
+ ["quick-review","Review important Articles, dates, terms or diagrams"]
 ];
 function normalizePhaseChecklist(value,items,legacyComplete=false){
  const source=value&&typeof value==="object"&&!Array.isArray(value)?value:{};
@@ -1359,7 +1359,7 @@ function completionColorClass(percent){
  if(value>=40)return "is-medium";
  return "is-low";
 }
-function renderStats(){const logs=Object.values(state.logs),planCounts=getStudyPlanCounts(),targetDate=(state.settings||{}).targetDate||"2027-05-23";$("daysLeft").textContent=totalDays();$("targetDate").value=targetDate;$("targetDate").min=addDaysToDateKey(CYCLE_START_DATE,Math.ceil(STUDY_PLAN_TOPICS.length/2));$("topicsDone").textContent=doneTopics()+"/"+totalTopics();const topicPercent=totalTopics()?Math.round(doneTopics()/totalTopics()*100):0;const topicLevel=completionColorClass(topicPercent);const topicSub=$("topicSub");topicSub.textContent=topicPercent+"% of mapped topics";topicSub.className="stat-foot topic-completion-value "+topicLevel;const topicTrack=$("topicProgressTrack"),topicFill=$("topicProgressFill");if(topicTrack&&topicFill){topicFill.style.width=topicPercent+"%";topicTrack.className="stat-completion-track "+topicLevel;topicTrack.setAttribute("aria-valuenow",String(topicPercent));topicTrack.setAttribute("aria-valuetext",topicPercent+"% of mapped topics completed")}$("daysDone").textContent=logs.length;$("missedDays").textContent=planCounts.missed;$("topicCompletion").textContent=doneTopics()+" of "+totalTopics();$("prelimsRemaining").textContent=daysUntilExam(targetDate);const prelimsDate=document.querySelector(".prelims-countdown .exam-countdown-date");if(prelimsDate)prelimsDate.textContent=new Date(targetDate+"T00:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});$("mainsRemaining").textContent=daysUntilExam("2027-08-20");$("todayLabel").textContent=new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short",year:"numeric"})}
+function renderStats(){const logs=Object.values(state.logs),planCounts=getStudyPlanCounts(),targetDate=(state.settings||{}).targetDate||"2027-05-23";$("daysLeft").textContent=totalDays();$("targetDate").value=targetDate;$("targetDate").min=getMinimumTargetDateKey();$("topicsDone").textContent=doneTopics()+"/"+totalTopics();const topicPercent=totalTopics()?Math.round(doneTopics()/totalTopics()*100):0;const topicLevel=completionColorClass(topicPercent);const topicSub=$("topicSub");topicSub.textContent=topicPercent+"% of mapped topics";topicSub.className="stat-foot topic-completion-value "+topicLevel;const topicTrack=$("topicProgressTrack"),topicFill=$("topicProgressFill");if(topicTrack&&topicFill){topicFill.style.width=topicPercent+"%";topicTrack.className="stat-completion-track "+topicLevel;topicTrack.setAttribute("aria-valuenow",String(topicPercent));topicTrack.setAttribute("aria-valuetext",topicPercent+"% of mapped topics completed")}$("daysDone").textContent=logs.length;$("missedDays").textContent=planCounts.missed;$("topicCompletion").textContent=doneTopics()+" of "+totalTopics();$("prelimsRemaining").textContent=daysUntilExam(targetDate);const prelimsDate=document.querySelector(".prelims-countdown .exam-countdown-date");if(prelimsDate)prelimsDate.textContent=new Date(targetDate+"T00:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});$("mainsRemaining").textContent=daysUntilExam("2027-08-20");$("todayLabel").textContent=new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short",year:"numeric"})}
 function createAnimatedCheckbox(checked=false,ariaLabel="Toggle checkbox"){
  const wrapper=document.createElement("span");wrapper.className="checkbox-wrapper-12";
  const cbx=document.createElement("span");cbx.className="cbx";
@@ -1392,13 +1392,13 @@ function renderDaily(){
  if(activities.length){
   const section=document.createElement("section");section.className="daily-topic-work";
   const heading=document.createElement("div");heading.className="daily-topic-work-heading";heading.textContent="Today's topic work";
-  const hint=document.createElement("p");hint.className="small-note";hint.textContent="Top 50 P1 topics are scheduled first. Complete the preparation or MCQ + revision tasks for today's subjects.";
+  const hint=document.createElement("p");hint.className="small-note";hint.textContent="Day 1 introduces one new topic. Day 2 is reserved only for revising that same topic; no new topic is scheduled.";
   section.append(heading,hint);
   activities.forEach(({entry,phase})=>{
    const group=document.createElement("div");group.className="daily-topic-group";
    const groupHead=document.createElement("div");groupHead.className="daily-topic-group-head";
    const title=document.createElement("strong");title.textContent=entry.rotationSubject||entry.subject;
-   const phaseLabel=document.createElement("span");phaseLabel.textContent=(entry.priority==="P1"?"TOP 50 · ":"")+(phase==="study"?"Day 1 · Preparation":"Day 2 · MCQ + Revision");
+   const phaseLabel=document.createElement("span");phaseLabel.textContent=(entry.priority==="P1"?"TOP 50 · ":"")+(phase==="study"?"Day 1 · New topic":"Day 2 · Revision only");
    groupHead.append(title,phaseLabel);
    const topic=document.createElement("div");topic.className="daily-topic-group-topic";topic.textContent=entry.topic;
    group.append(groupHead,topic,renderPhaseChecklist(entry,phase,getStudyPlanProgress(entry)));
@@ -1415,7 +1415,7 @@ function renderDaily(){
  $("dailyPercent").textContent=percent+"%";
  $("dailyBar").style.width=percent+"%";
  $("focusTitle").textContent="A balanced plan across subjects";
- $("focusDesc").textContent="Use the topic tasks below for today's new learning and yesterday's MCQ revision. Each topic is completed only after both days are finished.";
+ $("focusDesc").textContent="Day 1 is for one new topic. Day 2 is only for revising that same topic—no new topic is added.";
 }
 function renderSubjectOverview(){
  const host=$("subjectOverview");host.innerHTML="";
@@ -1798,8 +1798,8 @@ const LEGACY_CYCLE_START_DATE="2026-11-17";
 const STUDY_PLAN_TOPICS=BASE_STUDY_PLAN.flatMap(week=>week.days.map(topic=>({subject:week.subject,topic})));
 const SHUFFLED_STUDY_PLAN=buildSubjectRotatedStudyPlan(STUDY_PLAN_TOPICS);
 const DAILY_STUDY_PLAN=SHUFFLED_STUDY_PLAN.flatMap(entry=>[
- {...entry,phase:"study",label:"Study"},
- {...entry,phase:"mcq_revision",label:"MCQ + Revision"}
+ {...entry,phase:"study",label:"Day 1 · New topic"},
+ {...entry,phase:"mcq_revision",label:"Day 2 · Revision only"}
 ]);
 state=normalizeProgressState(readState());
 function getStudyPlanRotationSubject(entry){
@@ -1819,24 +1819,17 @@ function isValidTargetDate(value){
  if(Number.isNaN(target.getTime())||localDateKey(target)!==value)return false;
  const start=new Date(CYCLE_START_DATE+"T00:00:00");
  const availableDays=Math.round((target-start)/86400000);
- return availableDays>=Math.ceil(STUDY_PLAN_TOPICS.length/2);
+ return availableDays>=STUDY_PLAN_TOPICS.length*2-1;
 }
 function getMinimumTargetDateKey(){
- return addDaysToDateKey(CYCLE_START_DATE,Math.ceil(STUDY_PLAN_TOPICS.length/2));
+ return addDaysToDateKey(CYCLE_START_DATE,STUDY_PLAN_TOPICS.length*2-1);
 }
 function getStudyPlanEntryByPlanIndex(planIndex,phase){
  return DAILY_STUDY_PLAN.find(entry=>entry.planIndex===planIndex&&entry.phase===phase)||null;
 }
 function studyPlanDateOffset(entry){
- const start=new Date(CYCLE_START_DATE+"T00:00:00");
- const configuredTarget=(state.settings||{}).targetDate||"2027-05-23";
-  const targetKey=isValidTargetDate(configuredTarget)?configuredTarget:"2027-05-23";
- const target=new Date(targetKey+"T00:00:00");
- const totalDays=Math.max(1,Math.round((target-start)/86400000));
- const finalStudyOffset=Math.max(0,totalDays-1);
- if(STUDY_PLAN_TOPICS.length<=1)return 0;
  const scheduleIndex=Number.isInteger(entry?.scheduleIndex)?entry.scheduleIndex:entry.planIndex;
- return Math.round(scheduleIndex*finalStudyOffset/(STUDY_PLAN_TOPICS.length-1));
+ return Math.max(0,scheduleIndex*2);
 }
 function getStudyPlanDateKey(entry){
  const offset=studyPlanDateOffset(entry)+(entry.phase==="mcq_revision"?1:0);
@@ -1929,32 +1922,14 @@ async function completePlanRevision(entry){
  const key=getStudyPlanProgressDateKey(entry);
  const progress={...getStudyPlanProgress(entry)};
  if(!progress.studyDone){notify("Complete this topic's Day 1 preparation phase before Day 2 revision.");return;}
- if(!canCompleteStudyPlanPhase(entry,"mcq_revision")){notify("Complete every Day 2 MCQ + revision checklist item before finishing this topic.");return;}
- if(!progress.mcqDone){
-  const rawAmount=prompt("How many MCQs did you attempt for "+entry.topic+"?","0");
-  if(rawAmount===null)return;
-  const amount=Number(rawAmount.trim());
-  if(rawAmount.trim()===""||!Number.isInteger(amount)||amount<0||amount>500){notify("Enter a valid MCQ count from 0 to 500.");return;}
-  progress.mcqDone=true;
-  progress.mcqCount=amount;
-  state.studyPlanProgress[key]=progress;
-  persist();
- }
+ if(!canCompleteStudyPlanPhase(entry,"mcq_revision")){notify("Complete every Day 2 revision checklist item before finishing this topic.");return;}
  if(!progress.revisionDone){
   const quality=askRecallQuality(entry.topic,"revision");
   if(quality===null)return;
   if(!await syncStudyPlanRevisionToSyllabus(entry,quality))return;
   progress.revisionDone=true;
  }
- progress.mcqLogged=!!progress.mcqLogged;
  state.studyPlanProgress[key]=progress;
- const dateKey=localDate();
- state.logs[dateKey]=state.logs[dateKey]||{mcqs:0,notes:""};
- if(!progress.mcqLogged){
-  state.logs[dateKey].mcqs=(Number(state.logs[dateKey].mcqs)||0)+(Number(progress.mcqCount)||0);
-  progress.mcqLogged=true;
-  state.studyPlanProgress[key]=progress;
- }
  state.studyPlanDone=state.studyPlanDone||{};
  state.studyPlanDone[getStudyPlanDateKey(entry)]=true;
  syncStudyPlanCompletionToSyllabus(entry);
@@ -1969,7 +1944,7 @@ function renderPhaseChecklist(entry,phase,progress){
  const checkedCount=getPhaseChecklistCount(progress,phase);
  const section=document.createElement("section");section.className="phase-checklist"+(locked?" is-locked":"");
  const heading=document.createElement("div");heading.className="phase-checklist-heading";
- const title=document.createElement("strong");title.textContent=isStudy?"DAY 1 · PREPARATION CHECKLIST":"DAY 2 · MCQ + REVISION CHECKLIST";
+ const title=document.createElement("strong");title.textContent=isStudy?"DAY 1 · NEW TOPIC CHECKLIST":"DAY 2 · REVISION ONLY CHECKLIST";
  const count=document.createElement("span");count.className="phase-checklist-count";count.textContent=checkedCount+"/"+items.length+" done";
  heading.append(title,count);
  const list=document.createElement("div");list.className="phase-checklist-list";
@@ -2006,17 +1981,17 @@ function renderOverviewSchedule(){
   const card=document.createElement("div");card.className="today-topic-card"+(phaseDone?" is-complete":"");
   const meta=document.createElement("div");meta.className="today-topic-meta";
   const dateLabel=document.createElement("span");dateLabel.textContent=new Date(today+"T00:00:00").toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short"});
-  const dayLabel=document.createElement("span");dayLabel.textContent=isStudy?"Day 1 · Preparation":"Day 2 · MCQ + Revision";
+  const dayLabel=document.createElement("span");dayLabel.textContent=isStudy?"Day 1 · New topic":"Day 2 · Revision only";
   meta.append(dateLabel,dayLabel);
   const subject=document.createElement("div");subject.className="today-topic-subject";subject.textContent=entry.rotationSubject||entry.subject;
-  const topicLabel=document.createElement("div");topicLabel.className="today-topic-label";topicLabel.textContent=(entry.priority==="P1"?"TOP 50 PRIORITY · ":"")+(isStudy?"NEW TOPIC":"PREVIOUS TOPIC · MCQ + REVISION");
+  const topicLabel=document.createElement("div");topicLabel.className="today-topic-label";topicLabel.textContent=(entry.priority==="P1"?"TOP 50 PRIORITY · ":"")+(isStudy?"NEW TOPIC":"REVISION OF DAY 1 TOPIC");
   const topicName=document.createElement("div");topicName.className="today-topic-name";topicName.textContent=entry.topic;
   const description=document.createElement("div");description.className="focus-desc";
-  description.textContent=isStudy?"Complete its Day 1 preparation tasks in Daily routine. MCQ + revision follows on Day 2.":"Complete its Day 2 MCQ + revision tasks in Daily routine, then record your MCQ count and recall score.";
+  description.textContent=isStudy?"Study this new topic and prepare concise notes. Tomorrow is reserved only for revising it.":"Revise only the topic studied on Day 1. No new topic or new-topic checklist is scheduled today.";
   const footer=document.createElement("div");footer.className="today-topic-footer";
   const status=document.createElement("span");status.className="today-topic-status";
   if(isStudy)status.textContent=phaseDone?"Day 1 complete · Day 2 pending":"Preparation tasks: "+getPhaseChecklistCount(progress,"study")+"/"+STUDY_DAY_CHECKLIST.length;
-  else status.textContent=phaseDone?"Topic cycle completed":(!progress.studyDone?"Locked · Day 1 pending":"MCQ + revision tasks: "+getPhaseChecklistCount(progress,"mcq_revision")+"/"+REVISION_DAY_CHECKLIST.length);
+  else status.textContent=phaseDone?"Topic cycle completed":(!progress.studyDone?"Locked · Day 1 pending":"Revision tasks: "+getPhaseChecklistCount(progress,"mcq_revision")+"/"+REVISION_DAY_CHECKLIST.length);
   const button=document.createElement("button");button.type="button";button.className="btn primary study-complete-btn";
   button.textContent=phaseDone?(isStudy?"Day 1 completed":"Topic completed"):(isStudy?"Complete Day 1":"Complete Day 2");
   button.disabled=phaseDone||!ready;
@@ -2039,8 +2014,8 @@ function renderRoadmap(){
   const subjectCell=document.createElement("td");subjectCell.textContent=entry.subject;
   const priorityCell=document.createElement("td");priorityCell.textContent=entry.priority==="P1"?"TOP 50":"Standard";
   const topicCell=document.createElement("td");topicCell.textContent=entry.topic;topicCell.className="single-daily-topic";
-  const planCell=document.createElement("td");planCell.textContent=entry.phase==="study"?"Day 1 · Study":"Day 2 · MCQ + Revision";
-  const statusCell=document.createElement("td"),status=document.createElement("span");status.className="table-status"+(done?" done":"");status.textContent=done?"Completed":(isPast?"Missed":(entry.phase==="study"?"Study pending":"MCQ + revision pending"));statusCell.append(status);
+  const planCell=document.createElement("td");planCell.textContent=entry.phase==="study"?"Day 1 · New topic":"Day 2 · Revision only";
+  const statusCell=document.createElement("td"),status=document.createElement("span");status.className="table-status"+(done?" done":"");status.textContent=done?"Completed":(isPast?"Missed":(entry.phase==="study"?"New topic pending":"Revision pending"));statusCell.append(status);
   const doneCell=document.createElement("td"),check=document.createElement("input");check.type="checkbox";check.checked=done;check.disabled=done||!isToday||entry.phase!=="study";check.title=done?"Completed":(isToday&&entry.phase==="study"?"Complete today's study phase":"Complete from today's study/revision cards");check.setAttribute("aria-label","Completion status for "+dateKey+" "+entry.phase);
   if(isToday&&entry.phase==="study")check.addEventListener("change",()=>{if(!check.checked){check.checked=true;return;}markStudyPlanPhaseComplete(entry)});
   doneCell.append(check);row.append(dateCell,dayCell,subjectCell,priorityCell,topicCell,planCell,statusCell,doneCell);body.append(row);
