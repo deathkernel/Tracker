@@ -288,6 +288,25 @@ test("subject progress synchronization covers mapped syllabus topics", () => {
   assert.match(script, /async function syncStudyPlanRevisionToSyllabus\(entry,quality=3\)/);
 });
 
+test("one completed Day 1 + Day 2 study-plan topic counts once in subject progress", () => {
+  const start = script.indexOf("function syncStudyPlanCompletionToSyllabus(entry){");
+  const end = script.indexOf("\nasync function recordStudyReviewBatch", start);
+  assert.ok(start >= 0 && end > start);
+  const entry = { subject: "Polity", topic: "Preamble keywords philosophy", phase: "mcq_revision" };
+  const sandbox = {
+    state: { studyPlanProgress: { "plan:0": { studyDone: true, revisionDone: true } }, topics: {}, revisionSchedule: {} },
+    STUDY_PLAN_TOPICS: [entry],
+    findMatchingSyllabusTopics: () => ["Polity::Preamble", "Polity::Philosophy of Constitution"],
+    isPhaseChecklistComplete: () => true,
+    revisionDateAfter: () => "2026-11-22"
+  };
+  vm.runInNewContext(script.slice(start, end) + "\nthis.sync=syncStudyPlanCompletionToSyllabus;", sandbox);
+  sandbox.sync(entry);
+  sandbox.sync({ ...entry, phase: "study" });
+  assert.deepEqual(Object.keys(sandbox.state.topics), ["Polity::Preamble"]);
+  assert.deepEqual(Object.keys(sandbox.state.revisionSchedule), ["Polity::Preamble"]);
+});
+
 test("uncompletion invalidates linked study but preserves MCQ history", () => {
   assert.match(script, /function syncSyllabusUncompletionToStudyPlan\(subject,topic\)/);
   assert.match(script, /const progress=\{\.\.\.getStudyPlanProgress\(entry\),studyDone:false,mcqDone:false,revisionDone:false,studyChecklist:normalizePhaseChecklist\(null,STUDY_DAY_CHECKLIST,false\),revisionChecklist:normalizePhaseChecklist\(null,REVISION_DAY_CHECKLIST,false\),studyReset:true\}/);
