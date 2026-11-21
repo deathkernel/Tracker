@@ -1095,6 +1095,9 @@ test("MCQ Tracker has a separate navigation page and persistent 50-question hist
   assert.ok(script.includes('test.percentage.toFixed(0)+"%"'));
   assert.ok(script.includes("state.mcqTests.push("));
   assert.ok(script.includes("function getLatestMcqTest(planIndex)"));
+  assert.ok(html.includes("Spreadsheet view"));
+  assert.ok(script.includes('table.className="data-table mcq-sheet"'));
+  assert.ok(script.includes('correctInput.className="mcq-correct-input"'));
   assert.ok(script.includes("&&!!getLatestMcqTest(entry.planIndex)"));
 });
 
