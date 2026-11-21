@@ -1084,3 +1084,26 @@ test("custom topic identity migration uses canonical subject keys and rejects cr
     ["X"]
   );
 });
+
+
+test("MCQ Tracker has a separate navigation page and persistent 50-question history", () => {
+  assert.ok(html.includes('id="nav-mcq" value="mcq"'));
+  assert.ok(html.includes('data-page="mcq"'));
+  assert.ok(script.includes("next.mcqTests=Array.isArray(source.mcqTests)"));
+  assert.ok(script.includes("correct+wrong+unattempted!==50"));
+  assert.ok(script.includes("correct*2-wrong*(2/3)"));
+  assert.ok(script.includes("state.mcqTests.push("));
+  assert.ok(script.includes("function getLatestMcqTest(planIndex)"));
+  assert.ok(script.includes("&&!!getLatestMcqTest(entry.planIndex)"));
+});
+
+test("MCQ preparation assessment uses the agreed score bands", () => {
+  const start = script.indexOf("function getMcqAssessment(percentage){");
+  const end = script.indexOf("\nfunction renderMcqTracker(){", start);
+  assert.ok(start >= 0 && end > start);
+  const sandbox = {};
+  vm.runInNewContext(script.slice(start, end) + "\nthis.assess=getMcqAssessment;", sandbox);
+  assert.equal(sandbox.assess(70).label, "Good preparation");
+  assert.equal(sandbox.assess(50).label, "Average preparation");
+  assert.equal(sandbox.assess(49).label, "Needs improvement");
+});
