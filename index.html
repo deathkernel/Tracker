@@ -1049,6 +1049,24 @@ function apiFetch(url,options={}){
 const localDate=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-")};
 const isPlanDateOverdue=(dateKey,today=localDate())=>dateKey<today;
 const defaultState=()=>({version:0,topics:{},daily:{},weekly:{},logs:{},studyPlanDone:{},studyPlanProgress:{},studyPlanProgressSchema:2,revisionDone:{},masteryProgress:{},retestSchedule:{},recoveryQueue:[],settings:{targetDate:"2027-05-23",theme:"light"},customSubjects:[],customDaily:[]});
+function removeDuplicateStudyPlanSyllabusCompletions(progress){
+ const topics={...(progress.topics||{})};
+ const planMappings=STUDY_PLAN_TOPICS.map((entry,planIndex)=>({
+  planIndex,
+  keys:findMatchingSyllabusTopics(entry.subject,entry.topic)
+ }));
+ const primaryKeys=new Set(planMappings.map(item=>item.keys[0]).filter(Boolean));
+ planMappings.forEach(({planIndex,keys})=>{
+  const saved=progress.studyPlanProgress?.["plan:"+planIndex]||{};
+  const complete=!!saved.studyDone&&!!saved.revisionDone&&isPhaseChecklistComplete(saved,"study")&&isPhaseChecklistComplete(saved,"mcq_revision");
+  if(!complete||!keys.length||!topics[keys[0]])return;
+  keys.slice(1).forEach(key=>{
+   if(!primaryKeys.has(key))delete topics[key];
+  });
+ });
+ progress.topics=topics;
+ return progress;
+}
 function normalizeProgressState(value){
  const source=value&&typeof value==="object"&&!Array.isArray(value)?value:{};
  const next={...defaultState(),...source};
@@ -1129,6 +1147,7 @@ function normalizeProgressState(value){
  const validKeys=new Set(subjects.flatMap(subject=>subject.topics.map(topic=>subject.name+"::"+topic[0])));
  next.topics=Object.fromEntries(Object.entries(next.topics).filter(([key,done])=>validKeys.has(key)&&!!done));
  next.revisionDone=Object.fromEntries(Object.entries(next.revisionDone).filter(([key,done])=>validKeys.has(key)&&!!done&&!!next.topics[key]));
+ removeDuplicateStudyPlanSyllabusCompletions(next);
  return next;
 }
 let saveQueue=Promise.resolve(),localMutationVersion=0,recoveredLegacyProgress=false;
