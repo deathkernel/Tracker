@@ -9,7 +9,8 @@ const script = html.match(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/i)
 test("dashboard keeps each syllabus topic as a two-phase study unit", () => {
   assert.match(script, /const STUDY_PLAN_TOPICS=BASE_STUDY_PLAN\.flatMap/);
   assert.match(script, /const SHUFFLED_STUDY_PLAN=buildSubjectRotatedStudyPlan\(STUDY_PLAN_TOPICS\)/);
-  assert.match(script, /const DAILY_STUDY_PLAN=SHUFFLED_STUDY_PLAN\.flatMap/);
+  assert.match(script, /const ACTIVE_STUDY_PLAN=SHUFFLED_STUDY_PLAN\.slice\(0,PRELIMS_STUDY_TOPIC_LIMIT\)/);
+  assert.match(script, /const DAILY_STUDY_PLAN=ACTIVE_STUDY_PLAN\.flatMap/);
   assert.match(script, /phase:"study"/);
   assert.match(script, /phase:"mcq_revision"/);
 });
@@ -104,7 +105,7 @@ test("alternating schedule pairs each new topic with a revision-only day", () =>
     assert.equal(sandbox.offset({planIndex:index,scheduleIndex:index}),index*2);
   }
   sandbox.state.settings.targetDate="2027-05-23";
-  assert.equal(sandbox.offset({planIndex:188,scheduleIndex:188}),180);
+  assert.equal(sandbox.offset({planIndex:91,scheduleIndex:91}),182);
   assert.match(script,/phase:"study",label:"Day 1 · New topic"/);
   assert.match(script,/phase:"mcq_revision",label:"Day 2 · Revision only"/);
   assert.match(script,/priority:isPriority\?"P1":"P2"/);
@@ -136,6 +137,7 @@ test("target date validation reserves enough calendar days for every study and r
   const sandbox = {
     CYCLE_START_DATE: "2026-11-20",
     STUDY_PLAN_TOPICS: Array.from({ length: 189 }, () => ({})),
+    ACTIVE_STUDY_PLAN: Array.from({ length: 92 }, () => ({})),
     localDateKey: date => [
       date.getFullYear(),
       String(date.getMonth() + 1).padStart(2, "0"),
@@ -143,8 +145,9 @@ test("target date validation reserves enough calendar days for every study and r
     ].join("-")
   };
   vm.runInNewContext(script.slice(start,end) + "\nthis.valid=isValidTargetDate;",sandbox);
-  assert.equal(sandbox.valid("2027-12-01"),false);
-  assert.equal(sandbox.valid("2027-12-02"),true);
+  assert.equal(sandbox.valid("2027-05-21"),false);
+  assert.equal(sandbox.valid("2027-05-22"),true);
+  assert.equal(sandbox.valid("2027-05-23"),true);
   assert.equal(sandbox.valid("2026-02-30"),false);
   assert.equal(sandbox.valid("23-02-2027"),false);
   assert.match(script,/state\.settings\.targetDate=value;persist\(\);renderAll\(\)/);
@@ -167,8 +170,8 @@ test("each plan topic is followed by its own revision day", () => {
   assert.equal(sandbox.getDate({planIndex:0,scheduleIndex:0,phase:"mcq_revision"}),"2026-11-21");
   assert.equal(sandbox.getDate({planIndex:1,scheduleIndex:1,phase:"study"}),"2026-11-22");
   assert.equal(sandbox.getDate({planIndex:1,scheduleIndex:1,phase:"mcq_revision"}),"2026-11-23");
-  assert.equal(sandbox.getDate({planIndex:188,scheduleIndex:188,phase:"study"}),"2027-11-01");
-  assert.equal(sandbox.getDate({planIndex:188,scheduleIndex:188,phase:"mcq_revision"}),"2027-11-02");
+  assert.equal(sandbox.getDate({planIndex:91,scheduleIndex:91,phase:"study"}),"2027-05-21");
+  assert.equal(sandbox.getDate({planIndex:91,scheduleIndex:91,phase:"mcq_revision"}),"2027-05-22");
 });
 
 test("legacy date-keyed study progress migrates to stable per-topic keys", () => {
