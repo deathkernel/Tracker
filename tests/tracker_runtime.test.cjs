@@ -89,23 +89,18 @@ test("schedule rotates subjects within priority tiers and preserves original pro
   assert.deepEqual(Array.from(ordered,entry=>entry.scheduleIndex),[0,1,2,3,4,5,6,7]);
 });
 
-test("priority-first scheduling retains compressed 184-day coverage and two-phase dates", () => {
+test("alternating schedule assigns a new topic on Day 1 and revision only on Day 2", () => {
   const start = script.indexOf("function studyPlanDateOffset(entry){");
   const end = script.indexOf("\nfunction getStudyPlanDateKey(entry){", start);
   assert.ok(start >= 0 && end > start);
-  const dateOffset = script.slice(start, end);
-  assert.match(dateOffset, /Math\.round\(scheduleIndex\*finalStudyOffset\/\(STUDY_PLAN_TOPICS\.length-1\)\)/);
-  const offsets = Array.from({length:189}, (_,index) => Math.round(index*183/188));
-  assert.equal(new Set(offsets).size, 184);
-  assert.equal(offsets[0], 0);
-  assert.equal(offsets[1], 1);
-  assert.equal(offsets[offsets.length-1], 183);
-  const counts = new Map();
-  offsets.forEach(offset => counts.set(offset,(counts.get(offset)||0)+1));
-  assert.equal(Array.from(counts.values()).filter(count => count===2).length, 5);
-  assert.ok(Array.from(counts.values()).every(count => count===1||count===2));
+  const sandbox = { STUDY_PLAN_TOPICS: Array.from({ length:189 }, () => ({})) };
+  vm.runInNewContext(script.slice(start,end) + "\nthis.offset=studyPlanDateOffset;", sandbox);
+  for (let index=0; index<189; index++) {
+    assert.equal(sandbox.offset({planIndex:index,scheduleIndex:index}), index*2);
+  }
   assert.match(script, /const DAILY_STUDY_PLAN=SHUFFLED_STUDY_PLAN\.flatMap/);
-  assert.match(script, /entry\.phase==="mcq_revision"\?1:0/);
+  assert.match(script, /phase:"study",label:"Day 1/);
+  assert.match(script, /phase:"mcq_revision",label:"Day 2 · Revision only"/);
   assert.match(script, /priority:isPriority\?"P1":"P2"/);
 });
 test("topic checklists render under Daily routine, not Today’s study cycle", () => {
@@ -113,7 +108,7 @@ test("topic checklists render under Daily routine, not Today’s study cycle", (
   const cycle = script.slice(script.indexOf("function renderOverviewSchedule(){"), script.indexOf("\nfunction renderRoadmap(){"));
   assert.match(routine, /renderPhaseChecklist\(entry,phase,getStudyPlanProgress\(entry\)\)/);
   assert.doesNotMatch(cycle, /renderPhaseChecklist/);
-  assert.match(cycle, /Complete its Day 1 preparation tasks in Daily routine/);
+  assert.match(cycle, /Revise only the topic studied on Day 1/);
   assert.match(script, /const scheduleIndex=Number\.isInteger\(entry\?\.scheduleIndex\)\?entry\.scheduleIndex:entry\.planIndex/);
 });
 
@@ -136,7 +131,7 @@ test("PYQ completion indicator color follows completed-topic percentage", () => 
   assert.equal(sandbox.getColorClass(-10), "is-low");
 });
 
-test("target date validation protects the two-phase schedule capacity", () => {
+test("target date validation reserves enough calendar days for every study and revision pair", () => {
   const start = script.indexOf("function isValidTargetDate(value){");
   const end = script.indexOf("\nfunction getMinimumTargetDateKey", start);
   assert.ok(start >= 0 && end > start);
@@ -149,33 +144,33 @@ test("target date validation protects the two-phase schedule capacity", () => {
       String(date.getDate()).padStart(2, "0")
     ].join("-")
   };
-  vm.runInNewContext(
-    script.slice(start, end) + "\nthis.valid=isValidTargetDate;",
-    sandbox
-  );
-  assert.equal(sandbox.valid("2027-02-22"), false);
-  assert.equal(sandbox.valid("2027-02-23"), true);
-  assert.equal(sandbox.valid("2026-02-30"), false);
-  assert.equal(sandbox.valid("23-02-2027"), false);
-  assert.match(script, /state\.settings\.targetDate=value;persist\(\);renderAll\(\)/);
-  assert.match(script, /next\.settings\.targetDate="2027-05-23"/);
-  assert.match(script, /incoming\.settings\?\.targetDate!==undefined&&!isValidTargetDate/);
+  vm.runInNewContext(script.slice(start,end) + "\nthis.valid=isValidTargetDate;",sandbox);
+  assert.equal(sandbox.valid("2027-11-01"),false);
+  assert.equal(sandbox.valid("2027-11-02"),true);
+  assert.equal(sandbox.valid("2026-02-30"),false);
+  assert.equal(sandbox.valid("23-02-2027"),false);
+  assert.match(script,/state\.settings\.targetDate=value;persist\(\);renderAll\(\)/);
+  assert.match(script,/next\.settings\.targetDate="2027-05-23"/);
+  assert.match(script,/incoming\.settings\?\.targetDate!==undefined&&!isValidTargetDate/);
 });
 
-test("exam-deadline schedule finishes the final review by the configured target date", () => {
+test("each plan topic is followed by its own revision day", () => {
   const start = script.indexOf("function addDaysToDateKey(dateKey,days){");
-  const end = script.indexOf("function getStudyPlanProgressDateKey(entry){", start);
-  assert.ok(start >= 0 && end > start);
-  const sandbox = {
-    CYCLE_START_DATE: "2026-11-20",
-    STUDY_PLAN_TOPICS: Array.from({ length: 189 }, () => ({})),
-    state: { settings: { targetDate: "2027-05-23" } },
-    localDateKey: date => [date.getFullYear(), String(date.getMonth()+1).padStart(2,"0"), String(date.getDate()).padStart(2,"0")].join("-")
+  const end = script.indexOf("function getStudyPlanProgressDateKey(entry){",start);
+  assert.ok(start>=0&&end>start);
+  const sandbox={
+    CYCLE_START_DATE:"2026-11-20",
+    STUDY_PLAN_TOPICS:Array.from({length:189},()=>({})),
+    state:{settings:{targetDate:"2027-11-02"}},
+    localDateKey:date=>[date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-")
   };
-  vm.runInNewContext(script.slice(start, end) + "\nthis.getDate=getStudyPlanDateKey;", sandbox);
-  assert.equal(sandbox.getDate({ planIndex: 0, phase: "study" }), "2026-11-20");
-  assert.equal(sandbox.getDate({ planIndex: 188, phase: "study" }), "2027-05-22");
-  assert.equal(sandbox.getDate({ planIndex: 188, phase: "mcq_revision" }), "2027-05-23");
+  vm.runInNewContext(script.slice(start,end)+"\nthis.getDate=getStudyPlanDateKey;",sandbox);
+  assert.equal(sandbox.getDate({planIndex:0,scheduleIndex:0,phase:"study"}),"2026-11-20");
+  assert.equal(sandbox.getDate({planIndex:0,scheduleIndex:0,phase:"mcq_revision"}),"2026-11-21");
+  assert.equal(sandbox.getDate({planIndex:1,scheduleIndex:1,phase:"study"}),"2026-11-22");
+  assert.equal(sandbox.getDate({planIndex:1,scheduleIndex:1,phase:"mcq_revision"}),"2026-11-23");
+  assert.equal(sandbox.getDate({planIndex:188,scheduleIndex:188,phase:"study"}),"2027-11-01");
+  assert.equal(sandbox.getDate({planIndex:188,scheduleIndex:188,phase:"mcq_revision"}),"2027-11-02");
 });
 
 test("legacy date-keyed study progress migrates to stable per-topic keys", () => {
@@ -194,13 +189,13 @@ test("pipelined Day 2 uses the same topic's stable progress record", () => {
   assert.match(script, /revisionEntries:getStudyPlanEntriesForDate/);
 });
 
-test("Day 2 cannot finish until its own checklist is complete", () => {
-  const completion = script.slice(script.indexOf("async function completePlanRevision"), script.indexOf("function renderPhaseChecklist"));
-  assert.match(completion, /if\(!canCompleteStudyPlanPhase\(entry,"mcq_revision"\)\)/);
-  const mcqSave = completion.indexOf("progress.mcqDone=true;");
-  const revisionQuality = completion.indexOf('askRecallQuality(entry.topic,"revision")');
-  assert.ok(mcqSave >= 0 && revisionQuality > mcqSave);
-  assert.doesNotMatch(completion, /confirm\("Have you revised/);
+test("Day 2 is a revision-only phase with no new-topic MCQ task", () => {
+  const completion = script.slice(script.indexOf("async function completePlanRevision"),script.indexOf("function renderPhaseChecklist"));
+  assert.match(completion,/if\(!canCompleteStudyPlanPhase\(entry,"mcq_revision"\)\)/);
+  assert.doesNotMatch(completion,/progress\.mcqDone=true/);
+  assert.doesNotMatch(completion,/How many MCQs did you attempt/);
+  assert.match(completion,/askRecallQuality\(entry\.topic,"revision"\)/);
+  assert.match(script,/const REVISION_DAY_CHECKLIST=\[[\s\S]*?Revise the concise notes prepared on Day 1/);
 });
 test("Day 1 and Day 2 checklists gate their own Study Plan phases, not manual syllabus completion", () => {
   assert.match(script, /const STUDY_DAY_CHECKLIST=/);
