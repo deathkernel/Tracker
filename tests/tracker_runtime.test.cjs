@@ -290,7 +290,7 @@ test("subject progress synchronization covers mapped syllabus topics", () => {
 
 test("legacy alias progress migrates when completion flags are true even if revision checklist is stale", () => {
   const start = script.indexOf("function removeDuplicateStudyPlanSyllabusCompletions(progress){");
-  const end = script.indexOf("\\nfunction normalizeProgressState(value){", start);
+  const end = script.indexOf("\nfunction normalizeProgressState(value){", start);
   assert.ok(start >= 0 && end > start);
   const entries = [
     { subject: "Polity", topic: "Constitutional development and historical background" },
@@ -303,7 +303,7 @@ test("legacy alias progress migrates when completion flags are true even if revi
       ? ["Polity::Preamble", "Polity::Philosophy of Constitution"]
       : []
   };
-  vm.runInNewContext(script.slice(start, end) + "\\nthis.migrate=removeDuplicateStudyPlanSyllabusCompletions;", sandbox);
+  vm.runInNewContext(script.slice(start, end) + "\nthis.migrate=removeDuplicateStudyPlanSyllabusCompletions;", sandbox);
   const progress = {
     topics: {
       "Polity::Preamble": true,
