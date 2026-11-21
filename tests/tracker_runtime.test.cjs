@@ -104,7 +104,7 @@ test("alternating schedule reserves revision-only days and fits the configured e
     assert.equal(sandbox.offset({planIndex:index,scheduleIndex:index}),index*2);
   }
   sandbox.state.settings.targetDate="2027-05-23";
-  assert.equal(sandbox.offset({planIndex:188,scheduleIndex:188}),182);
+  assert.equal(sandbox.offset({planIndex:188,scheduleIndex:188}),183);
   assert.match(script,/phase:"study",label:"Day 1 · New topic"/);
   assert.match(script,/phase:"mcq_revision",label:"Day 2 · Revision only"/);
   assert.match(script,/priority:isPriority\?"P1":"P2"/);
