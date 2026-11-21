@@ -103,13 +103,13 @@ test("alternating schedule assigns a new topic on Day 1 and revision only on Day
   assert.match(script, /phase:"mcq_revision",label:"Day 2 · Revision only"/);
   assert.match(script, /priority:isPriority\?"P1":"P2"/);
 });
-test("topic checklists render under Daily routine, not Today’s study cycle", () => {
+test("Day 2 topic cards clearly identify revision-only work", () => {
   const routine = script.slice(script.indexOf("function renderDaily(){"), script.indexOf("\nfunction renderSubjectOverview(){"));
   const cycle = script.slice(script.indexOf("function renderOverviewSchedule(){"), script.indexOf("\nfunction renderRoadmap(){"));
-  assert.match(routine, /renderPhaseChecklist\(entry,phase,getStudyPlanProgress\(entry\)\)/);
-  assert.doesNotMatch(cycle, /renderPhaseChecklist/);
-  assert.match(cycle, /Revise only the topic studied on Day 1/);
-  assert.match(script, /const scheduleIndex=Number\.isInteger\(entry\?\.scheduleIndex\)\?entry\.scheduleIndex:entry\.planIndex/);
+  assert.match(routine,/Day 2 · Revision only/);
+  assert.match(routine,/Day 1 introduces one new topic/);
+  assert.match(cycle,/Revise only the topic studied on Day 1/);
+  assert.match(script,/const scheduleIndex=Number\.isInteger\(entry\?\.scheduleIndex\)\?entry\.scheduleIndex:entry\.planIndex/);
 });
 
 test("PYQ completion indicator color follows completed-topic percentage", () => {
