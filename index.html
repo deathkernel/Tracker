@@ -1836,7 +1836,10 @@ function studyPlanDateOffset(entry){
  const finalStudyOffset=Math.max(0,totalDays-1);
  if(STUDY_PLAN_TOPICS.length<=1)return 0;
  const scheduleIndex=Number.isInteger(entry?.scheduleIndex)?entry.scheduleIndex:entry.planIndex;
- return Math.min(scheduleIndex*2,finalStudyOffset);
+ const finalPairOffset=Math.max(0,finalStudyOffset-1);
+ const scheduleEnd=Math.min((STUDY_PLAN_TOPICS.length-1)*2,finalPairOffset);
+ const pairedOffset=Math.round(scheduleIndex*scheduleEnd/(STUDY_PLAN_TOPICS.length-1));
+ return Math.min(scheduleIndex*2,pairedOffset);
 }
 function getStudyPlanDateKey(entry){
  const offset=studyPlanDateOffset(entry)+(entry.phase==="mcq_revision"?1:0);
