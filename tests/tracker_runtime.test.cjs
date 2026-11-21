@@ -288,6 +288,32 @@ test("subject progress synchronization covers mapped syllabus topics", () => {
   assert.match(script, /async function syncStudyPlanRevisionToSyllabus\(entry,quality=3\)/);
 });
 
+test("legacy Day 1 + Day 2 alias completions are deduplicated during progress normalization", () => {
+  const start = script.indexOf("function removeDuplicateStudyPlanSyllabusCompletions(progress){");
+  const end = script.indexOf("\nfunction normalizeProgressState(value){", start);
+  assert.ok(start >= 0 && end > start);
+  const first = { subject: "Polity", topic: "Preamble keywords philosophy" };
+  const sandbox = {
+    STUDY_PLAN_TOPICS: [first],
+    findMatchingSyllabusTopics: () => ["Polity::Preamble", "Polity::Philosophy of Constitution"],
+    isPhaseChecklistComplete: () => true
+  };
+  vm.runInNewContext(script.slice(start, end) + "\nthis.migrate=removeDuplicateStudyPlanSyllabusCompletions;", sandbox);
+  const progress = {
+    topics: {
+      "Polity::Preamble": true,
+      "Polity::Philosophy of Constitution": true,
+      "Polity::Fundamental Rights": true
+    },
+    studyPlanProgress: { "plan:0": { studyDone: true, revisionDone: true } }
+  };
+  sandbox.migrate(progress);
+  assert.deepEqual(Object.keys(progress.topics).sort(), [
+    "Polity::Fundamental Rights",
+    "Polity::Preamble"
+  ]);
+});
+
 test("one completed Day 1 + Day 2 study-plan topic counts once in subject progress", () => {
   const start = script.indexOf("function syncStudyPlanCompletionToSyllabus(entry){");
   const end = script.indexOf("\nasync function recordStudyReviewBatch", start);
