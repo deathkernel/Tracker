@@ -1098,6 +1098,8 @@ test("MCQ Tracker has a separate navigation page and persistent 50-question hist
   assert.ok(html.includes("Spreadsheet view"));
   assert.ok(script.includes('table.className="data-table mcq-sheet"'));
   assert.ok(script.includes('correctInput.className="mcq-correct-input"'));
+  assert.ok(script.includes('const entries=DAILY_STUDY_PLAN.filter(entry=>entry.phase==="study"&&!!getStudyPlanProgress(entry).studyDone);'));
+  assert.ok(script.includes("addCell(entry.topic)"));
   assert.ok(script.includes("&&!!getLatestMcqTest(entry.planIndex)"));
 });
 
