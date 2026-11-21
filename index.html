@@ -2136,6 +2136,19 @@ function renderCharts(){
    }
    chart.append(svg);card.append(head,chart);extraHost.append(card)
   };
+  const mcqResults=Array.isArray(state.mcqTests)?state.mcqTests:[];
+  const mcqBySubject=allSubjects().map(subject=>{
+   const tests=mcqResults.filter(test=>test.subject===subject.name&&Number.isFinite(Number(test.percentage)));
+   return{label:subject.name.slice(0,12),value:tests.length?Math.round(tests.reduce((sum,test)=>sum+Number(test.percentage),0)/tests.length):null,count:tests.length};
+  }).filter(item=>item.count>0);
+  if(mcqBySubject.length){
+   renderTrend("MCQ accuracy by subject","Average accuracy · saved 50-question tests",mcqBySubject.map(item=>({label:item.label,value:item.value})),"%","lollipop");
+  }else{
+   const card=document.createElement("div");card.className="chart-card analytics-graph-card analytics-extra-card";
+   const heading=document.createElement("h3");heading.className="chart-title";heading.textContent="MCQ accuracy by subject";
+   const empty=document.createElement("div");empty.className="chart-empty";empty.textContent="Save a 50-MCQ topic result to see subject-wise accuracy here.";
+   card.append(heading,empty);extraHost.append(card);
+  }
   const weeklyLabel=date=>date.toLocaleDateString("en-IN",{day:"2-digit",month:"short"});
   renderTrend("Daily MCQs solved","Last 7 days",days.map(day=>({label:day.label,value:Number(state.logs[day.key]?.mcqs)||0})),"","lollipop");
   renderTrend("Weekly MCQs solved","Last 8 weeks",makeSeries(8,7,"mcqs",weeklyLabel),"");
