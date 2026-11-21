@@ -6,10 +6,12 @@ const vm = require("node:vm");
 const html = fs.readFileSync("index.html", "utf8");
 const script = html.match(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/i)?.[1] || "";
 
-test("dashboard keeps each syllabus topic as a two-phase study unit", () => {
+test("dashboard keeps the active Prelims topics as two-phase study units", () => {
   assert.match(script, /const STUDY_PLAN_TOPICS=BASE_STUDY_PLAN\.flatMap/);
   assert.match(script, /const SHUFFLED_STUDY_PLAN=buildSubjectRotatedStudyPlan\(STUDY_PLAN_TOPICS\)/);
+  assert.match(script, /const PRELIMS_STUDY_TOPIC_LIMIT=92/);
   assert.match(script, /const ACTIVE_STUDY_PLAN=SHUFFLED_STUDY_PLAN\.slice\(0,PRELIMS_STUDY_TOPIC_LIMIT\)/);
+  assert.match(script, /const DEFERRED_STUDY_PLAN=SHUFFLED_STUDY_PLAN\.slice\(PRELIMS_STUDY_TOPIC_LIMIT\)/);
   assert.match(script, /const DAILY_STUDY_PLAN=ACTIVE_STUDY_PLAN\.flatMap/);
   assert.match(script, /phase:"study"/);
   assert.match(script, /phase:"mcq_revision"/);
@@ -38,11 +40,14 @@ test("Top 50 P1 topics are mapped and scheduled before standard topics", () => {
     script.slice(rotationStart, rotationEnd) + "\n" +
     script.slice(priorityStart, priorityEnd) +
     "\nthis.units=BASE_STUDY_PLAN.flatMap(group=>group.days.map(topic=>({subject:group.subject,topic})));"+
-    "\nthis.top50=PRELIMS_TOP_50_KEYS;this.ordered=buildSubjectRotatedStudyPlan(units);",
+    "\nthis.top50=PRELIMS_TOP_50_KEYS;this.ordered=buildSubjectRotatedStudyPlan(units);this.active=this.ordered.slice(0,92);",
     sandbox
   );
   assert.equal(sandbox.top50.size, 50);
   assert.equal(sandbox.ordered.length, 189);
+  assert.equal(sandbox.active.length, 92);
+  assert.equal(sandbox.active.filter(entry => entry.priority === "P1").length, 48);
+  assert.equal(sandbox.active.filter(entry => entry.priority === "P2").length, 44);
   const firstStandard = sandbox.ordered.findIndex(entry => entry.priority !== "P1");
   assert.equal(firstStandard, 48);
   assert.ok(Array.from(sandbox.ordered.slice(0, firstStandard)).every(entry => entry.priority === "P1"));
