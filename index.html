@@ -1828,8 +1828,16 @@ function getStudyPlanEntryByPlanIndex(planIndex,phase){
  return DAILY_STUDY_PLAN.find(entry=>entry.planIndex===planIndex&&entry.phase===phase)||null;
 }
 function studyPlanDateOffset(entry){
+ const start=new Date(CYCLE_START_DATE+"T00:00:00");
+ const configuredTarget=(state.settings||{}).targetDate||"2027-11-02";
+ const targetKey=isValidTargetDate(configuredTarget)?configuredTarget:"2027-11-02";
+ const target=new Date(targetKey+"T00:00:00");
+ const totalDays=Math.max(1,Math.round((target-start)/86400000));
+ const finalStudyOffset=Math.max(0,totalDays-1);
+ if(STUDY_PLAN_TOPICS.length<=1)return 0;
  const scheduleIndex=Number.isInteger(entry?.scheduleIndex)?entry.scheduleIndex:entry.planIndex;
- return Math.max(0,scheduleIndex*2);
+ const pairedOffset=Math.round(scheduleIndex*finalStudyOffset/(STUDY_PLAN_TOPICS.length-1));
+ return Math.min(scheduleIndex*2,pairedOffset);
 }
 function getStudyPlanDateKey(entry){
  const offset=studyPlanDateOffset(entry)+(entry.phase==="mcq_revision"?1:0);
