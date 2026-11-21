@@ -1058,7 +1058,7 @@ function removeDuplicateStudyPlanSyllabusCompletions(progress){
  const primaryKeys=new Set(planMappings.map(item=>item.keys[0]).filter(Boolean));
  planMappings.forEach(({planIndex,keys})=>{
   const saved=progress.studyPlanProgress?.["plan:"+planIndex]||{};
-  const complete=!!saved.studyDone&&!!saved.revisionDone&&isPhaseChecklistComplete(saved,"study")&&isPhaseChecklistComplete(saved,"mcq_revision");
+  const complete=!!saved.studyDone&&!!saved.revisionDone;
   if(!complete||!keys.length||!topics[keys[0]])return;
   keys.slice(1).forEach(key=>{
    if(!primaryKeys.has(key))delete topics[key];
