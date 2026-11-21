@@ -1091,7 +1091,7 @@ test("MCQ Tracker has a separate navigation page and persistent 50-question hist
   assert.ok(html.includes('data-page="mcq"'));
   assert.ok(script.includes("next.mcqTests=Array.isArray(source.mcqTests)"));
   assert.ok(script.includes("const wrong=50-correct,unattempted=0,marks=correct*2,percentage=correct/50*100"));
-  assert.ok(script.includes('Wrong answers: "+wrong'));
+  assert.ok(script.includes("const wrong=50-correct,percentage=correct/50*100"));
   assert.ok(script.includes('test.percentage.toFixed(0)+"%"'));
   assert.ok(script.includes("state.mcqTests.push("));
   assert.ok(script.includes("function getLatestMcqTest(planIndex)"));
