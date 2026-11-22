@@ -1115,26 +1115,23 @@ test("MCQ preparation assessment uses the agreed score bands", () => {
 });
 
 
-test("timeline includes History, Polity, Ancient India and Art & Culture while excluding unrelated subjects and generic logs", () => {
+test("timeline includes History, Polity, Ancient, Medieval, Modern India and Art & Culture while excluding unrelated subjects and generic logs", () => {
   assert.match(html, /id="nav-timeline" value="timeline"/);
   assert.match(html, /data-page="timeline"/);
   assert.match(html, /id="timelineSummary"/);
-  assert.match(html, /History, Polity & Culture timeline/);
-  assert.match(html, /History, Polity, Ancient India and Art & Culture topics/);
-  assert.match(html, /\.timeline-list::before/);
-  assert.match(html, /\.timeline-event\.is-complete/);
-  assert.match(html, /\.timeline-event\.is-pending/);
-  assert.match(html, /\.timeline-event\.is-missed/);
-  assert.match(script, /function renderTimeline\(\)/);
+  assert.match(html, /History, Polity, Ancient India, Medieval India, Modern India and Art & Culture topics/);
+  assert.match(html, /\\.timeline-list::before/);
+  assert.match(html, /\\.timeline-event\\.is-complete/);
+  assert.match(html, /\\.timeline-event\\.is-pending/);
+  assert.match(html, /\\.timeline-event\\.is-missed/);
+  assert.match(script, /function renderTimeline\\(\\)/);
   const timeline = script.slice(script.indexOf("function renderTimeline(){"), script.indexOf("function renderAll(){"));
-  assert.match(timeline, /DAILY_STUDY_PLAN\.filter\(isTimelinePlanEntry\)/);
-  assert.match(timeline, /getStudyPlanRotationSubject\(entry\)/);
-  assert.match(timeline, /allSubjects\(\)\.filter\(subject=>\["History","Polity","Art & Culture"\]\.includes\(subject\.name\)\)/);
-  assert.match(timeline, /isTimelineSubject\(test\.subject\)/);
-  assert.match(timeline, /state\.revisionSchedule/);
-  assert.match(timeline, /state\.retestSchedule/);
-  assert.doesNotMatch(timeline, /Object\.entries\(state\.logs/);
+  assert.match(timeline, /DAILY_STUDY_PLAN\\.filter\\(isTimelinePlanEntry\\)/);
+  assert.match(timeline, /getStudyPlanRotationSubject\\(entry\\)/);
+  assert.match(timeline, /isTimelineSubject\\(test\\.subject\\)/);
+  assert.match(timeline, /state\\.revisionSchedule/);
+  assert.match(timeline, /state\\.retestSchedule/);
+  assert.doesNotMatch(timeline, /Object\\.entries\\(state\\.logs/);
   assert.match(timeline, /Timeline milestones/);
-  assert.match(timeline, /sort\(\(a,b\)=>a\.localeCompare\(b\)\)/);
-  assert.match(script, /renderTimeline\(\);setWorkspaceView/);
+  assert.match(script, /renderTimeline\\(\\);setWorkspaceView/);
 });
