@@ -1115,17 +1115,20 @@ test("MCQ preparation assessment uses the agreed score bands", () => {
 });
 
 
-test("Overview subject table and chart share available space with responsive compact layout", () => {
-  assert.match(html, /class="overview-data-grid"/);
-  assert.match(html, /id="overviewSubjectChart"/);
-  assert.match(html, /\.overview-data-grid\{display:grid;grid-template-columns:minmax\(0,1\.12fr\) minmax\(260px,\.88fr\);gap:18px/);
+test("Overview uses one full-width subject progress table and keeps analytics chart in Charts navigation", () => {
+  assert.equal((html.match(/id="subjectOverview"/g) || []).length, 1);
+  assert.doesNotMatch(html, /overviewSubjectChart|overview-data-grid|overview-chart-panel/);
+  assert.match(html, /id="subjectOverview"[^>]*aria-label="Subject progress table"/);
+  assert.match(html, /id="subjectProgressChart"/);
   assert.match(script, /function renderSubjectOverview\(\)/);
   const start = script.indexOf("function renderSubjectOverview(){");
   const end = script.indexOf("\nfunction normalizePlanTopic", start);
   const overview = script.slice(start, end);
-  assert.match(overview, /overviewSubjectChart/);
-  assert.match(overview, /overview-chart-row/);
+  assert.ok(overview.includes("<th>Completed</th>"));
+  assert.ok(overview.includes("<th>Remaining</th>"));
+  assert.match(overview, /totals\.done/);
   assert.match(overview, /subject\.percent/);
+  assert.match(html, /\.subject-progress-table\{width:100%;min-width:620px;table-layout:fixed\}/);
 });
 
 test("timeline includes History, Polity, Ancient, Medieval, Modern India and Art & Culture while excluding unrelated subjects and generic logs", () => {

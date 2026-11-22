@@ -154,12 +154,14 @@ def test_overview_subject_progress_renders_counts_and_contains_mobile_overflow(t
             custom = next(row for row in row_values if row[0] == "Custom audit subject")
             assert polity[1].startswith("2 /")
             assert custom[1] == "0 / 1"
-            assert custom[2].endswith("0%")
+            assert custom[2] == "1"
+            assert custom[3].endswith("0%")
 
-            assert host.evaluate("(element) => getComputedStyle(element).overflowX === 'auto'")
+            assert host.evaluate("(element) => getComputedStyle(element).overflowX === 'hidden'")
             assert host.evaluate("(element) => element.scrollWidth <= element.clientWidth + 1")
 
             page.set_viewport_size({"width": 390, "height": 844})
+            assert host.evaluate("(element) => getComputedStyle(element).overflowX === 'auto'")
             assert host.evaluate("(element) => element.scrollWidth > element.clientWidth")
             assert page.evaluate(
                 "() => document.documentElement.scrollWidth <= window.innerWidth + 1"
@@ -223,7 +225,7 @@ def test_manual_syllabus_completion_updates_overview_subject_progress(tracker_ur
             assert polity_row.count() == 1
             assert polity_row.locator("td").nth(1).inner_text().startswith("1 /")
             progress_percent = int(
-                polity_row.locator("td").nth(2).inner_text().replace("%", "")
+                polity_row.locator("td").nth(3).inner_text().replace("%", "")
             )
             assert progress_percent > 0
         finally:
