@@ -2420,6 +2420,7 @@ $("phoneAccessBtn")?.addEventListener("click",showPhoneAccess);
 $("closePhoneAccess")?.addEventListener("click",()=>{$("phoneAccessPanel").hidden=true;$("phoneAccessBtn")?.setAttribute("aria-expanded","false")});
 $("mcqPlanSelect")?.addEventListener("change",renderMcqTracker);
 function initFilters(){allSubjects().forEach(s=>{const opt=document.createElement("option");opt.value=s.name;opt.textContent=s.name;$("subjectFilter").append(opt)});$("topicSearch").addEventListener("input",renderTopics);$("subjectFilter").addEventListener("change",renderTopics);$("topicStatus").addEventListener("change",renderTopics);$("revisionSearch").addEventListener("input",renderRevision);$("revisionSubject").addEventListener("change",renderRevision);$("revisionStatus").addEventListener("change",renderRevision)}
+$("timelineFilter")?.addEventListener("change",renderTimeline);
 $("logDate").value=localDate();
 $("saveLog").addEventListener("click",()=>{const date=$("logDate").value;if(!isValidDateKey(date)){notify("Choose a valid study date.");return}const mcqs=Number($("logMcq").value);if(!Number.isInteger(mcqs)||mcqs<0||mcqs>500){notify("Enter a valid MCQ count from 0 to 500.");return}state.logs[date]={mcqs,notes:$("logNotes").value.trim()};persist();renderStats();renderLogs();renderCharts();notify("Daily activity saved.")});
  $("clearLog").addEventListener("click",()=>{["logMcq","logNotes"].forEach(id=>$(id).value="")});
