@@ -1154,24 +1154,24 @@ test("timeline includes History, Polity, Ancient, Medieval, Modern India and Art
 
 
 test("history chronology is a single shared helper for syllabus sorting and study-plan rotation", () => {
-  const definitions = [...script.matchAll(/function historyTopicChronology\\(topic\\)\\{/g)];
+  const definitions = [...script.matchAll(/function historyTopicChronology\(topic\)\{/g)];
   assert.equal(definitions.length, 1);
 
   const subjectsStart = script.indexOf("const allSubjects=()=>{");
-  const subjectsEnd = script.indexOf("\\nfunction appendSettingsAction", subjectsStart);
+  const subjectsEnd = script.indexOf("function appendSettingsAction", subjectsStart);
   const subjects = script.slice(subjectsStart, subjectsEnd);
   const rotationStart = script.indexOf("function buildSubjectRotatedStudyPlan(entries){");
-  const rotationEnd = script.indexOf("\\nfunction syncSyllabusCompletionToStudyPlan", rotationStart);
+  const rotationEnd = script.indexOf("function syncSyllabusCompletionToStudyPlan", rotationStart);
   const rotation = script.slice(rotationStart, rotationEnd);
 
   assert.match(subjects, /historyTopicChronology/);
   assert.match(rotation, /historyTopicChronology/);
 
   const helperStart = definitions[0].index;
-  const helperEnd = script.indexOf("\\nconst allSubjects=()=>", helperStart);
+  const helperEnd = script.indexOf("const allSubjects=()=>", helperStart);
   const sandbox = {};
   vm.runInNewContext(
-    script.slice(helperStart, helperEnd) + "\\nthis.chronology=historyTopicChronology;",
+    script.slice(helperStart, helperEnd) + String.fromCharCode(10) + "this.chronology=historyTopicChronology;",
     sandbox
   );
   assert.equal(sandbox.chronology("Indus Valley Sites"), 20);
@@ -1180,7 +1180,7 @@ test("history chronology is a single shared helper for syllabus sorting and stud
 });
 
 test("known redundant CSS declarations are not repeated in the stylesheet", () => {
-  const style = html.match(/<style>([\\s\\S]*?)<\\/style>/i)?.[1] || "";
+  const style = html.match(/<style>([\s\S]*?)<\/style>/i)?.[1] || "";
   const redundantRules = [
     ".exam-countdown-date{font-size:12px;color:var(--ink);font-weight:650}",
     "#phoneAccessBtn{display:none}",
