@@ -1115,23 +1115,26 @@ test("MCQ preparation assessment uses the agreed score bands", () => {
 });
 
 
-test("complete preparation timeline flows vertically and includes all milestone types and statuses", () => {
+test("History timeline contains every History topic and excludes other subjects and generic study logs", () => {
   assert.match(html, /id="nav-timeline" value="timeline"/);
   assert.match(html, /data-page="timeline"/);
   assert.match(html, /id="timelineSummary"/);
-  assert.match(html, /Complete preparation timeline/);
-  assert.match(html, /completed, in progress, missed and upcoming/);
+  assert.match(html, /History topics timeline/);
+  assert.match(html, /All History topics, revisions and tests/);
   assert.match(html, /\.timeline-list::before/);
   assert.match(html, /\.timeline-event\.is-complete/);
   assert.match(html, /\.timeline-event\.is-pending/);
   assert.match(html, /\.timeline-event\.is-missed/);
   assert.match(script, /function renderTimeline\(\)/);
-  assert.match(script, /DAILY_STUDY_PLAN\.forEach/);
-  assert.match(script, /Object\.entries\(state\.logs\|\|\{\}\)/);
-  assert.match(script, /state\.mcqTests\|\|\[\]/);
-  assert.match(script, /state\.revisionSchedule/);
-  assert.match(script, /state\.retestSchedule/);
-  assert.match(script, /statusForDate/);
-  assert.match(script, /sort\(\(a,b\)=>a\.localeCompare\(b\)\)/);
+  const timeline = script.slice(script.indexOf("function renderTimeline(){"), script.indexOf("function renderAll(){"));
+  assert.match(timeline, /DAILY_STUDY_PLAN\.filter\(isHistoryPlanEntry\)/);
+  assert.match(timeline, /getStudyPlanRotationSubject\(entry\)/);
+  assert.match(timeline, /allSubjects\(\)\.find\(subject=>subject\.name==="History"\)/);
+  assert.match(timeline, /isHistorySubject\(test\.subject\)/);
+  assert.match(timeline, /state\.revisionSchedule/);
+  assert.match(timeline, /state\.retestSchedule/);
+  assert.doesNotMatch(timeline, /Object\.entries\(state\.logs/);
+  assert.match(timeline, /History milestones/);
+  assert.match(timeline, /sort\(\(a,b\)=>a\.localeCompare\(b\)\)/);
   assert.match(script, /renderTimeline\(\);setWorkspaceView/);
 });
