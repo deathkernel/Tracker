@@ -1122,10 +1122,10 @@ test("Overview uses one full-width subject progress table and keeps analytics ch
   assert.match(html, /id="subjectProgressChart"/);
   assert.match(script, /function renderSubjectOverview\(\)/);
   const start = script.indexOf("function renderSubjectOverview(){");
-  const end = script.indexOf("\\nfunction normalizePlanTopic", start);
+  const end = script.indexOf("\nfunction normalizePlanTopic", start);
   const overview = script.slice(start, end);
-  assert.match(overview, /<th>Completed<\\/th>/);
-  assert.match(overview, /<th>Remaining<\\/th>/);
+  assert.ok(overview.includes("<th>Completed</th>"));
+  assert.ok(overview.includes("<th>Remaining</th>"));
   assert.match(overview, /totals\.done/);
   assert.match(overview, /subject\.percent/);
   assert.match(html, /\.subject-progress-table\{width:100%;min-width:620px;table-layout:fixed\}/);
