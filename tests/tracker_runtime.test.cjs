@@ -1121,7 +1121,7 @@ test("Overview subject table and chart share available space with responsive com
   assert.match(html, /\.overview-data-grid\{display:grid;grid-template-columns:minmax\(0,1\.12fr\) minmax\(260px,\.88fr\);gap:18px/);
   assert.match(script, /function renderSubjectOverview\(\)/);
   const start = script.indexOf("function renderSubjectOverview(){");
-  const end = script.indexOf("\\nfunction normalizePlanTopic", start);
+  const end = script.indexOf("\nfunction normalizePlanTopic", start);
   const overview = script.slice(start, end);
   assert.match(overview, /overviewSubjectChart/);
   assert.match(overview, /overview-chart-row/);
