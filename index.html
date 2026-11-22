@@ -734,7 +734,7 @@ body.dark #workspaceNav .nav-brand-mark{background:var(--blue);color:#10141d}
 .timeline-tag{padding:3px 8px;border-radius:6px;background:var(--blue-soft);color:var(--blue);font-size:10px;font-weight:750}
 @media(max-width:700px){.timeline-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.timeline-list{padding-left:29px}.timeline-list::before{left:8px}.timeline-date::before{left:-26px}.timeline-event{padding:11px 12px}}
 
-/* History, Polity, Ancient India and Art & Culture timeline. */
+/* History, Polity, Ancient, Medieval, Modern India and Art & Culture timeline. */
 .timeline-list{position:relative;display:grid;gap:0;padding:8px 0 8px 38px;}
 .timeline-list::before{content:"";position:absolute;top:14px;bottom:14px;left:12px;width:2px;background:linear-gradient(var(--blue),var(--line));}
 .timeline-day{position:relative;padding:0 0 22px;}
@@ -887,7 +887,7 @@ body.dark #workspaceNav .nav-brand-mark{background:var(--blue);color:#10141d}
   <div class="week-list" id="roadmap"></div>
  </section>
  <section class="card timeline-page" data-page="timeline" hidden>
-  <div class="card-head"><div><div class="eyebrow">YOUR STUDY HISTORY</div><h2>History, Polity & Culture timeline</h2><p class="subtitle">History, Polity, Ancient India and Art & Culture topics, revisions and tests — completed, in progress, missed and upcoming — in one downward timeline.</p></div><span class="chip" id="timelineCount">0 study logs</span></div>
+  <div class="card-head"><div><div class="eyebrow">YOUR STUDY HISTORY</div><h2>History, Polity & Culture timeline</h2><p class="subtitle">History, Polity, Ancient India, Medieval India, Modern India and Art & Culture topics, revisions and tests — completed, in progress, missed and upcoming — in one downward timeline.</p></div><span class="chip" id="timelineCount">0 study logs</span></div>
   <div class="timeline-summary" id="timelineSummary"></div>
   <div class="timeline-list" id="timelineList"><div class="empty">Loading your study logs…</div></div>
  </section>
@@ -2382,7 +2382,7 @@ function renderMcqTracker(){
 function renderTimeline(){
  const host=$("timelineList");if(!host)return;
  const today=localDate(),events=new Map();
- const isTimelineSubject=subject=>/history|polity|art\s*&\s*culture/i.test(String(subject||""));
+ const isTimelineSubject=subject=>/history|polity|art\\s*&\\s*culture|ancient\\s*(\\+|&)\\s*medieval\\s*history|ancient\\s*history|medieval\\s*history|modern\\s*history/i.test(String(subject||""));
  const isTimelinePlanEntry=entry=>isTimelineSubject(getStudyPlanRotationSubject(entry));
  const addEvent=(date,title,detail,status,type,meta=[])=>{
   if(!isValidDateKey(date))return;
@@ -2442,7 +2442,7 @@ function renderTimeline(){
   label.textContent=item.label;value.textContent=String(item.value);card.append(label,value);$("timelineSummary").append(card);
  });
  host.innerHTML="";
- if(!dates.length){host.innerHTML='<div class="empty">No History, Polity, Ancient India or Art & Culture milestones are available yet.</div>';return;}
+ if(!dates.length){host.innerHTML='<div class="empty">No History, Polity, Ancient India, Medieval India, Modern India or Art & Culture milestones are available yet.</div>';return;}
  dates.forEach(date=>{
   const day=document.createElement("section");day.className="timeline-day";
   const dateLabel=document.createElement("div");dateLabel.className="timeline-date";
