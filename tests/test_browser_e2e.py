@@ -157,10 +157,11 @@ def test_overview_subject_progress_renders_counts_and_contains_mobile_overflow(t
             assert custom[2] == "1"
             assert custom[3].endswith("0%")
 
-            assert host.evaluate("(element) => getComputedStyle(element).overflowX === 'auto'")
+            assert host.evaluate("(element) => getComputedStyle(element).overflowX === 'hidden'")
             assert host.evaluate("(element) => element.scrollWidth <= element.clientWidth + 1")
 
             page.set_viewport_size({"width": 390, "height": 844})
+            assert host.evaluate("(element) => getComputedStyle(element).overflowX === 'auto'")
             assert host.evaluate("(element) => element.scrollWidth > element.clientWidth")
             assert page.evaluate(
                 "() => document.documentElement.scrollWidth <= window.innerWidth + 1"
