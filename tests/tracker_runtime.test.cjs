@@ -1115,16 +1115,23 @@ test("MCQ preparation assessment uses the agreed score bands", () => {
 });
 
 
-test("study log timeline is a vertical chronological view with no revision or test events", () => {
+test("complete preparation timeline flows vertically and includes all milestone types and statuses", () => {
   assert.match(html, /id="nav-timeline" value="timeline"/);
   assert.match(html, /data-page="timeline"/);
   assert.match(html, /id="timelineSummary"/);
-  assert.match(html, /Study log timeline/);
-  assert.doesNotMatch(html, /id="timelineFilter"/);
+  assert.match(html, /Complete preparation timeline/);
+  assert.match(html, /completed, in progress, missed and upcoming/);
   assert.match(html, /\.timeline-list::before/);
+  assert.match(html, /\.timeline-event\.is-complete/);
+  assert.match(html, /\.timeline-event\.is-pending/);
+  assert.match(html, /\.timeline-event\.is-missed/);
   assert.match(script, /function renderTimeline\(\)/);
+  assert.match(script, /DAILY_STUDY_PLAN\.forEach/);
   assert.match(script, /Object\.entries\(state\.logs\|\|\{\}\)/);
-  assert.match(script, /sort\(\(\[a\]\,\[b\]\)=>a\.localeCompare\(b\)\)/);
-  assert.doesNotMatch(script.slice(script.indexOf("function renderTimeline(){"), script.indexOf("function renderAll(){")), /DAILY_STUDY_PLAN|mcqTests|Revision day|MCQ test/);
+  assert.match(script, /state\.mcqTests\|\|\[\]/);
+  assert.match(script, /state\.revisionSchedule/);
+  assert.match(script, /state\.retestSchedule/);
+  assert.match(script, /statusForDate/);
+  assert.match(script, /sort\(\(a,b\)=>a\.localeCompare\(b\)\)/);
   assert.match(script, /renderTimeline\(\);setWorkspaceView/);
 });

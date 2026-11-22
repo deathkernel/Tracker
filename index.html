@@ -733,6 +733,29 @@ body.dark #workspaceNav .nav-brand-mark{background:var(--blue);color:#10141d}
 .timeline-event-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
 .timeline-tag{padding:3px 8px;border-radius:6px;background:var(--blue-soft);color:var(--blue);font-size:10px;font-weight:750}
 @media(max-width:700px){.timeline-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.timeline-list{padding-left:29px}.timeline-list::before{left:8px}.timeline-date::before{left:-26px}.timeline-event{padding:11px 12px}}
+
+/* Complete preparation timeline: every milestone flows down one spine. */
+.timeline-list{position:relative;display:grid;gap:0;padding:8px 0 8px 38px;}
+.timeline-list::before{content:"";position:absolute;top:14px;bottom:14px;left:12px;width:2px;background:linear-gradient(var(--blue),var(--line));}
+.timeline-day{position:relative;padding:0 0 22px;}
+.timeline-day:last-child{padding-bottom:0;}
+.timeline-date{position:relative;margin:0 0 10px;font-size:12px;font-weight:850;letter-spacing:.02em;color:var(--ink);}
+.timeline-date::before{content:"";position:absolute;left:-32px;top:1px;width:14px;height:14px;border:3px solid var(--blue);border-radius:3px;background:var(--surface);transform:rotate(45deg);z-index:1;}
+.timeline-day-items{display:grid;gap:9px;}
+.timeline-event{padding:13px 15px;border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:10px;background:var(--surface);min-width:0;}
+.timeline-event.is-complete{border-left-color:var(--green);}
+.timeline-event.is-pending{border-left-color:var(--amber);}
+.timeline-event.is-missed{border-left-color:#c34b58;}
+.timeline-event-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.timeline-event-title{font-size:13px;font-weight:750;color:var(--ink);overflow-wrap:anywhere;}
+.timeline-event-detail{margin-top:5px;color:var(--muted);font-size:12px;line-height:1.55;overflow-wrap:anywhere;}
+.timeline-event-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
+.timeline-tag{padding:3px 8px;border-radius:6px;background:var(--blue-soft);color:var(--blue);font-size:10px;font-weight:750;}
+.timeline-tag.status-complete{background:var(--green-soft);color:var(--green);}
+.timeline-tag.status-pending{background:var(--amber-soft);color:var(--amber);}
+.timeline-tag.status-missed{background:#fff0f1;color:#b23b3b;}
+.timeline-summary{grid-template-columns:repeat(4,minmax(0,1fr));}
+@media(max-width:700px){.timeline-summary{grid-template-columns:repeat(2,minmax(0,1fr));}.timeline-list{padding-left:32px;}.timeline-list::before{left:10px;}.timeline-date::before{left:-27px;}.timeline-event{padding:11px 12px;}}
 </style>
 </head>
 <body data-view="overview">
@@ -864,7 +887,7 @@ body.dark #workspaceNav .nav-brand-mark{background:var(--blue);color:#10141d}
   <div class="week-list" id="roadmap"></div>
  </section>
  <section class="card timeline-page" data-page="timeline" hidden>
-  <div class="card-head"><div><div class="eyebrow">YOUR STUDY HISTORY</div><h2>Study log timeline</h2><p class="subtitle">Every saved study log, arranged chronologically from top to bottom.</p></div><span class="chip" id="timelineCount">0 study logs</span></div>
+  <div class="card-head"><div><div class="eyebrow">YOUR STUDY HISTORY</div><h2>Complete preparation timeline</h2><p class="subtitle">Every scheduled topic, revision, test and study log — completed, in progress, missed and upcoming — in one downward timeline.</p></div><span class="chip" id="timelineCount">0 study logs</span></div>
   <div class="timeline-summary" id="timelineSummary"></div>
   <div class="timeline-list" id="timelineList"><div class="empty">Loading your study logs…</div></div>
  </section>
@@ -2358,35 +2381,93 @@ function renderMcqTracker(){
 
 function renderTimeline(){
  const host=$("timelineList");if(!host)return;
- const entries=Object.entries(state.logs||{}).filter(([date])=>isValidDateKey(date)).sort(([a],[b])=>a.localeCompare(b));
- const totalMcqs=entries.reduce((sum,[,record])=>sum+(Number(record.mcqs)||0),0);
- const latest=entries.length?entries[entries.length-1][0]:"—";
- $("timelineCount").textContent=entries.length+" study logs";
+ const today=localDate(),events=new Map();
+ const addEvent=(date,title,detail,status,type,meta=[])=>{
+  if(!isValidDateKey(date))return;
+  if(!events.has(date))events.set(date,[]);
+  events.get(date).push({title,detail,status,type,meta});
+ };
+ const statusForDate=(date,done)=>{
+  if(done)return "complete";
+  return date<today?"missed":date===today?"pending":"upcoming";
+ };
+ DAILY_STUDY_PLAN.forEach(entry=>{
+  const date=getStudyPlanDateKey(entry),progress=getStudyPlanProgress(entry);
+  const done=isStudyPlanEntryDone(entry);
+  const phase=entry.phase==="study"?"New topic study":"Revision + MCQ practice";
+  const checklist=entry.phase==="study"?getPhaseChecklistCount(progress,"study"):getPhaseChecklistCount(progress,"mcq_revision");
+  const total=entry.phase==="study"?STUDY_DAY_CHECKLIST.length:REVISION_DAY_CHECKLIST.length;
+  const latest=getLatestMcqTest(entry.planIndex);
+  const detail=[entry.subject,entry.topic,phase==="New topic study"?"Day 1":"Day 2",checklist+"/"+total+" checklist steps"].join(" · ");
+  const meta=[entry.priority==="P1"?"TOP 50":"Standard",phase];
+  if(latest)meta.push("MCQ "+latest.correct+"/50 · "+latest.percentage.toFixed(0)+"%");
+  addEvent(date,entry.topic,detail,statusForDate(date,done),"study-plan",meta);
+ });
+ Object.entries(state.logs||{}).forEach(([date,record])=>{
+  if(!isValidDateKey(date))return;
+  const notes=String(record.notes||"").trim();
+  addEvent(date,"Daily study log",(Number(record.mcqs)||0)+" MCQs solved"+(notes?" · "+notes:""),"complete","study-log",["Study log"]);
+ });
+ (state.mcqTests||[]).forEach(test=>{
+  const entry=DAILY_STUDY_PLAN.find(item=>item.planIndex===test.planIndex&&item.phase==="study");
+  addEvent(test.date,"MCQ test · "+(test.topic||entry?.topic||"Study plan topic"),(test.subject||entry?.subject||"")+" · "+test.correct+"/50 correct · "+test.wrong+" wrong · "+Number(test.percentage||0).toFixed(0)+"% accuracy","complete","mcq-test",["MCQ test",getMcqAssessment(Number(test.percentage)||0).label]);
+ });
+ allSubjects().forEach(subject=>subject.topics.forEach(([topic])=>{
+  const key=subject.name+"::"+topic;
+  if(!state.topics?.[key])return;
+  const schedule=state.revisionSchedule?.[key]||{};
+  const mastery=state.masteryProgress?.[key]||{};
+  const lastReviewed=typeof schedule.last_reviewed_at==="string"&&isValidDateKey(schedule.last_reviewed_at)?schedule.last_reviewed_at:"";
+  if(lastReviewed)addEvent(lastReviewed,"Completed revision · "+topic,subject.name+" · "+(Number(mastery.lastQuality??mastery.last_quality)||0)+"/5 recall quality","complete","revision",["Revision completed"]);
+  const dueDate=typeof schedule.due_date==="string"&&isValidDateKey(schedule.due_date)?schedule.due_date:"";
+  const retest=state.retestSchedule?.[key]||{};
+  const retestDate=typeof retest.due_date==="string"&&isValidDateKey(retest.due_date)?retest.due_date:"";
+  if(dueDate)addEvent(dueDate,"Spaced revision · "+topic,subject.name+" · "+(Number(mastery.reviews)||0)+" reviews recorded",dueDate<today?"missed":dueDate===today?"pending":"upcoming","revision",["Revision due"]);
+  if(retestDate)addEvent(retestDate,"Mastery retest · "+topic,subject.name+" · "+(Number(mastery.masteryLevel)||0)+"/5 mastery",retest.status==="complete"?"complete":statusForDate(retestDate,retest.status==="complete"),"retest",["Retest"]);
+ }));
+ Object.entries(state.retestSchedule||{}).forEach(([key,retest])=>{
+  if(key.includes("::")||!retest||!isValidDateKey(retest.due_date))return;
+  const planIndex=Number(key.replace("plan:","")),entry=STUDY_PLAN_TOPICS[planIndex];
+  if(!entry)return;
+  addEvent(retest.due_date,"Mastery retest · "+entry.topic,entry.subject+" · "+(Number(state.masteryProgress?.[key]?.masteryLevel)||0)+"/5 mastery",statusForDate(retest.due_date,retest.status==="complete"),"retest",["Retest"]);
+ });
+ const dates=[...events.keys()].sort((a,b)=>a.localeCompare(b));
+ const allEvents=dates.flatMap(date=>events.get(date));
+ const completed=allEvents.filter(item=>item.status==="complete").length;
+ const pending=allEvents.filter(item=>item.status==="pending"||item.status==="upcoming").length;
+ const missed=allEvents.filter(item=>item.status==="missed").length;
+ $("timelineCount").textContent=allEvents.length+" milestones";
  $("timelineSummary").innerHTML="";
- [{label:"Study days logged",value:entries.length},{label:"Total MCQs solved",value:totalMcqs},{label:"Latest study log",value:latest==="—"?"—":new Date(latest+"T00:00:00").toLocaleDateString("en-IN",{day:"2-digit",month:"short"})}].forEach(item=>{
+ [{label:"Total milestones",value:allEvents.length},{label:"Completed",value:completed},{label:"Pending / upcoming",value:pending},{label:"Missed",value:missed}].forEach(item=>{
   const card=document.createElement("div");card.className="timeline-metric";
   const label=document.createElement("span"),value=document.createElement("strong");
   label.textContent=item.label;value.textContent=String(item.value);card.append(label,value);$("timelineSummary").append(card);
  });
  host.innerHTML="";
- if(!entries.length){host.innerHTML='<div class="empty">No study logs recorded yet. Save a daily study log to see it here.</div>';return}
- entries.forEach(([date,record])=>{
-  const day=document.createElement("div");day.className="timeline-day";
+ if(!dates.length){host.innerHTML='<div class="empty">No timeline milestones are available yet.</div>';return;}
+ dates.forEach(date=>{
+  const day=document.createElement("section");day.className="timeline-day";
   const dateLabel=document.createElement("div");dateLabel.className="timeline-date";
   dateLabel.textContent=new Date(date+"T00:00:00").toLocaleDateString("en-IN",{weekday:"long",day:"2-digit",month:"long",year:"numeric"});
   const items=document.createElement("div");items.className="timeline-day-items";
-  const card=document.createElement("article");card.className="timeline-event";
-  const top=document.createElement("div"),title=document.createElement("div"),tag=document.createElement("span"),detail=document.createElement("div"),meta=document.createElement("div");
-  top.className="timeline-event-top";title.className="timeline-event-title";title.textContent="Daily study log";
-  tag.className="timeline-tag";tag.textContent="Recorded";
-  detail.className="timeline-event-detail";
-  const notes=String(record.notes||"").trim();
-  detail.textContent=(Number(record.mcqs)||0)+" MCQs solved"+(notes?" · "+notes:"");
-  meta.className="timeline-event-meta";
-  const count=document.createElement("span");count.className="timeline-tag";count.textContent=(Number(record.mcqs)||0)+" MCQs";
-  meta.append(count);top.append(title,tag);card.append(top,detail,meta);items.append(card);day.append(dateLabel,items);host.append(day);
+  events.get(date).sort((a,b)=>{
+   const order={"study-plan":0,"study-log":1,"mcq-test":2,"revision":3,"retest":4};
+   return (order[a.type]??9)-(order[b.type]??9)||a.title.localeCompare(b.title);
+  }).forEach(event=>{
+   const card=document.createElement("article");card.className="timeline-event is-"+event.status;
+   const top=document.createElement("div"),title=document.createElement("div"),tag=document.createElement("span"),detail=document.createElement("div"),meta=document.createElement("div");
+   top.className="timeline-event-top";title.className="timeline-event-title";title.textContent=event.title;
+   tag.className="timeline-tag status-"+(event.status==="upcoming"?"pending":event.status);
+   tag.textContent=event.status==="complete"?"Completed":event.status==="missed"?"Missed":event.status==="upcoming"?"Upcoming":"In progress";
+   detail.className="timeline-event-detail";detail.textContent=event.detail;
+   meta.className="timeline-event-meta";
+   [event.type.replace("-"," "),...event.meta].forEach(value=>{const chip=document.createElement("span");chip.className="timeline-tag";chip.textContent=value;meta.append(chip);});
+   top.append(title,tag);card.append(top,detail,meta);items.append(card);
+  });
+  day.append(dateLabel,items);host.append(day);
  });
 }
+
 function renderAll(){syncSubjectFilter();renderSettings();renderStats();renderDaily();renderOverviewSchedule();renderSubjectOverview();renderTopics();renderMissingTopics();renderRevision();renderMcqTracker();renderCharts();renderRoadmap();renderLogs();renderTimeline();setWorkspaceView(window.trackerView||"overview")}
 async function showPhoneAccess(){
  const panel=$("phoneAccessPanel"),button=$("phoneAccessBtn");if(!panel)return;
