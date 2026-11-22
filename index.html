@@ -364,7 +364,7 @@ body.dark .btn.danger{border-color:#5a3938}
 .exam-countdown-grid{gap:12px;margin:0 0 18px}
 .exam-countdown-card{border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow);padding:15px 18px}
 .exam-countdown-label{font-size:10px;letter-spacing:.1em;font-weight:800;color:var(--muted)}
-.exam-countdown-date{font-size:12px;color:var(--ink);font-weight:650}
+
 .exam-countdown-remaining{font-size:27px;letter-spacing:-.045em;font-weight:780;color:var(--ink)}
 .exam-countdown-caption{font-size:10px;color:var(--muted)}
 .prelims-countdown{border-left:3px solid var(--blue)}
@@ -477,7 +477,7 @@ body.dark .today-topic-card .focus-desc{color:var(--muted)}
  .brand{width:100%}
  h1{font-size:21px}
  .header-right{width:100%;justify-content:flex-start}
- #phoneAccessBtn{display:none}
+ 
  .grid-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
  .stat{padding:12px 13px}
  .stat-value{font-size:23px}
@@ -502,7 +502,7 @@ body.dark .today-topic-card .focus-desc{color:var(--muted)}
  .card-head{align-items:flex-start;flex-wrap:wrap;margin-bottom:13px}
  .overview-focus-grid{grid-template-columns:1fr;gap:14px}
  .overview-topic-column{border:0;border-top:1px solid var(--line);padding:15px 0 0}
- .subject-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ 
  .toolbar{display:grid;grid-template-columns:1fr 1fr}
  .toolbar input{grid-column:1/-1;min-width:0;width:100%}
  .toolbar select{min-width:0;width:100%}
@@ -1269,8 +1269,7 @@ function mergeStateChanges(base,local,remote){
 }
 function persist(){try{state=normalizeProgressState(state);refreshRecoveryQueue();const mutation=++localMutationVersion;localStorage.setItem(STORE,JSON.stringify(state));const snapshot=JSON.parse(JSON.stringify(state));saveQueue=saveQueue.then(async()=>{const payload={...snapshot,version:state.version||0};const response=await apiFetch("/api/state",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});if(response.status===409){notify("Tracker changed on another device. Reload before saving again.");throw new Error("State version conflict")}if(!response.ok)throw new Error("Database sync failed");const result=await response.json();state.version=result.version;if(mutation===localMutationVersion)localStorage.setItem(STORE,JSON.stringify(state));}).catch(error=>{if(error.message!=="State version conflict")notify("Local backup saved, but database sync failed. Keep the app running and retry.");});return saveQueue}catch{notify("Could not save. Export a backup and check browser storage.");return Promise.resolve(false)}}
 function notify(message){const el=$("toast");el.textContent=message;el.classList.add("show");clearTimeout(notify.timer);notify.timer=setTimeout(()=>el.classList.remove("show"),2200)}
-const allSubjects=()=>{
- const historyTopicChronology=(topic)=>{
+function historyTopicChronology(topic){
   const name=String(topic||"").toLowerCase();
   const rules=[
    [/prehistoric|palaeolithic|mesolithic|neolithic/,10],
@@ -1300,7 +1299,9 @@ const allSubjects=()=>{
   ];
   const match=rules.find(([pattern])=>pattern.test(name));
   return match?match[1]:1000;
- };
+ }
+const allSubjects=()=>{
+ 
  const subjects=SUBJECTS.map(subject=>({name:subject.name,topics:[...subject.topics]}));
  (state.customSubjects||[]).forEach(custom=>{let group=subjects.find(subject=>subject.name.toLowerCase()===custom.name.toLowerCase());if(!group){group={name:custom.name,topics:[]};subjects.push(group)}(custom.topics||[]).forEach(topic=>{if(!group.topics.some(item=>item[0].toLowerCase()===topic[0].toLowerCase()))group.topics.push(topic)})});
  subjects.forEach(subject=>{
@@ -1615,37 +1616,7 @@ const PRELIMS_TOP_50_KEYS=new Set(allSubjects().flatMap(subject=>
  subject.topics.filter(topic=>topic[2]==="P1").map(topic=>subject.name+"::"+topic[0])
 ));
 function buildSubjectRotatedStudyPlan(entries){
- const historyTopicChronology=(topic)=>{
-  const name=String(topic||"").toLowerCase();
-  const rules=[
-   [/prehistoric|palaeolithic|mesolithic|neolithic/,10],
-   [/indus valley|harappan/,20],
-   [/early vedic/,30],
-   [/later vedic/,40],
-   [/mahajanapada/,50],
-   [/buddhist|jain/,60],
-   [/mauryan|ashoka/,70],
-   [/post.?mauryan|sangam/,80],
-   [/gupta|harsha|ancient universit|ancient science/,90],
-   [/chola|early medieval|regional kingdom/,100],
-   [/delhi sultanate|bahmani/,110],
-   [/vijayanagara/,120],
-   [/mughal/,130],
-   [/bhakti|sufi/,140],
-   [/rise of british|british power|modern india|economic impact of british/,150],
-   [/revolt of 1857|administrative changes after 1857/,160],
-   [/socio.?religious reform|education, press|intellectual awakening/,170],
-   [/formation of inc|early nationalism|moderates|extremists/,180],
-   [/partition of bengal|swadeshi|revolutionary activities|home rule/,190],
-   [/gandhian|1918.?1922/,200],
-   [/national movement|1923.?1929/,210],
-   [/independence|1947/,220],
-   [/ancient medieval/,115],
-   [/medieval architecture|literature and sources|rock.?cut architecture|ancient ports|ancient sites/,95]
-  ];
-  const match=rules.find(([pattern])=>pattern.test(name));
-  return match?match[1]:1000;
- };
+ 
  const tiers={priority:new Map(),standard:new Map()};
  entries.forEach((entry,planIndex)=>{
   const matchedKeys=findMatchingSyllabusTopics(entry.subject,entry.topic);
