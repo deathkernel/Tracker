@@ -1113,3 +1113,18 @@ test("MCQ preparation assessment uses the agreed score bands", () => {
   assert.equal(sandbox.assess(60).label, "Average");
   assert.equal(sandbox.assess(59).label, "Needs Improvement");
 });
+
+
+test("complete preparation timeline is available from workspace navigation", () => {
+  assert.match(html, /id="nav-timeline" value="timeline"/);
+  assert.match(html, /data-page="timeline"/);
+  assert.match(html, /id="timelineSummary"/);
+  assert.match(html, /id="timelineFilter"/);
+  assert.match(script, /function renderTimeline\(\)/);
+  assert.match(script, /DAILY_STUDY_PLAN\.forEach\(entry=>/);
+  assert.match(script, /Object\.entries\(state\.logs\|\|\{\}\)/);
+  assert.match(script, /state\.mcqTests\|\|\[\]/);
+  assert.match(script, /events\.sort\(\(a,b\)=>a\.date\.localeCompare\(b\.date\)/);
+  assert.match(script, /renderTimeline\(\);setWorkspaceView/);
+  assert.match(script, /timeline:"See your complete preparation journey in chronological order\."/);
+});
