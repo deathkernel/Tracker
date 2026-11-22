@@ -20,6 +20,8 @@ test("dashboard keeps the active Prelims topics as two-phase study units", () =>
 
 test("Top 50 P1 topics are mapped and scheduled before standard topics", () => {
   const subjectData = JSON.parse(script.match(/const SUBJECTS=(\[[\s\S]*?\]);\r?\nconst ROADMAP/)[1]);
+  const chronologyStart = script.indexOf("function historyTopicChronology(topic){");
+  const chronologyEnd = script.indexOf("const allSubjects=()=>", chronologyStart);
   const mappingStart = script.indexOf("function normalizePlanTopic(");
   const mappingEnd = script.indexOf("\nconst PRELIMS_TOP_50_KEYS=", mappingStart);
   const planStart = script.indexOf("const BASE_STUDY_PLAN=");
@@ -28,12 +30,14 @@ test("Top 50 P1 topics are mapped and scheduled before standard topics", () => {
   const rotationEnd = script.indexOf("\nfunction addDaysToDateKey", rotationStart);
   const priorityStart = script.indexOf("const PRELIMS_TOP_50_KEYS=");
   const priorityEnd = script.indexOf("\nfunction syncSyllabusCompletionToStudyPlan", priorityStart);
+  assert.ok(chronologyStart >= 0 && chronologyEnd > chronologyStart);
   assert.ok(mappingStart >= 0 && mappingEnd > mappingStart);
   assert.ok(planStart >= 0 && planEnd > planStart);
   assert.ok(rotationStart >= 0 && rotationEnd > rotationStart);
   assert.ok(priorityStart >= 0 && priorityEnd > priorityStart);
   const sandbox = { SUBJECTS: subjectData };
   vm.runInNewContext(
+    script.slice(chronologyStart, chronologyEnd) + "\n" +
     "const allSubjects=()=>SUBJECTS;\n" +
     script.slice(planStart, planEnd + 1) + "\n" +
     script.slice(mappingStart, mappingEnd) + "\n" +
@@ -1006,10 +1010,13 @@ test("customization normalization preserves invalid-settings progress and sparse
 });
 
 test("custom topic identity migration uses canonical subject keys and rejects cross-subject collisions", () => {
+  const chronologyStart = script.indexOf("function historyTopicChronology(topic){");
+  const chronologyEnd = script.indexOf("const allSubjects=()=>", chronologyStart);
   const subjectsStart = script.indexOf("const allSubjects=()=>{");
   const subjectsEnd = script.indexOf("\nfunction appendSettingsAction", subjectsStart);
   const helpersStart = script.indexOf("function canonicalSubjectName(");
   const helpersEnd = script.indexOf("\nfunction renderSettings(", helpersStart);
+  assert.ok(chronologyStart >= 0 && chronologyEnd > chronologyStart);
   assert.ok(subjectsStart >= 0 && subjectsEnd > subjectsStart);
   assert.ok(helpersStart >= 0 && helpersEnd > helpersStart);
   const subjects = JSON.parse(script.match(/const SUBJECTS=(\[[\s\S]*?\]);\r?\nconst ROADMAP/)[1]);
@@ -1027,6 +1034,7 @@ test("custom topic identity migration uses canonical subject keys and rejects cr
   };
   const canonicalSandbox = { state: builtInState, SUBJECTS: subjects };
   vm.runInNewContext(
+    script.slice(chronologyStart, chronologyEnd) + "\n" +
     script.slice(subjectsStart, subjectsEnd) + "\n" +
     script.slice(helpersStart, helpersEnd) +
     "\nthis.rename=renameCustomTopic;this.remove=removeCustomTopic;",
@@ -1070,6 +1078,7 @@ test("custom topic identity migration uses canonical subject keys and rejects cr
   };
   const collisionSandbox = { state: collisionState, SUBJECTS: [] };
   vm.runInNewContext(
+    script.slice(chronologyStart, chronologyEnd) + "\n" +
     script.slice(subjectsStart, subjectsEnd) + "\n" +
     script.slice(helpersStart, helpersEnd) +
     "\nthis.rename=renameCustomTopic;",
