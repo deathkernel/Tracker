@@ -2,6 +2,36 @@
 title UPSC 2027 Tracker
 cd /d "%~dp0"
 
+where git >nul 2>nul
+if errorlevel 1 goto git_update_unavailable
+git rev-parse --is-inside-work-tree >nul 2>nul
+if errorlevel 1 goto git_update_unavailable
+git remote get-url origin >nul 2>nul
+if errorlevel 1 goto git_update_unavailable
+
+echo.
+echo Checking for Tracker updates...
+git fetch origin
+if errorlevel 1 (
+    echo WARNING: Git fetch failed. Starting the currently installed version.
+    goto continue_setup
+)
+
+git pull --ff-only origin main
+if errorlevel 1 (
+    echo WARNING: Git pull could not be completed. Check local changes or branch status.
+    echo Starting the currently installed version.
+) else (
+    echo Tracker is up to date.
+)
+goto continue_setup
+
+:git_update_unavailable
+echo.
+echo Git or the origin remote is unavailable. Skipping automatic update.
+
+:continue_setup
+
 where py >nul 2>nul
 if %errorlevel%==0 (
     set "PYTHON=py"
