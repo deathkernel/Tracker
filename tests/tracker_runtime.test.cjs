@@ -1151,3 +1151,50 @@ test("timeline includes History, Polity, Ancient, Medieval, Modern India and Art
   assert.match(timeline, /Timeline milestones/);
   assert.match(script, /renderTimeline\(\);setWorkspaceView/);
 });
+
+
+test("history chronology is a single shared helper for syllabus sorting and study-plan rotation", () => {
+  const definitions = [...script.matchAll(/function historyTopicChronology\\(topic\\)\\{/g)];
+  assert.equal(definitions.length, 1);
+
+  const subjectsStart = script.indexOf("const allSubjects=()=>{");
+  const subjectsEnd = script.indexOf("\\nfunction appendSettingsAction", subjectsStart);
+  const subjects = script.slice(subjectsStart, subjectsEnd);
+  const rotationStart = script.indexOf("function buildSubjectRotatedStudyPlan(entries){");
+  const rotationEnd = script.indexOf("\\nfunction syncSyllabusCompletionToStudyPlan", rotationStart);
+  const rotation = script.slice(rotationStart, rotationEnd);
+
+  assert.match(subjects, /historyTopicChronology/);
+  assert.match(rotation, /historyTopicChronology/);
+
+  const helperStart = definitions[0].index;
+  const helperEnd = script.indexOf("\\nconst allSubjects=()=>", helperStart);
+  const sandbox = {};
+  vm.runInNewContext(
+    script.slice(helperStart, helperEnd) + "\\nthis.chronology=historyTopicChronology;",
+    sandbox
+  );
+  assert.equal(sandbox.chronology("Indus Valley Sites"), 20);
+  assert.equal(sandbox.chronology("Mughal Rulers"), 130);
+  assert.equal(sandbox.chronology("Gandhian Movements 1918–1922"), 200);
+});
+
+test("known redundant CSS declarations are not repeated in the stylesheet", () => {
+  const style = html.match(/<style>([\\s\\S]*?)<\\/style>/i)?.[1] || "";
+  const redundantRules = [
+    ".exam-countdown-date{font-size:12px;color:var(--ink);font-weight:650}",
+    "#phoneAccessBtn{display:none}",
+    ".subject-grid{grid-template-columns:repeat(2,minmax(0,1fr))}"
+  ];
+  redundantRules.forEach(rule => {
+    assert.equal(style.split(rule).length - 1, 1, "Expected one declaration for " + rule);
+  });
+});
+
+test("README describes the active and deferred study-plan scope accurately", () => {
+  const readme = fs.readFileSync("README.md", "utf8");
+  assert.match(readme, /active Prelims cycle schedules 92 priority-first topics/);
+  assert.match(readme, /remaining 97 entries are deferred/);
+  assert.match(readme, /at least 183 days after the cycle start/);
+  assert.doesNotMatch(readme, /all 189 units fit/);
+});
