@@ -756,6 +756,28 @@ body.dark #workspaceNav .nav-brand-mark{background:var(--blue);color:#10141d}
 .timeline-tag.status-missed{background:#fff0f1;color:#b23b3b;}
 .timeline-summary{grid-template-columns:repeat(4,minmax(0,1fr));}
 @media(max-width:700px){.timeline-summary{grid-template-columns:repeat(2,minmax(0,1fr));}.timeline-list{padding-left:32px;}.timeline-list::before{left:10px;}.timeline-date::before{left:-27px;}.timeline-event{padding:11px 12px;}}
+
+/* Overview data layout: use the available width instead of leaving an oversized table canvas */
+.overview-data-grid{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(260px,.88fr);gap:18px;align-items:stretch}
+.overview-data-grid .subject-progress-wrap{min-width:0;align-self:stretch}
+.overview-data-grid .subject-progress-table{width:100%;min-width:0}
+.overview-data-grid .data-table th,.overview-data-grid .data-table td{padding:9px 11px}
+.overview-data-grid .table-progress{width:min(132px,62%);margin-right:7px}
+.overview-chart-panel{min-width:0;padding:15px 16px;border:1px solid var(--line);border-radius:11px;background:var(--bg)}
+.overview-chart-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:15px}
+.overview-chart-heading h3{margin:0;font-size:12px;font-weight:800;color:var(--ink)}
+.overview-chart-heading span{font-size:10px;color:var(--muted)}
+.overview-subject-chart{display:grid;gap:13px}
+.overview-chart-row{min-width:0}
+.overview-chart-row-head{display:flex;justify-content:space-between;gap:10px;margin-bottom:6px;font-size:11px}
+.overview-chart-row-head span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.overview-chart-row-head strong{flex:none;font-size:11px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.overview-chart-track{height:7px;overflow:hidden;border-radius:99px;background:#e8ecf2}
+.overview-chart-track span{display:block;height:100%;border-radius:99px;background:var(--green);transition:width .2s ease}
+body.dark .overview-chart-track{background:#343e50}
+@media(max-width:760px){.overview-data-grid{grid-template-columns:1fr}.overview-chart-panel{padding:14px}.overview-subject-chart{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px}}
+@media(max-width:480px){.overview-data-grid .subject-progress-table{min-width:500px}.overview-data-grid{gap:12px}.overview-subject-chart{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body data-view="overview">
@@ -838,7 +860,7 @@ body.dark #workspaceNav .nav-brand-mark{background:var(--blue);color:#10141d}
  </section>
  <section class="card" data-page="overview">
   <div class="card-head"><h2>Subject progress</h2><span class="chip" id="subjectCount">9 subjects</span></div>
-  <div class="data-table-wrap subject-progress-wrap" id="subjectOverview" role="region" aria-label="Subject progress table" tabindex="0"></div>
+  <div class="overview-data-grid"><div class="data-table-wrap subject-progress-wrap" id="subjectOverview" role="region" aria-label="Subject progress table" tabindex="0"></div><div class="overview-chart-panel"><div class="overview-chart-heading"><h3>Subject completion</h3><span>Completed topics</span></div><div id="overviewSubjectChart" class="overview-subject-chart"></div></div></div>
  </section>
  <section class="card" data-page="missing" hidden>
   <div class="card-head"><div><h2>Missing Topics</h2><p class="small-note">Only past scheduled topics with incomplete study or MCQ + revision are shown. Today’s and future topics stay out of this list.</p></div><span class="chip" id="missingTopicCount">0 remaining</span></div>
@@ -1532,12 +1554,16 @@ function renderDaily(){
  $("focusDesc").textContent="Day 1 is for one new topic. Day 2 is only for revising that same topic—no new topic is added.";
 }
 function renderSubjectOverview(){
- const host=$("subjectOverview");host.innerHTML="";
+ const host=$("subjectOverview"),chart=$("overviewSubjectChart");if(!host||!chart)return;
+ host.innerHTML="";chart.innerHTML="";
+ const subjects=allSubjects().map(subject=>{const done=subject.topics.filter(topic=>state.topics[subject.name+"::"+topic[0]]).length;return{name:subject.name,done,total:subject.topics.length,percent:subject.topics.length?Math.round(done/subject.topics.length*100):0}});
  const table=document.createElement("table");table.className="data-table subject-progress-table";table.setAttribute("aria-label","Subject completion by topic");
- table.innerHTML="<thead><tr><th>Subject</th><th>Topics completed</th><th>Progress</th></tr></thead>";
+ table.innerHTML="<thead><tr><th>Subject</th><th>Completed</th><th>Progress</th></tr></thead>";
  const body=document.createElement("tbody");
- allSubjects().forEach(s=>{const done=s.topics.filter(t=>state.topics[s.name+"::"+t[0]]).length,p=s.topics.length?Math.round(done/s.topics.length*100):0;const row=document.createElement("tr");const name=document.createElement("td");name.textContent=s.name;const count=document.createElement("td");count.textContent=done+" / "+s.topics.length;const progress=document.createElement("td");const wrap=document.createElement("div");wrap.className="table-progress";const bar=document.createElement("span");bar.style.width=p+"%";wrap.append(bar);const pct=document.createElement("small");pct.textContent=p+"%";progress.append(wrap,pct);row.append(name,count,progress);body.append(row)});
- table.append(body);host.append(table);$("subjectCount").textContent=allSubjects().length+" subjects";
+ subjects.forEach(subject=>{const row=document.createElement("tr"),name=document.createElement("td"),count=document.createElement("td"),progress=document.createElement("td");name.textContent=subject.name;count.textContent=subject.done+" / "+subject.total;const wrap=document.createElement("div");wrap.className="table-progress";const bar=document.createElement("span");bar.style.width=subject.percent+"%";wrap.append(bar);const pct=document.createElement("small");pct.textContent=subject.percent+"%";progress.append(wrap,pct);row.append(name,count,progress);body.append(row)});
+ table.append(body);host.append(table);
+ subjects.forEach(subject=>{const row=document.createElement("div");row.className="overview-chart-row";const top=document.createElement("div"),name=document.createElement("span"),value=document.createElement("strong"),track=document.createElement("div"),fill=document.createElement("span");top.className="overview-chart-row-head";name.textContent=subject.name;value.textContent=subject.percent+"%";track.className="overview-chart-track";fill.style.width=subject.percent+"%";track.append(fill);top.append(name,value);row.append(top,track);chart.append(row)});
+ $("subjectCount").textContent=subjects.length+" subjects";
 }
 function normalizePlanTopic(value){
  return String(value||"").toLowerCase().replace(/\b(the|and|of|its|for|with|from|overview|key|important|major|core|basics|introduction|revision|test|pyqs|pyq|practice|analysis)\b/g," ").replace(/\s+/g," ").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();

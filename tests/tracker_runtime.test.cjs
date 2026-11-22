@@ -1115,6 +1115,19 @@ test("MCQ preparation assessment uses the agreed score bands", () => {
 });
 
 
+test("Overview subject table and chart share available space with responsive compact layout", () => {
+  assert.match(html, /class="overview-data-grid"/);
+  assert.match(html, /id="overviewSubjectChart"/);
+  assert.match(html, /\.overview-data-grid\{display:grid;grid-template-columns:minmax\(0,1\.12fr\) minmax\(260px,\.88fr\);gap:18px/);
+  assert.match(script, /function renderSubjectOverview\(\)/);
+  const start = script.indexOf("function renderSubjectOverview(){");
+  const end = script.indexOf("\nfunction normalizePlanTopic", start);
+  const overview = script.slice(start, end);
+  assert.match(overview, /overviewSubjectChart/);
+  assert.match(overview, /overview-chart-row/);
+  assert.match(overview, /subject\.percent/);
+});
+
 test("timeline includes History, Polity, Ancient, Medieval, Modern India and Art & Culture while excluding unrelated subjects and generic logs", () => {
   assert.match(html, /id="nav-timeline" value="timeline"/);
   assert.match(html, /data-page="timeline"/);
