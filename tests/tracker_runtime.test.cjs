@@ -1115,16 +1115,16 @@ test("MCQ preparation assessment uses the agreed score bands", () => {
 });
 
 
-test("complete preparation timeline is available from workspace navigation", () => {
+test("study log timeline is a vertical chronological view with no revision or test events", () => {
   assert.match(html, /id="nav-timeline" value="timeline"/);
   assert.match(html, /data-page="timeline"/);
   assert.match(html, /id="timelineSummary"/);
-  assert.match(html, /id="timelineFilter"/);
+  assert.match(html, /Study log timeline/);
+  assert.doesNotMatch(html, /id="timelineFilter"/);
+  assert.match(html, /\.timeline-list::before/);
   assert.match(script, /function renderTimeline\(\)/);
-  assert.match(script, /DAILY_STUDY_PLAN\.forEach\(entry=>/);
   assert.match(script, /Object\.entries\(state\.logs\|\|\{\}\)/);
-  assert.match(script, /state\.mcqTests\|\|\[\]/);
-  assert.match(script, /events\.sort\(\(a,b\)=>a\.date\.localeCompare\(b\.date\)/);
+  assert.match(script, /sort\(\(\[a\]\,\[b\]\)=>a\.localeCompare\(b\)\)/);
+  assert.doesNotMatch(script.slice(script.indexOf("function renderTimeline(){"), script.indexOf("function renderAll(){")), /DAILY_STUDY_PLAN|mcqTests|Revision day|MCQ test/);
   assert.match(script, /renderTimeline\(\);setWorkspaceView/);
-  assert.match(script, /timeline:"See your complete preparation journey in chronological order\."/);
 });
