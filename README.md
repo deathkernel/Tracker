@@ -15,8 +15,8 @@ Keep the command window open while using the tracker. Press Ctrl+C to stop the l
 
 - Daily checklist and completion progress.
 - Exam-deadline study cycle: each topic has a Day 1 preparation checklist and a separate Day 2 MCQ + revision checklist; both must be completed before the syllabus topic is marked complete. A new Day 1 topic can overlap with another topic’s Day 2.
-- The dashboard distributes the 189 planned study units between the cycle start and configured exam target date; final revision is scheduled on the target date.
-- The target date must leave at least 95 calendar days from the cycle start so all 189 units fit with no more than two new topics per day.
+- The base roadmap contains 189 study-plan entries. The active Prelims cycle schedules 92 priority-first topics as Day 1 preparation + Day 2 revision phases; the remaining 97 entries are deferred beyond the configured target date.
+- The target date must be at least 183 days after the cycle start (184 calendar dates inclusive) to fit all 92 active topics, with each topic's Day 1 and Day 2 scheduled on consecutive days. The 27-week roadmap is a broader reference plan, not a promise that all 189 entries are in the active daily cycle.
 - 9 base subjects and 291 curated syllabus topics, with every topic explicitly mapped to at least one first-pass study unit. Related topics may share a lesson.
 - Subject-wise progress, topic search and completion filters.
 - Weekly roadmap with date, subject and study focus.

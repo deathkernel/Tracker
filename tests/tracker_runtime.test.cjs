@@ -20,6 +20,8 @@ test("dashboard keeps the active Prelims topics as two-phase study units", () =>
 
 test("Top 50 P1 topics are mapped and scheduled before standard topics", () => {
   const subjectData = JSON.parse(script.match(/const SUBJECTS=(\[[\s\S]*?\]);\r?\nconst ROADMAP/)[1]);
+  const chronologyStart = script.indexOf("function historyTopicChronology(topic){");
+  const chronologyEnd = script.indexOf("const allSubjects=()=>", chronologyStart);
   const mappingStart = script.indexOf("function normalizePlanTopic(");
   const mappingEnd = script.indexOf("\nconst PRELIMS_TOP_50_KEYS=", mappingStart);
   const planStart = script.indexOf("const BASE_STUDY_PLAN=");
@@ -28,12 +30,14 @@ test("Top 50 P1 topics are mapped and scheduled before standard topics", () => {
   const rotationEnd = script.indexOf("\nfunction addDaysToDateKey", rotationStart);
   const priorityStart = script.indexOf("const PRELIMS_TOP_50_KEYS=");
   const priorityEnd = script.indexOf("\nfunction syncSyllabusCompletionToStudyPlan", priorityStart);
+  assert.ok(chronologyStart >= 0 && chronologyEnd > chronologyStart);
   assert.ok(mappingStart >= 0 && mappingEnd > mappingStart);
   assert.ok(planStart >= 0 && planEnd > planStart);
   assert.ok(rotationStart >= 0 && rotationEnd > rotationStart);
   assert.ok(priorityStart >= 0 && priorityEnd > priorityStart);
   const sandbox = { SUBJECTS: subjectData };
   vm.runInNewContext(
+    script.slice(chronologyStart, chronologyEnd) + "\n" +
     "const allSubjects=()=>SUBJECTS;\n" +
     script.slice(planStart, planEnd + 1) + "\n" +
     script.slice(mappingStart, mappingEnd) + "\n" +
@@ -1006,10 +1010,13 @@ test("customization normalization preserves invalid-settings progress and sparse
 });
 
 test("custom topic identity migration uses canonical subject keys and rejects cross-subject collisions", () => {
+  const chronologyStart = script.indexOf("function historyTopicChronology(topic){");
+  const chronologyEnd = script.indexOf("const allSubjects=()=>", chronologyStart);
   const subjectsStart = script.indexOf("const allSubjects=()=>{");
   const subjectsEnd = script.indexOf("\nfunction appendSettingsAction", subjectsStart);
   const helpersStart = script.indexOf("function canonicalSubjectName(");
   const helpersEnd = script.indexOf("\nfunction renderSettings(", helpersStart);
+  assert.ok(chronologyStart >= 0 && chronologyEnd > chronologyStart);
   assert.ok(subjectsStart >= 0 && subjectsEnd > subjectsStart);
   assert.ok(helpersStart >= 0 && helpersEnd > helpersStart);
   const subjects = JSON.parse(script.match(/const SUBJECTS=(\[[\s\S]*?\]);\r?\nconst ROADMAP/)[1]);
@@ -1027,6 +1034,7 @@ test("custom topic identity migration uses canonical subject keys and rejects cr
   };
   const canonicalSandbox = { state: builtInState, SUBJECTS: subjects };
   vm.runInNewContext(
+    script.slice(chronologyStart, chronologyEnd) + "\n" +
     script.slice(subjectsStart, subjectsEnd) + "\n" +
     script.slice(helpersStart, helpersEnd) +
     "\nthis.rename=renameCustomTopic;this.remove=removeCustomTopic;",
@@ -1070,6 +1078,7 @@ test("custom topic identity migration uses canonical subject keys and rejects cr
   };
   const collisionSandbox = { state: collisionState, SUBJECTS: [] };
   vm.runInNewContext(
+    script.slice(chronologyStart, chronologyEnd) + "\n" +
     script.slice(subjectsStart, subjectsEnd) + "\n" +
     script.slice(helpersStart, helpersEnd) +
     "\nthis.rename=renameCustomTopic;",
@@ -1150,4 +1159,51 @@ test("timeline includes History, Polity, Ancient, Medieval, Modern India and Art
   assert.doesNotMatch(timeline, /Object\.entries\(state\.logs/);
   assert.match(timeline, /Timeline milestones/);
   assert.match(script, /renderTimeline\(\);setWorkspaceView/);
+});
+
+
+test("history chronology is a single shared helper for syllabus sorting and study-plan rotation", () => {
+  const definitions = [...script.matchAll(/function historyTopicChronology\(topic\)\{/g)];
+  assert.equal(definitions.length, 1);
+
+  const subjectsStart = script.indexOf("const allSubjects=()=>{");
+  const subjectsEnd = script.indexOf("function appendSettingsAction", subjectsStart);
+  const subjects = script.slice(subjectsStart, subjectsEnd);
+  const rotationStart = script.indexOf("function buildSubjectRotatedStudyPlan(entries){");
+  const rotationEnd = script.indexOf("function syncSyllabusCompletionToStudyPlan", rotationStart);
+  const rotation = script.slice(rotationStart, rotationEnd);
+
+  assert.match(subjects, /historyTopicChronology/);
+  assert.match(rotation, /historyTopicChronology/);
+
+  const helperStart = definitions[0].index;
+  const helperEnd = script.indexOf("const allSubjects=()=>", helperStart);
+  const sandbox = {};
+  vm.runInNewContext(
+    script.slice(helperStart, helperEnd) + String.fromCharCode(10) + "this.chronology=historyTopicChronology;",
+    sandbox
+  );
+  assert.equal(sandbox.chronology("Indus Valley Sites"), 20);
+  assert.equal(sandbox.chronology("Mughal Rulers"), 130);
+  assert.equal(sandbox.chronology("Gandhian Movements 1918–1922"), 200);
+});
+
+test("known redundant CSS declarations are not repeated in the stylesheet", () => {
+  const style = html.match(/<style>([\s\S]*?)<\/style>/i)?.[1] || "";
+  const redundantRules = [
+    ".exam-countdown-date{font-size:12px;color:var(--ink);font-weight:650}",
+    "#phoneAccessBtn{display:none}",
+    ".subject-grid{grid-template-columns:repeat(2,minmax(0,1fr))}"
+  ];
+  redundantRules.forEach(rule => {
+    assert.equal(style.split(rule).length - 1, 1, "Expected one declaration for " + rule);
+  });
+});
+
+test("README describes the active and deferred study-plan scope accurately", () => {
+  const readme = fs.readFileSync("README.md", "utf8");
+  assert.match(readme, /active Prelims cycle schedules 92 priority-first topics/);
+  assert.match(readme, /remaining 97 entries are deferred/);
+  assert.match(readme, /at least 183 days after the cycle start/);
+  assert.doesNotMatch(readme, /all 189 units fit/);
 });
