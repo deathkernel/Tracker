@@ -887,7 +887,7 @@ body.dark #workspaceNav .nav-brand-mark{background:var(--blue);color:#10141d}
   <div class="week-list" id="roadmap"></div>
  </section>
  <section class="card timeline-page" data-page="timeline" hidden>
-  <div class="card-head"><div><div class="eyebrow">YOUR STUDY HISTORY</div><h2>History, Polity & Culture timeline</h2><p class="subtitle">History, Polity, Ancient India and Art & Culture topics, revisions and tests — completed, in progress, missed and upcoming — in one downward timeline.</p></div><span class="chip" id="timelineCount">0 study logs</span></div>
+  <div class="card-head"><div><div class="eyebrow">YOUR STUDY HISTORY</div><h2>History, Polity & Culture timeline</h2><p class="subtitle">History, Polity, Ancient India, Medieval India, Modern India and Art & Culture topics, revisions and tests — completed, in progress, missed and upcoming — in one downward timeline.</p></div><span class="chip" id="timelineCount">0 study logs</span></div>
   <div class="timeline-summary" id="timelineSummary"></div>
   <div class="timeline-list" id="timelineList"><div class="empty">Loading your study logs…</div></div>
  </section>
@@ -2442,7 +2442,7 @@ function renderTimeline(){
   label.textContent=item.label;value.textContent=String(item.value);card.append(label,value);$("timelineSummary").append(card);
  });
  host.innerHTML="";
- if(!dates.length){host.innerHTML='<div class="empty">No History, Polity, Ancient India or Art & Culture milestones are available yet.</div>';return;}
+ if(!dates.length){host.innerHTML='<div class="empty">No History, Polity, Ancient India, Medieval India, Modern India or Art & Culture milestones are available yet.</div>';return;}
  dates.forEach(date=>{
   const day=document.createElement("section");day.className="timeline-day";
   const dateLabel=document.createElement("div");dateLabel.className="timeline-date";
