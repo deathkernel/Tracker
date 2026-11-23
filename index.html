@@ -1173,7 +1173,7 @@ function removeDuplicateStudyPlanSyllabusCompletions(progress){
 function normalizeProgressState(value){
  const source=value&&typeof value==="object"&&!Array.isArray(value)?value:{};
  const next={...defaultState(),...source};
- next.mcqTests=Array.isArray(source.mcqTests)?source.mcqTests.filter(item=>item&&Number.isInteger(item.planIndex)&&item.planIndex>=0&&Number.isInteger(item.correct)&&Number.isInteger(item.wrong)&&Number.isInteger(item.unattempted)&&item.correct>=0&&item.wrong>=0&&item.unattempted>=0&&item.correct+item.wrong+item.unattempted===50&&typeof item.date==="string").slice(-2000):[];
+ next.mcqTests=Array.isArray(source.mcqTests)?source.mcqTests.filter(item=>item&&Number.isInteger(item.planIndex)&&item.planIndex>=0&&Number.isInteger(item.correct)&&Number.isInteger(item.wrong)&&Number.isInteger(item.unattempted)&&item.correct>=0&&item.wrong>=0&&item.unattempted>=0&&item.correct+item.wrong+item.unattempted===50&&typeof item.date==="string").map(item=>({...item,attempts:Array.isArray(item.attempts)?item.attempts.filter(attempt=>attempt&&typeof attempt.id==="string"&&attempt.result&&Number.isInteger(attempt.result.correct)&&Number.isInteger(attempt.result.wrong)).slice(-100):[],questions:Array.isArray(item.questions)?item.questions.filter(question=>question&&question.id&&Array.isArray(question.options)&&question.options.length>0).slice(0,50):[]})).slice(-2000):[];
  const sourceSettings=source.settings&&typeof source.settings==="object"&&!Array.isArray(source.settings)?source.settings:{};
  next.settings={...defaultState().settings,...sourceSettings};
  next.topicEvidence=source.topicEvidence&&typeof source.topicEvidence==="object"&&!Array.isArray(source.topicEvidence)?source.topicEvidence:{};
