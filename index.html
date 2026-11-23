@@ -2427,15 +2427,13 @@ function getPlanMcqPracticeSetId(planIndex,dateKey=getStudyPlanDateKey(getStudyP
 function getPlanMcqAttempts(planIndex,setId){
  return pyqAttempts().filter(item=>item.practicePlanIndex===planIndex&&item.practiceSetId===setId);
 }
-function getPlanMcqResult(planIndex,setId){
- const attempts=getPlanMcqAttempts(planIndex,setId).filter(item=>!item.attemptId);
+function getPlanMcqResult(planIndex,setId,attemptId=null){
+ const attempts=getPlanMcqAttempts(planIndex,setId).filter(item=>attemptId?item.attemptId===attemptId:!item.attemptId);
  const correct=attempts.filter(item=>item.selected===item.correctOption).length;
  return{attempted:attempts.length,correct,wrong:attempts.filter(item=>item.selected!==item.correctOption).length,unattempted:Math.max(0,50-attempts.length),percentage:correct/50*100};
 }
 function getAttemptMcqResult(planIndex,setId,attemptId){
- const attempts=getPlanMcqAttempts(planIndex,setId).filter(item=>item.attemptId===attemptId);
- const correct=attempts.filter(item=>item.selected===item.correctOption).length;
- return{attempted:attempts.length,correct,wrong:attempts.filter(item=>item.selected!==item.correctOption).length,unattempted:Math.max(0,50-attempts.length),percentage:correct/50*100};
+ return getPlanMcqResult(planIndex,setId,attemptId);
 }
 function renderMcqTracker(){
  const panel=$("mcqTestPanel"),history=$("mcqHistory");
