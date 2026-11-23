@@ -1108,7 +1108,7 @@ test("MCQ Tracker has persistent history and same-question retest controls", () 
   assert.ok(script.includes("item.attemptId===activePyqPractice.attemptId"));
   assert.ok(script.includes("record.attemptId=activePyqPractice.attemptId"));
   assert.ok(script.includes("target.attempts.push(completedAttempt)"));
-  assert.ok(script.includes("target.questions=questions"));
+  assert.ok(script.includes("questions:questions.map(question=>({...question,options:question.options.map(option=>({...option}))}))"));
   assert.ok(script.includes("function getLatestMcqTest(planIndex)"));
   assert.ok(script.includes("state.mcqTests.push(target)"));
   assert.ok(script.includes("if(questions.length!==50||questions.some(question=>!question.correct_option_id"));
@@ -1229,7 +1229,7 @@ test("Day 2 fetch searches the full subject bank and matches enriched question c
   assert.match(script, /new URLSearchParams\(\{subject,page:String\(page\),limit:"100"\}\)/);
   assert.match(script, /question\?\.concepts/);
   assert.match(script, /question\?\.prompt/);
-  assert.match(script, /Loaded all available matching, answer-key verified PYQs/);
+  assert.match(script, /if\(selected.length!==50\)throw new Error/);
   assert.doesNotMatch(script, /new URLSearchParams\(\{q:topicQuery,subject,page:String\(page\),limit:"100"\}\)/);
 });
 
@@ -1255,7 +1255,8 @@ test("MCQ attempt scoring is isolated and retest snapshots preserve exact questi
         { id: "q1", selected: "C", correctOption: "A", practicePlanIndex: 3, practiceSetId: "set-1", attemptId: "retry-1" },
         { id: "q2", selected: "A", correctOption: "A", practicePlanIndex: 3, practiceSetId: "set-1", attemptId: "retry-1" }
       ]
-    }
+    },
+    pyqAttempts(){return this.state.questionBank}
   };
   vm.runInNewContext(script.slice(start, end) + "\nthis.base=getPlanMcqResult;this.retry=getAttemptMcqResult;", sandbox);
   assert.equal(sandbox.base(3, "set-1").attempted, 2);
