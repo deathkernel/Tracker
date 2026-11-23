@@ -1099,8 +1099,14 @@ test("MCQ Tracker has a separate navigation page and persistent 50-question hist
   assert.ok(html.includes('id="nav-mcq" value="mcq"'));
   assert.ok(html.includes('data-page="mcq"'));
   assert.ok(script.includes("next.mcqTests=Array.isArray(source.mcqTests)"));
-  assert.ok(script.includes("const wrong=50-correct,unattempted=0,marks=correct*2,percentage=correct/50*100"));
-  assert.ok(script.includes("const wrong=50-correct,percentage=correct/50*100"));
+  assert.ok(script.includes("const attempts=getPlanMcqAttempts(planIndex,setId),correct=attempts.filter(item=>item.selected===item.correctOption).length"));
+  assert.ok(script.includes("percentage:correct/50*100"));
+  assert.ok(script.includes("state.mcqTests.push({planIndex,date,subject:entry.rotationSubject||entry.subject,topic:entry.topic,correct:result.correct,wrong:result.wrong,unattempted:0,marks:result.correct*2,percentage"));
+  assert.ok(script.includes("function renderDay2PracticeBanner(message)"));
+  assert.ok(script.includes("exitButton.addEventListener(\"click\",exitDay2McqPractice)"));
+  assert.ok(script.includes("renderDay2PracticeBanner(\"Day 2 · \"+activePyqPractice.topic"));
+  assert.ok(script.includes("if(requestId!==day2RequestId)return"));
+  assert.ok(script.includes("if(selected.length<50)throw new Error"));
   assert.ok(script.includes('test.percentage.toFixed(0)+"%"'));
   assert.ok(script.includes("state.mcqTests.push("));
   assert.ok(script.includes("function getLatestMcqTest(planIndex)"));
