@@ -172,6 +172,7 @@ test("each plan topic is followed by its own revision day", () => {
     CYCLE_START_DATE:"2026-11-20",
     STUDY_PLAN_TOPICS:Array.from({length:189},()=>({})),
     ACTIVE_STUDY_PLAN:Array.from({length:92},(_,planIndex)=>({planIndex})),
+    DAILY_STUDY_PLAN:[],
     state:{settings:{targetDate:"2027-11-02"}},
     localDate:()=>"2026-11-20",
     localDateKey:date=>[date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-")
