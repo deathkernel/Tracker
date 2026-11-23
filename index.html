@@ -770,7 +770,7 @@ body.dark #workspaceNav .nav-brand-mark{background:var(--blue);color:#10141d}
 .subject-progress-table tfoot th:not(:first-child){text-align:center}
 @media(min-width:761px){.subject-progress-wrap{overflow-x:hidden}}
 
-.pyq-filters{display:grid;grid-template-columns:minmax(220px,2fr) repeat(2,minmax(130px,1fr)) auto;gap:10px;align-items:end;margin:18px 0}
+.pyq-filters{display:grid;grid-template-columns:minmax(220px,2fr) repeat(2,minmax(130px,1fr)) auto;gap:10px;align-items:end;margin:18px 0}.pyq-filters[hidden]{display:none!important}
 .pyq-filters label{display:grid;gap:6px;font-size:11px;font-weight:700;color:var(--muted)}
 .pyq-filters input,.pyq-filters select{width:100%;min-height:40px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);padding:8px 10px;font:inherit}
 .pyq-status{padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-size:12px;color:var(--muted);margin:12px 0}
@@ -2352,19 +2352,10 @@ function setWorkspaceView(view){
     const todayDay2Entry=getStudyPlanEntriesForDate(localDate(),"mcq_revision")[0]||null;
     if(todayDay2Entry){
      const studyEntry=getStudyPlanEntryByPlanIndex(todayDay2Entry.planIndex,"study");
-     if(studyEntry&&getStudyPlanProgress(studyEntry).studyDone){
+     if(studyEntry){
       startDay2McqPractice(todayDay2Entry.planIndex);
       return;
      }
-     if(filters)filters.hidden=true;
-     const banner=$("pyqPracticeBanner");
-     banner.textContent="Today's scheduled Day 2 topic: "+(studyEntry?.topic||todayDay2Entry.topic)+". Complete the Day 1 checklist first to unlock its topic-matched 50-MCQ practice.";
-     banner.hidden=false;
-     $("pyqQuestionList").replaceChildren(document.createTextNode("Your scheduled topic is ready. Complete Day 1 preparation to unlock its focused MCQ practice."));
-     $("pyqResultCount").textContent="Today's scheduled topic";
-     $("pyqStatus").textContent="The general PYQ bank is paused so unrelated questions are not shown instead of today's scheduled topic.";
-     return;
-    }
     if(!$("pyqQuestionList").children.length)loadPyqQuestions(true);
    }
   }
@@ -2640,7 +2631,7 @@ function isDay2TopicMatch(question,targetTokens){
 async function startDay2McqPractice(planIndex){
  if(day2Loading)return;
  const studyEntry=getStudyPlanEntryByPlanIndex(planIndex,"study"),revisionEntry=getStudyPlanEntryByPlanIndex(planIndex,"mcq_revision");
- if(!studyEntry||!revisionEntry||!getStudyPlanProgress(studyEntry).studyDone){notify("Complete Day 1 before starting this topic's MCQ practice.");return;}
+ if(!studyEntry||!revisionEntry){notify("Today's Day 2 topic could not be matched to its Day 1 study entry.");return;}
  const dateKey=getStudyPlanDateKey(revisionEntry);
  if(dateKey>localDate()){notify("This topic's 50-MCQ practice unlocks on "+dateKey+".");return;}
  const rawTopic=String(studyEntry.topic||"");
