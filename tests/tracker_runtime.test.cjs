@@ -1233,3 +1233,12 @@ test("Day 2 fetch searches the full subject bank and matches enriched question c
   assert.doesNotMatch(script, /new URLSearchParams\(\{q:topicQuery,subject,page:String\(page\),limit:"100"\}\)/);
 });
 
+
+
+test("automatic recovery scheduler reschedules incomplete phases from today in original overdue order", () => {
+  assert.match(script, /function buildRecoverySchedule\(today=localDate\(\)\)/);
+  assert.match(script, /const aLate=a\.original<today\?0:1/);
+  assert.match(script, /schedule\.set\(item\.entry\.planIndex\+"\:"+item\.entry\.phase,slot\)/);
+  assert.match(script, /function getStudyPlanDateKey\(entry\)[\s\S]*?buildRecoverySchedule\(\)\.get/);
+  assert.match(script, /if\(!progress\.studyDone\)[\s\S]*?pending\.push\(\{entry:study/);
+});
