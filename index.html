@@ -2616,8 +2616,6 @@ function isDay2TopicMatch(question,targetTokens){
 }
 async function startDay2McqPractice(planIndex){
  if(day2Loading)return;
- day2Loading=true;
- const requestId=++day2RequestId;
  const studyEntry=getStudyPlanEntryByPlanIndex(planIndex,"study"),revisionEntry=getStudyPlanEntryByPlanIndex(planIndex,"mcq_revision");
  if(!studyEntry||!revisionEntry||!getStudyPlanProgress(studyEntry).studyDone){notify("Complete Day 1 before starting this topic's MCQ practice.");return;}
  const dateKey=getStudyPlanDateKey(revisionEntry);
@@ -2626,6 +2624,8 @@ async function startDay2McqPractice(planIndex){
  const topicQuery=rawTopic.includes(":")?rawTopic.slice(rawTopic.indexOf(":")+1).trim():rawTopic.trim();
  const targetTokens=getDay2TopicTokens(topicQuery);
  if(!targetTokens.length){notify("This study topic needs a clearer topic label before matching MCQs.");return;}
+ day2Loading=true;
+ const requestId=++day2RequestId;
  const subject=pyqApiSubjectForEntry(studyEntry);
  const setId=getPlanMcqPracticeSetId(planIndex,dateKey);
  const existing=getPlanMcqAttempts(planIndex,setId);
