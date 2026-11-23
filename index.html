@@ -2787,10 +2787,10 @@ function handlePyqOptionClick(event){
  const button=event.target.closest(".pyq-option");if(!button)return;const card=button.closest(".pyq-question");if(!card)return;
  const questionId=card.dataset.questionId,question=window.pyqQuestionCache?.[questionId];if(!question)return;
  const selected=button.dataset.optionId,correct=question.correct_option_id;
- const saved=activePyqPractice?pyqAttempts().some(item=>item.id===questionId&&item.practiceSetId===activePyqPractice.setId):pyqAttempts().some(item=>item.id===questionId&&!item.practiceSetId);
+ const saved=activePyqPractice?pyqAttempts().some(item=>item.id===questionId&&item.practiceSetId===activePyqPractice.setId&&item.attemptId===activePyqPractice.attemptId):pyqAttempts().some(item=>item.id===questionId&&!item.practiceSetId);
  if(!correct||saved)return;
  const record={id:questionId,selected,correctOption:correct,answeredAt:new Date().toISOString(),year:question.year,subject:question.subject,topic:question.topic};
- if(activePyqPractice){record.practicePlanIndex=activePyqPractice.planIndex;record.practiceSetId=activePyqPractice.setId;}
+ if(activePyqPractice){record.practicePlanIndex=activePyqPractice.planIndex;record.practiceSetId=activePyqPractice.setId;record.attemptId=activePyqPractice.attemptId;record.mcqRetest=!!activePyqPractice.isRetest;}
  state.questionBank=[...pyqAttempts(),record].slice(-20000);
  persist();
  card.querySelectorAll(".pyq-option").forEach(option=>{
@@ -2806,12 +2806,11 @@ function handlePyqOptionClick(event){
  card.insertBefore(feedback,card.querySelector(".pyq-question-meta"));updatePyqMetrics();
  if(activePyqPractice){
   const entry=getStudyPlanEntryByPlanIndex(activePyqPractice.planIndex,"study");
-  const progress=getPlanMcqResult(activePyqPractice.planIndex,activePyqPractice.setId);
-  renderDay2PracticeBanner("Day 2 · "+activePyqPractice.topic+" · "+progress.attempted+"/50 answered · "+progress.correct+" correct · "+progress.wrong+" incorrect.");
+  const progress=getPlanMcqResult(activePyqPractice.planIndex,activePyqPractice.setId+":"+activePyqPractice.attemptId);
+  renderDay2PracticeBanner((activePyqPractice.isRetest?"Retest · ":"Day 2 · ")+activePyqPractice.topic+" · "+progress.attempted+"/50 answered · "+progress.correct+" correct · "+progress.wrong+" incorrect.");
   renderMcqTracker();updatePlanMcqResult(activePyqPractice.planIndex,activePyqPractice.setId,entry);
  }
 }
-
 function renderAll(){syncSubjectFilter();renderSettings();renderStats();renderDaily();renderOverviewSchedule();renderSubjectOverview();renderTopics();renderMissingTopics();renderRevision();renderMcqTracker();renderCharts();renderRoadmap();renderLogs();renderTimeline();setWorkspaceView(window.trackerView||"overview")}
 async function showPhoneAccess(){
  const panel=$("phoneAccessPanel"),button=$("phoneAccessBtn");if(!panel)return;
