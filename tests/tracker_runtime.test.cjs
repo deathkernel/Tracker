@@ -172,6 +172,7 @@ test("each plan topic is followed by its own revision day", () => {
     CYCLE_START_DATE:"2026-11-20",
     STUDY_PLAN_TOPICS:Array.from({length:189},()=>({})),
     state:{settings:{targetDate:"2027-11-02"}},
+    localDate:()=>"2026-11-20",
     localDateKey:date=>[date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-")
   };
   vm.runInNewContext(script.slice(start,end)+"\nthis.getDate=getStudyPlanDateKey;",sandbox);
@@ -1114,7 +1115,7 @@ test("MCQ Tracker has persistent history and same-question retest controls", () 
   assert.ok(script.includes("questions:questions.map(question=>({...question,options:question.options.map(option=>({...option}))}))"));
   assert.ok(script.includes("if(result.attempted!==50)return"));
   assert.ok(script.includes('table.className="data-table mcq-sheet"'));
-  assert.ok(script.includes("Every answer is tracked as you solve every answer."));
+  assert.ok(script.includes("Answers are saved automatically."));
   assert.doesNotMatch(script, /correctInput|mcq-correct-input/);
   assert.ok(script.includes('const entries=DAILY_STUDY_PLAN.filter(entry=>entry.phase==="study"&&!!getStudyPlanProgress(entry).studyDone);'));
 });
