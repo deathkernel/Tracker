@@ -1110,9 +1110,10 @@ test("MCQ Tracker has a separate navigation page and persistent 50-question hist
   assert.ok(script.includes('test.percentage.toFixed(0)+"%"'));
   assert.ok(script.includes("state.mcqTests.push("));
   assert.ok(script.includes("function getLatestMcqTest(planIndex)"));
-  assert.ok(html.includes("Spreadsheet view"));
   assert.ok(script.includes('table.className="data-table mcq-sheet"'));
-  assert.ok(script.includes('correctInput.className="mcq-correct-input"'));
+  assert.ok(script.includes('table.innerHTML="<thead><tr><th>Day 2 date</th><th>Subject</th><th>Topic</th><th>Total</th><th>Correct</th><th>Wrong</th><th>Accuracy</th><th>Performance</th><th>Progress</th><th>Action</th></tr></thead>"'));
+  assert.ok(script.includes('historyTable.innerHTML="<thead><tr><th>Date</th><th>Subject</th><th>Topic</th><th>Correct</th><th>Wrong</th><th>Accuracy</th><th>Performance</th></tr></thead>"'));
+  assert.doesNotMatch(script, /correctInput|mcq-correct-input/);
   assert.ok(script.includes('const entries=DAILY_STUDY_PLAN.filter(entry=>entry.phase==="study"&&!!getStudyPlanProgress(entry).studyDone);'));
   assert.ok(script.includes("addCell(entry.topic)"));
   assert.ok(script.includes("&&!!getLatestMcqTest(entry.planIndex)"));
