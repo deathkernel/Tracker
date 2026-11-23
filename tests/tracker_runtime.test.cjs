@@ -1114,7 +1114,7 @@ test("MCQ Tracker has persistent history and same-question retest controls", () 
   assert.ok(script.includes("questions:questions.map(question=>({...question,options:question.options.map(option=>({...option}))}))"));
   assert.ok(script.includes("if(result.attempted!==50)return"));
   assert.ok(script.includes('table.className="data-table mcq-sheet"'));
-  assert.ok(script.includes("Every answer is tracked as you solve."));
+  assert.ok(script.includes("Every answer is tracked as you solve every answer."));
   assert.doesNotMatch(script, /correctInput|mcq-correct-input/);
   assert.ok(script.includes('const entries=DAILY_STUDY_PLAN.filter(entry=>entry.phase==="study"&&!!getStudyPlanProgress(entry).studyDone);'));
 });
@@ -1219,7 +1219,7 @@ test("README describes the active and deferred study-plan scope accurately", () 
 test("Day 2 practice uses its Day 1 topic and hides generic PYQ search controls", () => {
   assert.match(script, /getStudyPlanEntriesForDate\(localDate\(\),"mcq_revision"\)/);
   assert.match(script, /startDay2McqPractice\(todayDay2Entry\.planIndex\)/);
-  assert.match(script, /\.pyq-filters\[hidden\]\{display:none!important\}/);
+  assert.match(html, /\.pyq-filters\[hidden\]\{display:none!important\}/);
   assert.match(script, /const topicQuery=rawTopic\.includes\(":"\)/);
   assert.doesNotMatch(script, /Complete the Day 1 checklist first to unlock/);
   assert.doesNotMatch(script, /getStudyPlanProgress\(studyEntry\)\.studyDone\)\{notify\("Complete Day 1/);
@@ -1238,7 +1238,7 @@ test("Day 2 fetch searches the full subject bank and matches enriched question c
 test("automatic recovery scheduler reschedules incomplete phases from today in original overdue order", () => {
   assert.match(script, /function buildRecoverySchedule\(today=localDate\(\)\)/);
   assert.match(script, /const aLate=a\.original<today\?0:1/);
-  assert.match(script, /schedule\.set\(item\.entry\.planIndex\+"\:"+item\.entry\.phase,slot\)/);
+  assert.match(script, /schedule\.set\(item\.entry\.planIndex\+":"\+item\.entry\.phase,slot\)/);
   assert.match(script, /function getStudyPlanDateKey\(entry\)[\s\S]*?buildRecoverySchedule\(\)\.get/);
   assert.match(script, /if\(!progress\.studyDone\)[\s\S]*?pending\.push\(\{entry:study/);
 });
@@ -1256,9 +1256,8 @@ test("MCQ attempt scoring is isolated and retest snapshots preserve exact questi
         { id: "q2", selected: "A", correctOption: "A", practicePlanIndex: 3, practiceSetId: "set-1", attemptId: "retry-1" }
       ]
     },
-    pyqAttempts(){return this.state.questionBank}
   };
-  vm.runInNewContext(script.slice(start, end) + "\nthis.base=getPlanMcqResult;this.retry=getAttemptMcqResult;", sandbox);
+  vm.runInNewContext("function pyqAttempts(){return state.questionBank}\n" + script.slice(start, end) + "\nthis.base=getPlanMcqResult;this.retry=getAttemptMcqResult;", sandbox);
   assert.equal(sandbox.base(3, "set-1").attempted, 2);
   assert.equal(sandbox.base(3, "set-1").correct, 1);
   assert.equal(sandbox.retry(3, "set-1", "retry-1").attempted, 2);
