@@ -1214,3 +1214,11 @@ test("README describes the active and deferred study-plan scope accurately", () 
   assert.match(readme, /at least 183 days after the cycle start/);
   assert.doesNotMatch(readme, /all 189 units fit/);
 });
+
+
+test("opening PYQ workspace prioritizes today's scheduled Day 2 topic over the generic question bank", () => {
+  assert.match(script, /getStudyPlanEntriesForDate\(localDate\(\),"mcq_revision"\)/);
+  assert.match(script, /startDay2McqPractice\(todayDay2Entry\.planIndex\)/);
+  assert.match(script, /Today's scheduled Day 2 topic:/);
+  assert.match(script, /The general PYQ bank is paused so unrelated questions are not shown/);
+});
