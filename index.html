@@ -2428,7 +2428,13 @@ function getPlanMcqAttempts(planIndex,setId){
  return pyqAttempts().filter(item=>item.practicePlanIndex===planIndex&&item.practiceSetId===setId);
 }
 function getPlanMcqResult(planIndex,setId){
- const attempts=getPlanMcqAttempts(planIndex,setId),correct=attempts.filter(item=>item.selected===item.correctOption).length;
+ const attempts=getPlanMcqAttempts(planIndex,setId);
+ const correct=attempts.filter(item=>item.selected===item.correctOption).length;
+ return{attempted:attempts.length,correct,wrong:attempts.filter(item=>item.selected!==item.correctOption).length,unattempted:Math.max(0,50-attempts.length),percentage:correct/50*100};
+}
+function getAttemptMcqResult(planIndex,setId,attemptId){
+ const attempts=getPlanMcqAttempts(planIndex,setId).filter(item=>item.attemptId===attemptId);
+ const correct=attempts.filter(item=>item.selected===item.correctOption).length;
  return{attempted:attempts.length,correct,wrong:attempts.filter(item=>item.selected!==item.correctOption).length,unattempted:Math.max(0,50-attempts.length),percentage:correct/50*100};
 }
 function renderMcqTracker(){
