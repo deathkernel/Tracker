@@ -1095,28 +1095,28 @@ test("custom topic identity migration uses canonical subject keys and rejects cr
 });
 
 
-test("MCQ Tracker has a separate navigation page and persistent 50-question history", () => {
+test("MCQ Tracker has persistent history and same-question retest controls", () => {
   assert.ok(html.includes('id="nav-mcq" value="mcq"'));
   assert.ok(html.includes('data-page="mcq"'));
   assert.ok(script.includes("next.mcqTests=Array.isArray(source.mcqTests)"));
-  assert.ok(script.includes("const attempts=getPlanMcqAttempts(planIndex,setId),correct=attempts.filter(item=>item.selected===item.correctOption).length"));
-  assert.ok(script.includes("percentage:correct/50*100"));
-  assert.ok(script.includes("state.mcqTests.push({planIndex,date,subject:entry.rotationSubject||entry.subject,topic:entry.topic,correct:result.correct,wrong:result.wrong,unattempted:0,marks:result.correct*2,percentage"));
-  assert.ok(script.includes("function renderDay2PracticeBanner(message)"));
-  assert.ok(script.includes("exitButton.addEventListener(\"click\",exitDay2McqPractice)"));
-  assert.ok(script.includes("renderDay2PracticeBanner(\"Day 2 · \"+activePyqPractice.topic"));
-  assert.ok(script.includes("if(requestId!==day2RequestId)return"));
-  assert.ok(script.includes("if(selected.length<50)throw new Error"));
-  assert.ok(script.includes('test.percentage.toFixed(0)+"%"'));
-  assert.ok(script.includes("state.mcqTests.push("));
+  assert.ok(script.includes("function getAttemptMcqResult(planIndex,setId,attemptId)"));
+  assert.ok(script.includes("function renderStoredMcqRetest(test)"));
+  assert.ok(script.includes("questions:test.questions"));
+  assert.ok(script.includes("start.textContent=latest?\"Retest same questions\""));
+  assert.ok(script.includes('retest.textContent="Retest"'));
+  assert.ok(script.includes("retest.addEventListener(\"click\",()=>renderStoredMcqRetest(test))"));
+  assert.ok(script.includes("item.attemptId===activePyqPractice.attemptId"));
+  assert.ok(script.includes("record.attemptId=activePyqPractice.attemptId"));
+  assert.ok(script.includes("target.attempts.push(completedAttempt)"));
+  assert.ok(script.includes("target.questions=questions"));
   assert.ok(script.includes("function getLatestMcqTest(planIndex)"));
+  assert.ok(script.includes("state.mcqTests.push(target)"));
+  assert.ok(script.includes("if(questions.length!==50||questions.some(question=>!question.correct_option_id"));
+  assert.ok(script.includes("if(result.attempted!==50)return"));
   assert.ok(script.includes('table.className="data-table mcq-sheet"'));
-  assert.ok(script.includes('table.innerHTML="<thead><tr><th>Day 2 date</th><th>Subject</th><th>Topic</th><th>Total</th><th>Correct</th><th>Wrong</th><th>Accuracy</th><th>Performance</th><th>Progress</th><th>Action</th></tr></thead>"'));
-  assert.ok(script.includes('historyTable.innerHTML="<thead><tr><th>Date</th><th>Subject</th><th>Topic</th><th>Correct</th><th>Wrong</th><th>Accuracy</th><th>Performance</th></tr></thead>"'));
+  assert.ok(script.includes("Every answer is tracked as you solve."));
   assert.doesNotMatch(script, /correctInput|mcq-correct-input/);
   assert.ok(script.includes('const entries=DAILY_STUDY_PLAN.filter(entry=>entry.phase==="study"&&!!getStudyPlanProgress(entry).studyDone);'));
-  assert.ok(script.includes("addCell(entry.topic)"));
-  assert.ok(script.includes("&&!!getLatestMcqTest(entry.planIndex)"));
 });
 
 test("MCQ preparation assessment uses the agreed score bands", () => {
