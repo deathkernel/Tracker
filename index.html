@@ -2185,7 +2185,9 @@ function renderOverviewSchedule(){
   button.textContent=phaseDone?(isStudy?"Day 1 completed":"Topic completed"):(isStudy?"Complete Day 1":"Complete Day 2");
   button.disabled=phaseDone||!ready;
   button.addEventListener("click",()=>{if(isStudy)markStudyPlanPhaseComplete(entry);else completePlanRevision(entry)});
-  footer.append(status,button);card.append(meta,subject,topicLabel,topicName,description,footer);host.append(card);
+  footer.append(status,button);
+  if(!isStudy&&getStudyPlanDateKey(entry)<=today&&progress.studyDone){const practice=document.createElement("button");practice.type="button";practice.className="btn";practice.textContent="Start 50 topic MCQs";practice.addEventListener("click",()=>startDay2McqPractice(entry.planIndex));footer.append(practice)}
+  card.append(meta,subject,topicLabel,topicName,description,footer);host.append(card);
  });
 }
 function renderRoadmap(){
@@ -2587,10 +2589,11 @@ async function startDay2McqPractice(planIndex){
  const setId=getPlanMcqPracticeSetId(planIndex,dateKey);
  const existing=getPlanMcqAttempts(planIndex,setId);
  activePyqPractice={planIndex,setId,topic:studyEntry.topic,subject:studyEntry.rotationSubject||studyEntry.subject};
+ $("pyqQuestionList").replaceChildren(document.createTextNode("Loading topic-matched questions…"));
  setWorkspaceView("pyq");
  const banner=$("pyqPracticeBanner");banner.hidden=false;banner.textContent="Loading topic-matched questions for "+studyEntry.topic+"…";
  $("pyqSearch").value=topicQuery;$("pyqSubject").value=subject;
- $("pyqYear").value="";$("pyqQuestionList").replaceChildren();
+ $("pyqYear").value="";
  try{
   const questions=[],seen=new Set();let page=1,hasMore=true;
   while(questions.length<50&&hasMore&&page<=5){
