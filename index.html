@@ -2020,9 +2020,38 @@ function studyPlanDateOffset(entry){
  const scheduleIndex=Number.isInteger(entry?.scheduleIndex)?entry.scheduleIndex:entry.planIndex;
  return Math.max(0,scheduleIndex)*2;
 }
-function getStudyPlanDateKey(entry){
+function getOriginalStudyPlanDateKey(entry){
  const offset=studyPlanDateOffset(entry)+(entry.phase==="mcq_revision"?1:0);
  return addDaysToDateKey(CYCLE_START_DATE,offset);
+}
+function buildRecoverySchedule(today=localDate()){
+ const schedule=new Map(),pending=[];
+ ACTIVE_STUDY_PLAN.forEach(topic=>{
+  const study=getStudyPlanEntryByPlanIndex(topic.planIndex,"study");
+  const revision=getStudyPlanEntryByPlanIndex(topic.planIndex,"mcq_revision");
+  if(!study||!revision)return;
+  const progress=getStudyPlanProgress(study);
+  if(!progress.studyDone){
+   pending.push({entry:study,original:getOriginalStudyPlanDateKey(study),phaseOrder:0});
+   pending.push({entry:revision,original:getOriginalStudyPlanDateKey(revision),phaseOrder:1});
+  }else if(!isStudyPlanEntryDone(revision)){
+   pending.push({entry:revision,original:getOriginalStudyPlanDateKey(revision),phaseOrder:1});
+  }
+ });
+ pending.sort((a,b)=>{
+  const aLate=a.original<today?0:1,bLate=b.original<today?0:1;
+  return aLate-bLate||a.original.localeCompare(b.original)||a.entry.planIndex-b.entry.planIndex||a.phaseOrder-b.phaseOrder;
+ });
+ let slot=today;
+ pending.forEach(item=>{
+  schedule.set(item.entry.planIndex+":"+item.entry.phase,slot);
+  slot=addDaysToDateKey(slot,1);
+ });
+ return schedule;
+}
+function getStudyPlanDateKey(entry){
+ const recoveryDate=buildRecoverySchedule().get(entry.planIndex+":"+entry.phase);
+ return recoveryDate||getOriginalStudyPlanDateKey(entry);
 }
 function getStudyPlanProgressDateKey(entry){
  return "plan:"+entry.planIndex;
