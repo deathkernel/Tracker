@@ -7,6 +7,9 @@ import os
 import secrets
 import socket
 import sqlite3
+import urllib.error
+import urllib.parse
+import urllib.request
 from contextlib import asynccontextmanager, contextmanager
 from datetime import date, timedelta
 from pathlib import Path
@@ -245,6 +248,55 @@ def qr_code(request: Request) -> Response:
             "X-Content-Type-Options": "nosniff",
         },
     )
+
+
+
+@app.get("/api/pyq")
+def get_public_pyq(request: Request) -> dict[str, Any]:
+    """Safely proxy the documented public UPSC Prelims Test question API."""
+    allowed = {"page", "limit", "q", "subject", "year"}
+    supplied = dict(request.query_params)
+    if set(supplied) - allowed or len(request.query_params.multi_items()) != len(supplied):
+        raise HTTPException(status_code=400, detail="Unsupported or repeated PYQ filter.")
+    try:
+        page = int(supplied.get("page", "1"))
+        limit = int(supplied.get("limit", "25"))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Page and limit must be integers.") from exc
+    if page < 1 or not 1 <= limit <= 100:
+        raise HTTPException(status_code=400, detail="Page must be positive and limit must be between 1 and 100.")
+    params: dict[str, str] = {"page": str(page), "limit": str(limit)}
+    query = supplied.get("q", "").strip()
+    subject = supplied.get("subject", "").strip()
+    year = supplied.get("year", "").strip()
+    if len(query) > 200:
+        raise HTTPException(status_code=400, detail="Search text must be 200 characters or fewer.")
+    if query:
+        params["q"] = query
+    subjects = {"Polity", "History", "Economy", "Geography", "Environment", "Science", "Current Affairs"}
+    if subject:
+        if subject not in subjects:
+            raise HTTPException(status_code=400, detail="Unknown PYQ subject.")
+        params["subject"] = subject
+    if year:
+        if not year.isdigit() or not 2014 <= int(year) <= 2026:
+            raise HTTPException(status_code=400, detail="Year must be between 2014 and 2026.")
+        params["year"] = year
+    url = "https://upscprelimstest.com/api/pyq/database?" + urllib.parse.urlencode(params)
+    outbound = urllib.request.Request(
+        url,
+        headers={"Accept": "application/json", "User-Agent": "UPSC-Tracker/1.0"},
+    )
+    try:
+        with urllib.request.urlopen(outbound, timeout=15) as response:
+            payload = json.loads(response.read(5_000_001))
+    except urllib.error.HTTPError as exc:
+        raise HTTPException(status_code=502, detail="The PYQ provider rejected the request.") from exc
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise HTTPException(status_code=502, detail="The PYQ provider is unavailable or returned invalid JSON.") from exc
+    if not isinstance(payload, dict) or not isinstance(payload.get("questions"), list):
+        raise HTTPException(status_code=502, detail="The PYQ provider returned an unexpected response.")
+    return payload
 
 
 @app.get("/api/health")
