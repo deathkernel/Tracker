@@ -2344,7 +2344,30 @@ function setWorkspaceView(view){
  document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input=>{input.checked=input.value===activeView});
  $("pageTitle").textContent=titles[activeView];
  $("pageHint").textContent=descriptions[activeView];
- if(activeView==="pyq"){updatePyqMetrics();const filters=$("pyqFilters");if(filters)filters.hidden=!!activePyqPractice;if(!activePyqPractice&&!$("pyqQuestionList").children.length)loadPyqQuestions(true)}
+ if(activeView==="pyq"){
+   updatePyqMetrics();
+   const filters=$("pyqFilters");
+   if(filters)filters.hidden=!!activePyqPractice;
+   if(!activePyqPractice){
+    const todayDay2Entry=getStudyPlanEntriesForDate(localDate(),"mcq_revision")[0]||null;
+    if(todayDay2Entry){
+     const studyEntry=getStudyPlanEntryByPlanIndex(todayDay2Entry.planIndex,"study");
+     if(studyEntry&&getStudyPlanProgress(studyEntry).studyDone){
+      startDay2McqPractice(todayDay2Entry.planIndex);
+      return;
+     }
+     if(filters)filters.hidden=true;
+     const banner=$("pyqPracticeBanner");
+     banner.textContent="Today's scheduled Day 2 topic: "+(studyEntry?.topic||todayDay2Entry.topic)+". Complete the Day 1 checklist first to unlock its topic-matched 50-MCQ practice.";
+     banner.hidden=false;
+     $("pyqQuestionList").replaceChildren(document.createTextNode("Your scheduled topic is ready. Complete Day 1 preparation to unlock its focused MCQ practice."));
+     $("pyqResultCount").textContent="Today's scheduled topic";
+     $("pyqStatus").textContent="The general PYQ bank is paused so unrelated questions are not shown instead of today's scheduled topic.";
+     return;
+    }
+    if(!$("pyqQuestionList").children.length)loadPyqQuestions(true);
+   }
+  }
 }
 function activeDevice(){
  const userAgent=navigator.userAgent||"";
