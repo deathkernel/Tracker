@@ -2688,7 +2688,7 @@ function updatePlanMcqResult(planIndex,setId,entry){
  if(isRetest&&target){
   target.attempts=Array.isArray(target.attempts)?target.attempts:[];
   target.attempts.push(completedAttempt);
-  target.correct=result.correct;target.wrong=result.wrong;target.percentage=percentage;target.savedAt=savedAt;
+  target.correct=result.correct;target.wrong=result.wrong;target.unattempted=result.unattempted;target.marks=result.correct*2;target.percentage=percentage;target.assessment=assessment.label;target.savedAt=savedAt;
  }else if(!isRetest&&!target){
   target={id:"mcq-"+planIndex+"-"+Date.now(),planIndex,date,subject:entry.rotationSubject||entry.subject,topic:entry.topic,correct:result.correct,wrong:result.wrong,unattempted:0,marks:result.correct*2,percentage,savedAt,assessment:assessment.label,setId,questions:questions.map(question=>({...question,options:question.options.map(option=>({...option}))})),attempts:[completedAttempt]};
   state.mcqTests.push(target);
