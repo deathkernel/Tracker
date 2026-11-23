@@ -2600,7 +2600,8 @@ async function startDay2McqPractice(planIndex){
  if(!studyEntry||!revisionEntry||!getStudyPlanProgress(studyEntry).studyDone){notify("Complete Day 1 before starting this topic's MCQ practice.");return;}
  const dateKey=getStudyPlanDateKey(revisionEntry);
  if(dateKey>localDate()){notify("This topic's 50-MCQ practice unlocks on "+dateKey+".");return;}
- const topicQuery=String(studyEntry.topic||"").replace(/^[^:]{1,50}:\\s*/,"").trim();
+ const rawTopic=String(studyEntry.topic||"");
+ const topicQuery=rawTopic.includes(":")?rawTopic.slice(rawTopic.indexOf(":")+1).trim():rawTopic.trim();
  const targetTokens=getDay2TopicTokens(topicQuery);
  if(!targetTokens.length){notify("This study topic needs a clearer topic label before matching MCQs.");return;}
  const subject=pyqApiSubjectForEntry(studyEntry);
