@@ -2405,7 +2405,16 @@ function applyDeviceTheme(){
  $("themeProfileLabel").textContent=device==="mobile"?"Mobile profile":"Desktop profile";
 }
 function getLatestMcqTest(planIndex){
- return (state.mcqTests||[]).filter(test=>test.planIndex===planIndex).sort((a,b)=>b.date.localeCompare(a.date)||b.savedAt.localeCompare(a.savedAt))[0]||null;
+ return (state.mcqTests||[]).filter(test=>test.planIndex===planIndex).sort((a,b)=>String(b.savedAt||"").localeCompare(String(a.savedAt||"")))[0]||null;
+}
+function getMcqTestById(testId){
+ return (state.mcqTests||[]).find(test=>test.id===testId)||null;
+}
+function getMcqTestResult(test){
+ const answers=Array.isArray(test?.attempts)?test.attempts.slice(1):[];
+ const latest=Array.isArray(test?.attempts)?test.attempts[test.attempts.length-1]:null;
+ const result=latest?.result||test;
+ return {correct:Number(result.correct)||0,wrong:Number(result.wrong)||0,percentage:Number(result.percentage)||0,attemptNumber:answers.length+1};
 }
 function getMcqAssessment(percentage){
  if(percentage>=80)return{label:"Good",detail:"Strong performance. Maintain revision and accuracy.",tone:"good"};
