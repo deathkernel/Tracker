@@ -2645,7 +2645,7 @@ async function startDay2McqPractice(planIndex){
   const progress=getPlanMcqResult(planIndex,setId);
   banner.replaceChildren(document.createTextNode(selected.length<50
    ?"Strict topic filter found "+selected.length+" relevant questions for "+studyEntry.topic+". Other topics were excluded. Progress: "+progress.attempted+"/"+selected.length+"."
-   :"Day 2 · "+studyEntry.topic+" · 50 strictly topic-matched questions · "+progress.attempted+"/50 answered.";
+   :"Day 2 · "+studyEntry.topic+" · 50 strictly topic-matched questions · "+progress.attempted+"/50 answered."));
   $("pyqResultCount").textContent=selected.length+"/50 topic-matched practice questions";
   $("pyqStatus").textContent="Only questions whose topic metadata matches this study topic are included. Answers are saved automatically.";
   $("pyqMoreBtn").hidden=true;
