@@ -891,7 +891,7 @@ body.dark #workspaceNav .nav-brand-mark{background:var(--blue);color:#10141d}
  <section class="card pyq-page" data-page="pyq" hidden>
   <div class="card-head"><div><div class="eyebrow">QUESTION PRACTICE</div><h2>UPSC PYQ & MCQ Bank</h2><p class="subtitle">Practise solved Civil Services Prelims GS-I questions, filter by subject/year, and track answers locally.</p></div><span class="chip" id="pyqResultCount">Ready to load</span></div>
   <div id="pyqPracticeBanner" class="pyq-status" hidden></div>
-  <div class="pyq-filters">
+  <div class="pyq-filters" id="pyqFilters">
    <label>Search questions<input id="pyqSearch" type="search" maxlength="200" placeholder="Search topic, keyword or question…"></label>
    <label>Subject<select id="pyqSubject"><option value="">All subjects</option><option>Polity</option><option>History</option><option>Economy</option><option>Geography</option><option>Environment</option><option>Science</option><option>Current Affairs</option></select></label>
    <label>Year<select id="pyqYear"><option value="">All years</option><option>2026</option><option>2025</option><option>2024</option><option>2023</option><option>2022</option><option>2021</option><option>2020</option><option>2019</option><option>2018</option><option>2017</option><option>2016</option><option>2015</option><option>2014</option></select></label>
@@ -2344,7 +2344,7 @@ function setWorkspaceView(view){
  document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input=>{input.checked=input.value===activeView});
  $("pageTitle").textContent=titles[activeView];
  $("pageHint").textContent=descriptions[activeView];
- if(activeView==="pyq"){updatePyqMetrics();if(!$("pyqQuestionList").children.length)loadPyqQuestions(true)}
+ if(activeView==="pyq"){updatePyqMetrics();const filters=$("pyqFilters");if(filters)filters.hidden=!!activePyqPractice;if(!activePyqPractice&&!$("pyqQuestionList").children.length)loadPyqQuestions(true)}
 }
 function activeDevice(){
  const userAgent=navigator.userAgent||"";
@@ -2509,6 +2509,14 @@ function renderTimeline(){
 
 let pyqPage=1,pyqHasMore=false,pyqLoading=false,pyqLastQuery="";
 let activePyqPractice=null;
+function exitDay2McqPractice(){
+ activePyqPractice=null;
+ const filters=$("pyqFilters");if(filters)filters.hidden=false;
+ $("pyqPracticeBanner").hidden=true;
+ $("pyqQuestionList").replaceChildren();
+ $("pyqResultCount").textContent="Ready to load";
+ $("pyqStatus").textContent="Browse the PYQ bank or use the filters to load questions.";
+}
 function pyqAttempts(){return Array.isArray(state.questionBank)?state.questionBank:[]}
 function updatePyqMetrics(){
  const attempts=pyqAttempts().filter(item=>item&&item.selected&&item.correctOption);
@@ -2611,6 +2619,8 @@ async function startDay2McqPractice(planIndex){
  $("pyqQuestionList").replaceChildren(document.createTextNode("Loading and strictly filtering topic-matched questions…"));
  setWorkspaceView("pyq");
  const banner=$("pyqPracticeBanner");banner.hidden=false;banner.textContent="Finding questions strictly related to "+studyEntry.topic+"…";
+ const filters=$("pyqFilters");if(filters)filters.hidden=true;
+ const exitButton=document.createElement("button");exitButton.type="button";exitButton.className="btn";exitButton.textContent="Exit topic test · Browse PYQs";exitButton.addEventListener("click",exitDay2McqPractice);banner.append(document.createTextNode(" "),exitButton);
  $("pyqSearch").value=topicQuery;$("pyqSubject").value=subject;
  $("pyqYear").value="";
  try{
@@ -2633,14 +2643,15 @@ async function startDay2McqPractice(planIndex){
   selected.forEach(question=>{window.pyqQuestionCache[question.id]=question});
   renderPyqQuestions(selected,false);
   const progress=getPlanMcqResult(planIndex,setId);
-  banner.textContent=selected.length<50
+  banner.replaceChildren(document.createTextNode(selected.length<50
    ?"Strict topic filter found "+selected.length+" relevant questions for "+studyEntry.topic+". Other topics were excluded. Progress: "+progress.attempted+"/"+selected.length+"."
-   :"Day 2 · "+studyEntry.topic+" · 50 strictly topic-matched questions · "+progress.attempted+"/50 answered.";
+   :"Day 2 · "+studyEntry.topic+" · 50 strictly topic-matched questions · "+progress.attempted+"/50 answered."));
   $("pyqResultCount").textContent=selected.length+"/50 topic-matched practice questions";
   $("pyqStatus").textContent="Only questions whose topic metadata matches this study topic are included. Answers are saved automatically.";
   $("pyqMoreBtn").hidden=true;
-  if(existing.length===selected.length&&selected.length===50)banner.textContent="This strict 50-question topic set is already complete. Your result is saved in MCQ Tracker.";
- }catch(error){banner.textContent=error.message||"Could not load topic questions. Please retry.";banner.hidden=false;$("pyqQuestionList").replaceChildren()}
+  if(existing.length===selected.length&&selected.length===50)banner.firstChild.textContent="This strict 50-question topic set is already complete. Your result is saved in MCQ Tracker.";
+  banner.append(document.createTextNode(" "),exitButton);
+ }catch(error){banner.replaceChildren(document.createTextNode(error.message||"Could not load topic questions. Please retry."),document.createTextNode(" "),exitButton);banner.hidden=false;$("pyqQuestionList").replaceChildren()}
 }
 function handlePyqOptionClick(event){
  const button=event.target.closest(".pyq-option");if(!button)return;const card=button.closest(".pyq-question");if(!card)return;
