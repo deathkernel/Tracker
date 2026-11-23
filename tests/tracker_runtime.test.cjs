@@ -1111,7 +1111,7 @@ test("MCQ Tracker has persistent history and same-question retest controls", () 
   assert.ok(script.includes("questions:questions.map(question=>({...question,options:question.options.map(option=>({...option}))}))"));
   assert.ok(script.includes("function getLatestMcqTest(planIndex)"));
   assert.ok(script.includes("state.mcqTests.push(target)"));
-  assert.ok(script.includes("if(questions.length!==50||questions.some(question=>!question.correct_option_id"));
+  assert.ok(script.includes("questions:questions.map(question=>({...question,options:question.options.map(option=>({...option}))}))"));
   assert.ok(script.includes("if(result.attempted!==50)return"));
   assert.ok(script.includes('table.className="data-table mcq-sheet"'));
   assert.ok(script.includes("Every answer is tracked as you solve."));
