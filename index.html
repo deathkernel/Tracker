@@ -880,8 +880,8 @@ body.dark #workspaceNav .nav-brand-mark{background:var(--blue);color:#10141d}
   <p class="small-note">Mapped question counts are approximate editorial classifications, not official UPSC topic-wise counts. Mark a topic complete after concept study, PYQs and a quick revision. Syllabus completion updates subject progress immediately; the scheduled Day 1 / Day 2 checklist is tracked separately.</p>
  </section>
  <section class="card" data-page="mcq" hidden>
-  <div class="card-head"><div><div class="eyebrow">TOPIC PERFORMANCE</div><h2>50-MCQ Performance Tracker</h2><p class="subtitle">Solve questions from your book. Enter only the number of correct answers; the rest is calculated automatically.</p></div><span class="chip">Fixed · 50 MCQs</span></div>
-  <div class="small-note">Spreadsheet view · Enter the correct count in each topic row. Wrong answers and accuracy are calculated automatically.</div>
+  <div class="card-head"><div><div class="eyebrow">TOPIC PERFORMANCE</div><h2>50-MCQ Performance Tracker</h2><p class="subtitle">Complete the 50 topic-matched questions fetched automatically for each Day 2 revision. Every answer is tracked as you solve.</p></div><span class="chip">Fixed · 50 MCQs</span></div>
+  <div class="small-note">Day 2 practice is linked to its Day 1 topic. Start the test from the row when its revision day arrives; no manual score entry is needed.</div>
   <div id="mcqTestPanel"></div>
   <div class="card-head" style="margin-top:22px"><h3>Daily MCQ history</h3><span class="chip" id="mcqHistoryCount">0 tests</span></div>
   <div id="mcqHistory"></div>
@@ -890,6 +890,7 @@ body.dark #workspaceNav .nav-brand-mark{background:var(--blue);color:#10141d}
 
  <section class="card pyq-page" data-page="pyq" hidden>
   <div class="card-head"><div><div class="eyebrow">QUESTION PRACTICE</div><h2>UPSC PYQ & MCQ Bank</h2><p class="subtitle">Practise solved Civil Services Prelims GS-I questions, filter by subject/year, and track answers locally.</p></div><span class="chip" id="pyqResultCount">Ready to load</span></div>
+  <div id="pyqPracticeBanner" class="pyq-status" hidden></div>
   <div class="pyq-filters">
    <label>Search questions<input id="pyqSearch" type="search" maxlength="200" placeholder="Search topic, keyword or question…"></label>
    <label>Subject<select id="pyqSubject"><option value="">All subjects</option><option>Polity</option><option>History</option><option>Economy</option><option>Geography</option><option>Environment</option><option>Science</option><option>Current Affairs</option></select></label>
@@ -2184,7 +2185,9 @@ function renderOverviewSchedule(){
   button.textContent=phaseDone?(isStudy?"Day 1 completed":"Topic completed"):(isStudy?"Complete Day 1":"Complete Day 2");
   button.disabled=phaseDone||!ready;
   button.addEventListener("click",()=>{if(isStudy)markStudyPlanPhaseComplete(entry);else completePlanRevision(entry)});
-  footer.append(status,button);card.append(meta,subject,topicLabel,topicName,description,footer);host.append(card);
+  footer.append(status,button);
+  if(!isStudy&&getStudyPlanDateKey(entry)<=today&&progress.studyDone){const practice=document.createElement("button");practice.type="button";practice.className="btn";practice.textContent="Start 50 topic MCQs";practice.addEventListener("click",()=>startDay2McqPractice(entry.planIndex));footer.append(practice)}
+  card.append(meta,subject,topicLabel,topicName,description,footer);host.append(card);
  });
 }
 function renderRoadmap(){
@@ -2365,6 +2368,16 @@ function getMcqAssessment(percentage){
  if(percentage>=60)return{label:"Average",detail:"Your basics are developing. Review incorrect questions.",tone:"average"};
  return{label:"Needs Improvement",detail:"Revisit the topic concepts and attempt another practice test.",tone:"needs-work"};
 }
+function getPlanMcqPracticeSetId(planIndex,dateKey=getStudyPlanDateKey(getStudyPlanEntryByPlanIndex(planIndex,"mcq_revision"))){
+ return "plan:"+planIndex+":"+dateKey;
+}
+function getPlanMcqAttempts(planIndex,setId){
+ return pyqAttempts().filter(item=>item.practicePlanIndex===planIndex&&item.practiceSetId===setId);
+}
+function getPlanMcqResult(planIndex,setId){
+ const attempts=getPlanMcqAttempts(planIndex,setId),correct=attempts.filter(item=>item.selected===item.correctOption).length;
+ return{attempted:attempts.length,correct,wrong:attempts.filter(item=>item.selected!==item.correctOption).length,unattempted:Math.max(0,50-attempts.length),percentage:correct/50*100};
+}
 function renderMcqTracker(){
  const panel=$("mcqTestPanel"),history=$("mcqHistory");
  if(!panel||!history)return;
@@ -2373,47 +2386,37 @@ function renderMcqTracker(){
  if(!entries.length){panel.textContent="No Day 2 topics are scheduled.";return;}
  const wrap=document.createElement("div");wrap.className="data-table-wrap";
  const table=document.createElement("table");table.className="data-table mcq-sheet";
- table.innerHTML="<thead><tr><th>Date</th><th>Subject</th><th>Topic</th><th>Total</th><th>Correct</th><th>Wrong</th><th>Accuracy</th><th>Performance</th><th>Action</th></tr></thead>";
+ table.innerHTML="<thead><tr><th>Day 2 date</th><th>Subject</th><th>Topic</th><th>Total</th><th>Correct</th><th>Wrong</th><th>Accuracy</th><th>Performance</th><th>Progress</th><th>Action</th></tr></thead>";
  const body=document.createElement("tbody");
  entries.forEach(entry=>{
-  const planIndex=entry.planIndex,progress=getStudyPlanProgress(entry),latest=getLatestMcqTest(planIndex);
+  const planIndex=entry.planIndex,revisionEntry=getStudyPlanEntryByPlanIndex(planIndex,"mcq_revision"),dateKey=getStudyPlanDateKey(revisionEntry);
+  const setId=getPlanMcqPracticeSetId(planIndex,dateKey),result=getPlanMcqResult(planIndex,setId),latest=getLatestMcqTest(planIndex);
   const tr=document.createElement("tr");
   const addCell=value=>{const td=document.createElement("td");td.textContent=value;tr.append(td);return td;};
-  addCell(getStudyPlanDateKey(entry));addCell(entry.subject);addCell(entry.topic);addCell("50");
-  const correctCell=document.createElement("td");
-  const correctInput=document.createElement("input");correctInput.type="number";correctInput.min="0";correctInput.max="50";correctInput.step="1";correctInput.inputMode="numeric";correctInput.className="mcq-correct-input";correctInput.setAttribute("aria-label","Correct answers for "+entry.topic);correctInput.placeholder="0–50";correctInput.value=latest?String(latest.correct):"";
-  correctCell.append(correctInput);tr.append(correctCell);
-  const wrongCell=addCell(latest?String(latest.wrong):"—"),accuracyCell=addCell(latest?latest.percentage.toFixed(0)+"%":"—"),performanceCell=addCell(latest?getMcqAssessment(latest.percentage).label:"—");
-  const actionCell=document.createElement("td"),save=document.createElement("button");save.type="button";save.className="btn primary";save.textContent=latest?"Update":"Save";
-  const preview=()=>{
-   const raw=correctInput.value,correct=Number(raw);
-   if(raw===""||!Number.isInteger(correct)||correct<0||correct>50){wrongCell.textContent="—";accuracyCell.textContent="—";performanceCell.textContent="—";return;}
-   const wrong=50-correct,percentage=correct/50*100;
-   wrongCell.textContent=String(wrong);accuracyCell.textContent=percentage.toFixed(0)+"%";performanceCell.textContent=getMcqAssessment(percentage).label;
-  };
-  correctInput.addEventListener("input",preview);preview();
-  save.disabled=!progress.studyDone;save.title=progress.studyDone?"Save topic performance":"Complete Day 1 before saving";
-  save.addEventListener("click",()=>{
-   const raw=correctInput.value,correct=Number(raw);
-   if(raw===""||!Number.isInteger(correct)||correct<0||correct>50){notify("Enter a correct-answer count from 0 to 50.");return;}
-   if(!progress.studyDone){notify("Complete Day 1 before recording topic performance.");return;}
-   const wrong=50-correct,unattempted=0,marks=correct*2,percentage=correct/50*100,assessment=getMcqAssessment(percentage);
-   state.mcqTests=state.mcqTests||[];state.mcqTests=state.mcqTests.filter(test=>test.planIndex!==planIndex);
-   state.mcqTests.push({planIndex,date:localDate(),subject:entry.subject,topic:entry.topic,correct,wrong,unattempted,marks,percentage,savedAt:new Date().toISOString(),assessment:assessment.label});
-   persist();renderMcqTracker();renderDaily();notify("Topic performance saved.");
-  });
-  actionCell.append(save);tr.append(actionCell);body.append(tr);
+  addCell(dateKey);addCell(entry.rotationSubject||entry.subject);addCell(entry.topic);addCell("50");
+  addCell(result.attempted?String(result.correct):latest?String(latest.correct):"—");
+  addCell(result.attempted?String(result.wrong):latest?String(latest.wrong):"—");
+  addCell(result.attempted?result.percentage.toFixed(0)+"%":latest?latest.percentage.toFixed(0)+"%":"—");
+  addCell(result.attempted?getMcqAssessment(result.percentage).label:latest?getMcqAssessment(latest.percentage).label:"Pending");
+  addCell(result.attempted+"/50");
+  const actionCell=document.createElement("td"),start=document.createElement("button");
+  start.type="button";start.className="btn primary";start.textContent=result.attempted===50?"Review test":result.attempted?"Continue":"Start 50 MCQs";
+  start.disabled=dateKey>localDate();
+  start.title=start.disabled?"Available on the scheduled Day 2 revision date":"Fetch and solve this topic's 50 MCQs";
+  start.addEventListener("click",()=>startDay2McqPractice(planIndex));
+  actionCell.append(start);tr.append(actionCell);body.append(tr);
  });
  table.append(body);wrap.append(table);panel.append(wrap);
  const rows=(state.mcqTests||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)||b.savedAt.localeCompare(a.savedAt));
- $("mcqHistoryCount").textContent=rows.length+" records";
- if(!rows.length){history.textContent="No MCQ results recorded yet.";return;}
+ $("mcqHistoryCount").textContent=rows.length+" completed tests";
+ if(!rows.length){history.textContent="No completed 50-question tests yet.";return;}
  const historyWrap=document.createElement("div");historyWrap.className="data-table-wrap";
  const historyTable=document.createElement("table");historyTable.className="data-table";
  historyTable.innerHTML="<thead><tr><th>Date</th><th>Subject</th><th>Topic</th><th>Correct</th><th>Wrong</th><th>Accuracy</th><th>Performance</th></tr></thead>";
  const historyBody=document.createElement("tbody");
  rows.forEach(test=>{const tr=document.createElement("tr");[test.date,test.subject,test.topic,test.correct+"/50",String(test.wrong),test.percentage.toFixed(0)+"%",getMcqAssessment(test.percentage).label].forEach(value=>{const td=document.createElement("td");td.textContent=value;tr.append(td)});historyBody.append(tr)});
- historyTable.append(historyBody);historyWrap.append(historyTable);history.replaceChildren(historyWrap);
+ historyTable.append(historyBody);historyWrap.append(historyTable);
+ history.replaceChildren(historyWrap);
 }
 
 function renderTimeline(){
@@ -2505,6 +2508,7 @@ function renderTimeline(){
 
 
 let pyqPage=1,pyqHasMore=false,pyqLoading=false,pyqLastQuery="";
+let activePyqPractice=null;
 function pyqAttempts(){return Array.isArray(state.questionBank)?state.questionBank:[]}
 function updatePyqMetrics(){
  const attempts=pyqAttempts().filter(item=>item&&item.selected&&item.correctOption);
@@ -2518,7 +2522,7 @@ function renderPyqQuestions(items,append=false){
  items.forEach(question=>{
   if(!question||!question.id||!Array.isArray(question.options))return;
   window.pyqQuestionCache[question.id]=question;
-  const saved=pyqAttempts().find(item=>item.id===question.id);
+  const saved=activePyqPractice?pyqAttempts().find(item=>item.id===question.id&&item.practiceSetId===activePyqPractice.setId):pyqAttempts().find(item=>item.id===question.id&&!item.practiceSetId);
   const card=document.createElement("article");card.className="pyq-question";card.dataset.questionId=question.id;
   const head=document.createElement("div");head.className="pyq-question-head";
   [String(question.year||"PYQ"),String(question.subject||"General"),String(question.topic||"Unclassified")].forEach(value=>{const tag=document.createElement("span");tag.className="pyq-tag";tag.textContent=value;head.append(tag)});
@@ -2553,11 +2557,77 @@ async function loadPyqQuestions(reset=true){
  }catch(error){status.textContent=error.message||"Could not load questions. Check your internet connection and retry.";more.hidden=true}
  finally{pyqLoading=false;button.disabled=false;more.disabled=false}
 }
+function pyqApiSubjectForEntry(entry){
+ const subject=String(entry.rotationSubject||entry.subject||"").toLowerCase();
+ if(subject.includes("history")||subject.includes("art & culture"))return "History";
+ if(subject.includes("science"))return "Science";
+ if(subject.includes("polity"))return "Polity";
+ if(subject.includes("economy"))return "Economy";
+ if(subject.includes("geography"))return "Geography";
+ if(subject.includes("environment"))return "Environment";
+ return "";
+}
+function updatePlanMcqResult(planIndex,setId,entry){
+ const result=getPlanMcqResult(planIndex,setId);
+ if(result.attempted!==50)return;
+ const revisionEntry=getStudyPlanEntryByPlanIndex(planIndex,"mcq_revision"),date=getStudyPlanDateKey(revisionEntry);
+ const percentage=result.percentage,assessment=getMcqAssessment(percentage);
+ state.mcqTests=state.mcqTests||[];
+ state.mcqTests=state.mcqTests.filter(test=>test.planIndex!==planIndex);
+ state.mcqTests.push({planIndex,date,subject:entry.rotationSubject||entry.subject,topic:entry.topic,correct:result.correct,wrong:result.wrong,unattempted:0,marks:result.correct*2,percentage,savedAt:new Date().toISOString(),assessment:assessment.label});
+ persist();renderMcqTracker();renderDaily();renderOverviewSchedule();
+ const banner=$("pyqPracticeBanner");
+ if(banner)banner.textContent="Completed: "+result.correct+"/50 correct · "+result.wrong+" incorrect · "+percentage.toFixed(0)+"% accuracy. Your MCQ Tracker has been updated.";
+}
+async function startDay2McqPractice(planIndex){
+ const studyEntry=getStudyPlanEntryByPlanIndex(planIndex,"study"),revisionEntry=getStudyPlanEntryByPlanIndex(planIndex,"mcq_revision");
+ if(!studyEntry||!revisionEntry||!getStudyPlanProgress(studyEntry).studyDone){notify("Complete Day 1 before starting this topic's MCQ practice.");return;}
+ const dateKey=getStudyPlanDateKey(revisionEntry);
+ if(dateKey>localDate()){notify("This topic's 50-MCQ practice unlocks on "+dateKey+".");return;}
+ const topicQuery=String(studyEntry.topic||"").replace(/^[^:]{1,50}:\s*/,"").trim();
+ const subject=pyqApiSubjectForEntry(studyEntry);
+ const setId=getPlanMcqPracticeSetId(planIndex,dateKey);
+ const existing=getPlanMcqAttempts(planIndex,setId);
+ activePyqPractice={planIndex,setId,topic:studyEntry.topic,subject:studyEntry.rotationSubject||studyEntry.subject};
+ $("pyqQuestionList").replaceChildren(document.createTextNode("Loading topic-matched questions…"));
+ setWorkspaceView("pyq");
+ const banner=$("pyqPracticeBanner");banner.hidden=false;banner.textContent="Loading topic-matched questions for "+studyEntry.topic+"…";
+ $("pyqSearch").value=topicQuery;$("pyqSubject").value=subject;
+ $("pyqYear").value="";
+ try{
+  const questions=[],seen=new Set();let page=1,hasMore=true;
+  while(questions.length<50&&hasMore&&page<=5){
+   const params=new URLSearchParams({q:topicQuery,subject,page:String(page),limit:"100"});
+   const response=await apiFetch("/api/pyq?"+params.toString());
+   if(!response.ok){const detail=await response.json().catch(()=>({}));throw new Error(detail.detail||"Question API request failed ("+response.status+").");}
+   const data=await response.json(),items=Array.isArray(data.questions)?data.questions:Array.isArray(data.data)?data.data:[];
+   items.forEach(question=>{if(question&&question.id&&!seen.has(String(question.id))&&Array.isArray(question.options)&&question.correct_option_id){seen.add(String(question.id));questions.push(question)}});
+   hasMore=!!data.hasMore;page+=1;
+  }
+  const selected=questions.slice(0,50);
+  if(!selected.length)throw new Error("No answer-key verified questions were found for this topic.");
+  window.pyqQuestionCache=window.pyqQuestionCache||{};
+  selected.forEach(question=>{window.pyqQuestionCache[question.id]=question});
+  renderPyqQuestions(selected,false);
+  const progress=getPlanMcqResult(planIndex,setId);
+  banner.textContent=selected.length<50
+   ?"Only "+selected.length+" matching questions are available for "+studyEntry.topic+". No questions from other topics were mixed in. Progress: "+progress.attempted+"/"+selected.length+"."
+   :"Day 2 · "+studyEntry.topic+" · 50 topic-matched questions · "+progress.attempted+"/50 answered.";
+  $("pyqResultCount").textContent=selected.length+"/50 practice questions";
+  $("pyqStatus").textContent="Choose one option for each question. Answers are saved automatically.";
+  $("pyqMoreBtn").hidden=true;
+  if(existing.length===50)banner.textContent="This 50-question set is already complete. Your result is saved in MCQ Tracker.";
+ }catch(error){banner.textContent=error.message||"Could not load topic questions. Please retry.";banner.hidden=false}
+}
 function handlePyqOptionClick(event){
  const button=event.target.closest(".pyq-option");if(!button)return;const card=button.closest(".pyq-question");if(!card)return;
  const questionId=card.dataset.questionId,question=window.pyqQuestionCache?.[questionId];if(!question)return;
- const selected=button.dataset.optionId,correct=question.correct_option_id;if(!correct||pyqAttempts().some(item=>item.id===questionId))return;
- state.questionBank=[...pyqAttempts(),{id:questionId,selected,correctOption:correct,answeredAt:new Date().toISOString(),year:question.year,subject:question.subject,topic:question.topic}].slice(-20000);
+ const selected=button.dataset.optionId,correct=question.correct_option_id;
+ const saved=activePyqPractice?pyqAttempts().some(item=>item.id===questionId&&item.practiceSetId===activePyqPractice.setId):pyqAttempts().some(item=>item.id===questionId&&!item.practiceSetId);
+ if(!correct||saved)return;
+ const record={id:questionId,selected,correctOption:correct,answeredAt:new Date().toISOString(),year:question.year,subject:question.subject,topic:question.topic};
+ if(activePyqPractice){record.practicePlanIndex=activePyqPractice.planIndex;record.practiceSetId=activePyqPractice.setId;}
+ state.questionBank=[...pyqAttempts(),record].slice(-20000);
  persist();
  card.querySelectorAll(".pyq-option").forEach(option=>{
   option.disabled=true;
@@ -2570,6 +2640,12 @@ function handlePyqOptionClick(event){
  feedback.append(heading,document.createTextNode("Your answer: "+selected+" · Correct answer: "+correct));
  if(question.mnemonic_hint)feedback.append(document.createElement("br"),document.createTextNode("Memory aid: "+question.mnemonic_hint));
  card.insertBefore(feedback,card.querySelector(".pyq-question-meta"));updatePyqMetrics();
+ if(activePyqPractice){
+  const entry=getStudyPlanEntryByPlanIndex(activePyqPractice.planIndex,"study");
+  const progress=getPlanMcqResult(activePyqPractice.planIndex,activePyqPractice.setId);
+  const banner=$("pyqPracticeBanner");banner.textContent="Day 2 · "+activePyqPractice.topic+" · "+progress.attempted+"/50 answered · "+progress.correct+" correct · "+progress.wrong+" incorrect.";
+  renderMcqTracker();updatePlanMcqResult(activePyqPractice.planIndex,activePyqPractice.setId,entry);
+ }
 }
 
 function renderAll(){syncSubjectFilter();renderSettings();renderStats();renderDaily();renderOverviewSchedule();renderSubjectOverview();renderTopics();renderMissingTopics();renderRevision();renderMcqTracker();renderCharts();renderRoadmap();renderLogs();renderTimeline();setWorkspaceView(window.trackerView||"overview")}
@@ -2587,10 +2663,10 @@ $("missingPriorityFilter")?.addEventListener("change",renderMissingTopics);
 $("phoneAccessBtn")?.addEventListener("click",showPhoneAccess);
 $("closePhoneAccess")?.addEventListener("click",()=>{$("phoneAccessPanel").hidden=true;$("phoneAccessBtn")?.setAttribute("aria-expanded","false")});
 $("mcqPlanSelect")?.addEventListener("change",renderMcqTracker);
-$("pyqLoadBtn")?.addEventListener("click",()=>loadPyqQuestions(true));
-$("pyqMoreBtn")?.addEventListener("click",()=>loadPyqQuestions(false));
+$("pyqLoadBtn")?.addEventListener("click",()=>{activePyqPractice=null;$("pyqPracticeBanner").hidden=true;loadPyqQuestions(true)});
+$("pyqMoreBtn")?.addEventListener("click",()=>{activePyqPractice=null;$("pyqPracticeBanner").hidden=true;loadPyqQuestions(false)});
 $("pyqQuestionList")?.addEventListener("click",event=>handlePyqOptionClick(event));
-$("pyqSearch")?.addEventListener("keydown",event=>{if(event.key==="Enter")loadPyqQuestions(true)});
+$("pyqSearch")?.addEventListener("keydown",event=>{if(event.key==="Enter"){activePyqPractice=null;$("pyqPracticeBanner").hidden=true;loadPyqQuestions(true)}});
 function initFilters(){allSubjects().forEach(s=>{const opt=document.createElement("option");opt.value=s.name;opt.textContent=s.name;$("subjectFilter").append(opt)});$("topicSearch").addEventListener("input",renderTopics);$("subjectFilter").addEventListener("change",renderTopics);$("topicStatus").addEventListener("change",renderTopics);$("revisionSearch").addEventListener("input",renderRevision);$("revisionSubject").addEventListener("change",renderRevision);$("revisionStatus").addEventListener("change",renderRevision)}
 $("timelineFilter")?.addEventListener("change",renderTimeline);
 $("logDate").value=localDate();
