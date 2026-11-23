@@ -2670,12 +2670,26 @@ function updatePlanMcqResult(planIndex,setId,entry){
  const result=getPlanMcqResult(planIndex,setId);
  if(result.attempted!==50)return;
  const revisionEntry=getStudyPlanEntryByPlanIndex(planIndex,"mcq_revision"),date=getStudyPlanDateKey(revisionEntry);
- const percentage=result.percentage,assessment=getMcqAssessment(percentage);
- state.mcqTests=state.mcqTests||[];
- state.mcqTests=state.mcqTests.filter(test=>test.planIndex!==planIndex);
- state.mcqTests.push({planIndex,date,subject:entry.rotationSubject||entry.subject,topic:entry.topic,correct:result.correct,wrong:result.wrong,unattempted:0,marks:result.correct*2,percentage,savedAt:new Date().toISOString(),assessment:assessment.label});
+ const percentage=result.percentage,assessment=getMcqAssessment(percentage),savedAt=new Date().toISOString();
+ const attemptId=activePyqPractice?.attemptId||"attempt-"+Date.now();
+ const isRetest=!!activePyqPractice?.isRetest;
+ const baseTest=isRetest?getMcqTestById(activePyqPractice.sourceTestId):getLatestMcqTest(planIndex);
+ const matchingAttempts=pyqAttempts().filter(item=>item.practicePlanIndex===planIndex&&item.practiceSetId===setId&&item.attemptId===attemptId);
+ const snapshot=activePyqPractice?.questions||baseTest?.questions||[];
+ const questions=snapshot.length?snapshot:activePyqPractice?.questionSnapshot||[];
+ const completedAttempt={id:attemptId,number:(baseTest?.attempts?.length||0)+1,date:savedAt,correct:result.correct,wrong:result.wrong,unattempted:result.unattempted,percentage,marks:result.correct*2,answers:matchingAttempts.map(item=>({id:item.id,selected:item.selected,correctOption:item.correctOption})),result:{correct:result.correct,wrong:result.wrong,unattempted:result.unattempted,percentage,marks:result.correct*2}};
+ state.mcqTests=Array.isArray(state.mcqTests)?state.mcqTests:[];
+ let target=baseTest;
+ if(isRetest&&target){
+  target.attempts=Array.isArray(target.attempts)?target.attempts:[];
+  target.attempts.push(completedAttempt);
+  target.correct=result.correct;target.wrong=result.wrong;target.percentage=percentage;target.savedAt=savedAt;
+ }else{
+  target={id:"mcq-"+planIndex+"-"+Date.now(),planIndex,date,subject:entry.rotationSubject||entry.subject,topic:entry.topic,correct:result.correct,wrong:result.wrong,unattempted:0,marks:result.correct*2,percentage,savedAt,assessment:assessment.label,setId,questions:questions.map(question=>({...question,options:question.options.map(option=>({...option}))})),attempts:[completedAttempt]};
+  state.mcqTests.push(target);
+ }
  persist();renderMcqTracker();renderDaily();renderOverviewSchedule();
- renderDay2PracticeBanner("Completed: "+result.correct+"/50 correct · "+result.wrong+" incorrect · "+percentage.toFixed(0)+"% accuracy. Your MCQ Tracker has been updated.");
+ renderDay2PracticeBanner((isRetest?"Retest completed: ":"Completed: ")+result.correct+"/50 correct · "+result.wrong+" incorrect · "+percentage.toFixed(0)+"% accuracy. This attempt has been saved separately.");
 }
 function getDay2TopicTokens(topic){
  const ignored=new Set(["and","or","the","of","to","for","in","on","a","an","with","after","before","from","by","core","key","major","important","overview","introduction","basics","basic","complete","full","revision","revise","pyq","pyqs","test","practice","questions","question","india","indian"]);
