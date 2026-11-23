@@ -2621,12 +2621,23 @@ function isDay2TopicMatch(question,targetTokens){
  const metadata=[
   question?.topic,
   question?.sub_topic,
-  ...(Array.isArray(question?.keywords)?question.keywords:[question?.keywords])
+  ...(Array.isArray(question?.keywords)?question.keywords:[question?.keywords]),
+  ...(Array.isArray(question?.concepts)?question.concepts:[question?.concepts]),
+  question?.prompt
  ].filter(Boolean).join(" ").toLowerCase();
  const metadataTokens=new Set(metadata.match(/[a-z0-9]+/g)||[]);
  if(!targetTokens.length)return false;
- const matched=targetTokens.filter(token=>metadataTokens.has(token)).length;
- const required=targetTokens.length<=2?targetTokens.length:Math.ceil(targetTokens.length*0.5);
+ const aliases={
+  rise:["rise","rising","emergence","establishment"],
+  power:["power","rule","control","dominance","authority"],
+  expansion:["expansion","expand","expanding","conquest","annexation","territorial"],
+  british:["british","britain","english","east india company","eic"]
+ };
+ const matched=targetTokens.filter(token=>{
+  const candidates=[token,...(aliases[token]||[])];
+  return candidates.some(candidate=>candidate.includes(" ")?metadata.includes(candidate):metadataTokens.has(candidate));
+ }).length;
+ const required=targetTokens.length<=2?1:Math.max(2,Math.ceil(targetTokens.length*0.4));
  return matched>=required;
 }
 async function startDay2McqPractice(planIndex){
@@ -2654,7 +2665,7 @@ async function startDay2McqPractice(planIndex){
  try{
   const questions=[],seen=new Set();let page=1,hasMore=true;
   while(questions.length<50&&hasMore&&page<=10){
-   const params=new URLSearchParams({q:topicQuery,subject,page:String(page),limit:"100"});
+   const params=new URLSearchParams({subject,page:String(page),limit:"100"});
    const response=await apiFetch("/api/pyq?"+params.toString());
    if(!response.ok){const detail=await response.json().catch(()=>({}));throw new Error(detail.detail||"Question API request failed ("+response.status+").");}
    const data=await response.json(),items=Array.isArray(data.questions)?data.questions:Array.isArray(data.data)?data.data:[];
@@ -2670,19 +2681,19 @@ async function startDay2McqPractice(planIndex){
   }
   if(requestId!==day2RequestId)return;
   const selected=questions.slice(0,50);
-  if(selected.length<50)throw new Error(selected.length
-   ?"Only "+selected.length+" answer-key verified questions matched this topic; 50 are required. No partial or unrelated test was started."
-   :"No answer-key verified questions matched this exact topic. No unrelated MCQs were loaded.");
+  if(!selected.length)throw new Error("The PYQ provider returned no answer-key verified questions matching "+studyEntry.topic+". Check the provider data or topic labels.");
   window.pyqQuestionCache=window.pyqQuestionCache||{};
   selected.forEach(question=>{window.pyqQuestionCache[question.id]=question});
   renderPyqQuestions(selected,false);
   const progress=getPlanMcqResult(planIndex,setId);
-  const message=existing.length===50
-   ?"This strict 50-question topic set is already complete. Your result is saved in MCQ Tracker."
-   :"Day 2 · "+studyEntry.topic+" · 50 strictly topic-matched questions · "+progress.attempted+"/50 answered.";
+  const message=existing.length>=selected.length
+   ?"Your saved topic practice is loaded. "+selected.length+" matching questions are available."
+   :"Day 2 · "+studyEntry.topic+" · "+selected.length+" topic-matched questions loaded · "+progress.attempted+"/50 answered.";
   renderDay2PracticeBanner(message);
-  $("pyqResultCount").textContent="50/50 topic-matched practice questions";
-  $("pyqStatus").textContent="Only questions whose topic metadata matches this study topic are included. Answers are saved automatically.";
+  $("pyqResultCount").textContent=selected.length+" topic-matched questions";
+  $("pyqStatus").textContent=selected.length<50
+   ?"Loaded all available matching, answer-key verified PYQs. The source bank has fewer than 50 for this topic; no unrelated questions were added."
+   :"Loaded 50 topic-matched, answer-key verified questions. Answers are saved automatically.";
   $("pyqMoreBtn").hidden=true;
  }catch(error){
   if(requestId!==day2RequestId)return;
