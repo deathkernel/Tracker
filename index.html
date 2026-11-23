@@ -2581,7 +2581,7 @@ function updatePlanMcqResult(planIndex,setId,entry){
 }
 function getDay2TopicTokens(topic){
  const ignored=new Set(["and","or","the","of","to","for","in","on","a","an","with","after","before","from","by","core","key","major","important","overview","introduction","basics","basic","complete","full","revision","revise","pyq","pyqs","test","practice","questions","question","india","indian"]);
- return [...new Set(String(topic||"").toLowerCase().normalize("NFKD").replace(/[\\u0300-\\u036f]/g,"").match(/[a-z0-9]+/g)||[])].filter(token=>token.length>2&&!ignored.has(token));
+ return [...new Set(String(topic||"").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").match(/[a-z0-9]+/g)||[])].filter(token=>token.length>2&&!ignored.has(token));
 }
 function isDay2TopicMatch(question,targetTokens){
  const metadata=[
