@@ -1216,9 +1216,11 @@ test("README describes the active and deferred study-plan scope accurately", () 
 });
 
 
-test("opening PYQ workspace prioritizes today's scheduled Day 2 topic over the generic question bank", () => {
+test("Day 2 practice uses its Day 1 topic and hides generic PYQ search controls", () => {
   assert.match(script, /getStudyPlanEntriesForDate\(localDate\(\),"mcq_revision"\)/);
   assert.match(script, /startDay2McqPractice\(todayDay2Entry\.planIndex\)/);
-  assert.match(script, /Today's scheduled Day 2 topic:/);
-  assert.match(script, /The general PYQ bank is paused so unrelated questions are not shown/);
+  assert.match(script, /\.pyq-filters\[hidden\]\{display:none!important\}/);
+  assert.match(script, /const topicQuery=rawTopic\.includes\(": "\)/);
+  assert.doesNotMatch(script, /Complete the Day 1 checklist first to unlock/);
+  assert.doesNotMatch(script, /getStudyPlanProgress\(studyEntry\)\.studyDone\)\{notify\("Complete Day 1/);
 });
