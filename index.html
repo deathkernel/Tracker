@@ -2369,7 +2369,7 @@ function getMcqAssessment(percentage){
  return{label:"Needs Improvement",detail:"Revisit the topic concepts and attempt another practice test.",tone:"needs-work"};
 }
 function getPlanMcqPracticeSetId(planIndex,dateKey=getStudyPlanDateKey(getStudyPlanEntryByPlanIndex(planIndex,"mcq_revision"))){
- return "plan:"+planIndex+":"+dateKey;
+ return "plan:"+planIndex+":"+dateKey+":strict-topic-v2";
 }
 function getPlanMcqAttempts(planIndex,setId){
  return pyqAttempts().filter(item=>item.practicePlanIndex===planIndex&&item.practiceSetId===setId);
@@ -2579,45 +2579,68 @@ function updatePlanMcqResult(planIndex,setId,entry){
  const banner=$("pyqPracticeBanner");
  if(banner)banner.textContent="Completed: "+result.correct+"/50 correct · "+result.wrong+" incorrect · "+percentage.toFixed(0)+"% accuracy. Your MCQ Tracker has been updated.";
 }
+function getDay2TopicTokens(topic){
+ const ignored=new Set(["and","or","the","of","to","for","in","on","a","an","with","after","before","from","by","core","key","major","important","overview","introduction","basics","basic","complete","full","revision","revise","pyq","pyqs","test","practice","questions","question","india","indian"]);
+ return [...new Set(String(topic||"").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").match(/[a-z0-9]+/g)||[])].filter(token=>token.length>2&&!ignored.has(token));
+}
+function isDay2TopicMatch(question,targetTokens){
+ const metadata=[
+  question?.topic,
+  question?.sub_topic,
+  ...(Array.isArray(question?.keywords)?question.keywords:[question?.keywords])
+ ].filter(Boolean).join(" ").toLowerCase();
+ const metadataTokens=new Set(metadata.match(/[a-z0-9]+/g)||[]);
+ if(!targetTokens.length)return false;
+ const matched=targetTokens.filter(token=>metadataTokens.has(token)).length;
+ const required=targetTokens.length<=2?targetTokens.length:Math.ceil(targetTokens.length*0.5);
+ return matched>=required;
+}
 async function startDay2McqPractice(planIndex){
  const studyEntry=getStudyPlanEntryByPlanIndex(planIndex,"study"),revisionEntry=getStudyPlanEntryByPlanIndex(planIndex,"mcq_revision");
  if(!studyEntry||!revisionEntry||!getStudyPlanProgress(studyEntry).studyDone){notify("Complete Day 1 before starting this topic's MCQ practice.");return;}
  const dateKey=getStudyPlanDateKey(revisionEntry);
  if(dateKey>localDate()){notify("This topic's 50-MCQ practice unlocks on "+dateKey+".");return;}
- const topicQuery=String(studyEntry.topic||"").replace(/^[^:]{1,50}:\s*/,"").trim();
+ const rawTopic=String(studyEntry.topic||"");
+ const topicQuery=rawTopic.includes(":")?rawTopic.slice(rawTopic.indexOf(":")+1).trim():rawTopic.trim();
+ const targetTokens=getDay2TopicTokens(topicQuery);
+ if(!targetTokens.length){notify("This study topic needs a clearer topic label before matching MCQs.");return;}
  const subject=pyqApiSubjectForEntry(studyEntry);
  const setId=getPlanMcqPracticeSetId(planIndex,dateKey);
  const existing=getPlanMcqAttempts(planIndex,setId);
  activePyqPractice={planIndex,setId,topic:studyEntry.topic,subject:studyEntry.rotationSubject||studyEntry.subject};
- $("pyqQuestionList").replaceChildren(document.createTextNode("Loading topic-matched questions…"));
+ $("pyqQuestionList").replaceChildren(document.createTextNode("Loading and strictly filtering topic-matched questions…"));
  setWorkspaceView("pyq");
- const banner=$("pyqPracticeBanner");banner.hidden=false;banner.textContent="Loading topic-matched questions for "+studyEntry.topic+"…";
+ const banner=$("pyqPracticeBanner");banner.hidden=false;banner.textContent="Finding questions strictly related to "+studyEntry.topic+"…";
  $("pyqSearch").value=topicQuery;$("pyqSubject").value=subject;
  $("pyqYear").value="";
  try{
   const questions=[],seen=new Set();let page=1,hasMore=true;
-  while(questions.length<50&&hasMore&&page<=5){
+  while(questions.length<50&&hasMore&&page<=10){
    const params=new URLSearchParams({q:topicQuery,subject,page:String(page),limit:"100"});
    const response=await apiFetch("/api/pyq?"+params.toString());
    if(!response.ok){const detail=await response.json().catch(()=>({}));throw new Error(detail.detail||"Question API request failed ("+response.status+").");}
    const data=await response.json(),items=Array.isArray(data.questions)?data.questions:Array.isArray(data.data)?data.data:[];
-   items.forEach(question=>{if(question&&question.id&&!seen.has(String(question.id))&&Array.isArray(question.options)&&question.correct_option_id){seen.add(String(question.id));questions.push(question)}});
+   items.forEach(question=>{
+    if(!question||!question.id||seen.has(String(question.id))||!Array.isArray(question.options)||!question.correct_option_id)return;
+    seen.add(String(question.id));
+    if(isDay2TopicMatch(question,targetTokens))questions.push(question);
+   });
    hasMore=!!data.hasMore;page+=1;
   }
   const selected=questions.slice(0,50);
-  if(!selected.length)throw new Error("No answer-key verified questions were found for this topic.");
+  if(!selected.length)throw new Error("No answer-key verified questions matched this exact topic. No unrelated MCQs were loaded.");
   window.pyqQuestionCache=window.pyqQuestionCache||{};
   selected.forEach(question=>{window.pyqQuestionCache[question.id]=question});
   renderPyqQuestions(selected,false);
   const progress=getPlanMcqResult(planIndex,setId);
   banner.textContent=selected.length<50
-   ?"Only "+selected.length+" matching questions are available for "+studyEntry.topic+". No questions from other topics were mixed in. Progress: "+progress.attempted+"/"+selected.length+"."
-   :"Day 2 · "+studyEntry.topic+" · 50 topic-matched questions · "+progress.attempted+"/50 answered.";
-  $("pyqResultCount").textContent=selected.length+"/50 practice questions";
-  $("pyqStatus").textContent="Choose one option for each question. Answers are saved automatically.";
+   ?"Strict topic filter found "+selected.length+" relevant questions for "+studyEntry.topic+". Other topics were excluded. Progress: "+progress.attempted+"/"+selected.length+"."
+   :"Day 2 · "+studyEntry.topic+" · 50 strictly topic-matched questions · "+progress.attempted+"/50 answered.";
+  $("pyqResultCount").textContent=selected.length+"/50 topic-matched practice questions";
+  $("pyqStatus").textContent="Only questions whose topic metadata matches this study topic are included. Answers are saved automatically.";
   $("pyqMoreBtn").hidden=true;
-  if(existing.length===50)banner.textContent="This 50-question set is already complete. Your result is saved in MCQ Tracker.";
- }catch(error){banner.textContent=error.message||"Could not load topic questions. Please retry.";banner.hidden=false}
+  if(existing.length===selected.length&&selected.length===50)banner.textContent="This strict 50-question topic set is already complete. Your result is saved in MCQ Tracker.";
+ }catch(error){banner.textContent=error.message||"Could not load topic questions. Please retry.";banner.hidden=false;$("pyqQuestionList").replaceChildren()}
 }
 function handlePyqOptionClick(event){
  const button=event.target.closest(".pyq-option");if(!button)return;const card=button.closest(".pyq-question");if(!card)return;
