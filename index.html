@@ -769,6 +769,20 @@ body.dark #workspaceNav .nav-brand-mark{background:var(--blue);color:#10141d}
 .subject-progress-table tfoot th:first-child{text-align:left}
 .subject-progress-table tfoot th:not(:first-child){text-align:center}
 @media(min-width:761px){.subject-progress-wrap{overflow-x:hidden}}
+
+.pyq-filters{display:grid;grid-template-columns:minmax(220px,2fr) repeat(2,minmax(130px,1fr)) auto;gap:10px;align-items:end;margin:18px 0}
+.pyq-filters label{display:grid;gap:6px;font-size:11px;font-weight:700;color:var(--muted)}
+.pyq-filters input,.pyq-filters select{width:100%;min-height:40px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);padding:8px 10px;font:inherit}
+.pyq-status{padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-size:12px;color:var(--muted);margin:12px 0}
+.pyq-metrics{display:flex;gap:18px;flex-wrap:wrap;padding:12px 2px;color:var(--muted);font-size:12px}.pyq-metrics strong{color:var(--ink);margin-left:5px}
+.pyq-question-list{display:grid;gap:12px}.pyq-question{border:1px solid var(--line);border-radius:13px;padding:16px;background:var(--surface)}
+.pyq-question-head{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}.pyq-tag{font-size:10px;font-weight:700;padding:4px 7px;border-radius:6px;background:var(--bg);color:var(--muted)}
+.pyq-question-prompt{font-size:14px;line-height:1.65;font-weight:650;white-space:pre-wrap;margin:8px 0 14px}
+.pyq-options{display:grid;gap:8px}.pyq-option{width:100%;display:flex;gap:10px;align-items:flex-start;text-align:left;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);padding:10px 12px;cursor:pointer;font:inherit;font-size:12px;line-height:1.5}
+.pyq-option:disabled{cursor:default;opacity:1}.pyq-option.selected{border-color:var(--blue);background:var(--blue-soft)}.pyq-option.correct{border-color:#25865a;background:color-mix(in srgb,#25865a 9%,var(--surface))}.pyq-option.incorrect{border-color:#c14b4b;background:color-mix(in srgb,#c14b4b 8%,var(--surface))}
+.pyq-option-key{font-weight:800;min-width:18px}.pyq-feedback{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--bg);font-size:12px;line-height:1.5}.pyq-feedback strong{display:block;margin-bottom:3px}
+.pyq-question-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;color:var(--muted);font-size:10px}.pyq-pagination{display:flex;justify-content:center;padding:16px}
+@media(max-width:700px){.pyq-filters{grid-template-columns:1fr 1fr}.pyq-filters label:first-child{grid-column:1/-1}.pyq-filters button{grid-column:1/-1}.pyq-question{padding:12px}}
 </style>
 </head>
 <body data-view="overview">
@@ -809,6 +823,7 @@ body.dark #workspaceNav .nav-brand-mark{background:var(--blue);color:#10141d}
  <div class="nav-divider"></div>
  <div class="nav-section-label">DAILY WORK</div>
  <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-mcq" value="mcq"><label class="cir-tabs__t" for="nav-mcq" data-view="mcq"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="nav-label">MCQ Tracker</span></label>
+ <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-pyq" value="pyq"><label class="cir-tabs__t" for="nav-pyq" data-view="pyq"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5h12M8 12h12M8 19h12"/><path d="M3 5h.01M3 12h.01M3 19h.01"/></svg><span class="nav-label">PYQ & MCQ</span></label>
  <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-logs" value="logs"><label class="cir-tabs__t" for="nav-logs" data-view="logs"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h3m-3 3h7"/></svg><span class="nav-label">Study Log</span></label>
  <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-plan" value="plan"><label class="cir-tabs__t" for="nav-plan" data-view="plan"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M7 8h4v4H7zM14 8h3M14 12h3M7 16h10"/></svg><span class="nav-label">Study Plan</span></label>
  <input class="cir-tabs__r" type="radio" name="workspace-view" id="nav-timeline" value="timeline"><label class="cir-tabs__t" for="nav-timeline" data-view="timeline"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h16"/><circle cx="8" cy="5" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="10" cy="19" r="2" fill="currentColor"/></svg><span class="nav-label">Timeline</span></label>
@@ -871,6 +886,22 @@ body.dark #workspaceNav .nav-brand-mark{background:var(--blue);color:#10141d}
   <div class="card-head" style="margin-top:22px"><h3>Daily MCQ history</h3><span class="chip" id="mcqHistoryCount">0 tests</span></div>
   <div id="mcqHistory"></div>
   <p class="small-note">Wrong answers are calculated as 50 − correct answers. Accuracy is based on correct answers out of 50. Good: 80–100%; Average: 60–79%; Needs Improvement: below 60%.</p>
+ </section>
+
+ <section class="card pyq-page" data-page="pyq" hidden>
+  <div class="card-head"><div><div class="eyebrow">QUESTION PRACTICE</div><h2>UPSC PYQ & MCQ Bank</h2><p class="subtitle">Practise solved Civil Services Prelims GS-I questions, filter by subject/year, and track answers locally.</p></div><span class="chip" id="pyqResultCount">Ready to load</span></div>
+  <div class="pyq-filters">
+   <label>Search questions<input id="pyqSearch" type="search" maxlength="200" placeholder="Search topic, keyword or question…"></label>
+   <label>Subject<select id="pyqSubject"><option value="">All subjects</option><option>Polity</option><option>History</option><option>Economy</option><option>Geography</option><option>Environment</option><option>Science</option><option>Current Affairs</option></select></label>
+   <label>Year<select id="pyqYear"><option value="">All years</option><option>2026</option><option>2025</option><option>2024</option><option>2023</option><option>2022</option><option>2021</option><option>2020</option><option>2019</option><option>2018</option><option>2017</option><option>2016</option><option>2015</option><option>2014</option></select></label>
+   <button class="btn primary" id="pyqLoadBtn" type="button">Load questions</button>
+  </div>
+  <div class="pyq-status" id="pyqStatus" role="status" aria-live="polite">Choose filters and load the question bank.</div>
+  <div class="pyq-metrics"><span>Attempted <strong id="pyqAttempted">0</strong></span><span>Correct <strong id="pyqCorrect">0</strong></span><span>Accuracy <strong id="pyqAccuracy">—</strong></span></div>
+  <div id="pyqQuestionList" class="pyq-question-list"></div>
+  <div class="pyq-pagination"><button class="btn" id="pyqMoreBtn" type="button" hidden>Load more</button></div>
+  <p class="small-note">Source: UPSC Prelims Test public question API. This is an independent practice dataset, not an official UPSC answer-key feed. Verify disputed answers against official UPSC keys.</p>
+  <p class="small-note"><a href="https://upscprelimstest.com/methodology" target="_blank" rel="noopener noreferrer">Question methodology & corrections</a> · <a href="https://upscprelimstest.com/terms" target="_blank" rel="noopener noreferrer">API usage terms</a></p>
  </section>
  <section class="card" data-page="revision" hidden>
   <div class="card-head"><h2>Topics to revise</h2><span class="chip" id="revisionCount">0 completed topics</span></div>
@@ -1148,6 +1179,7 @@ function normalizeProgressState(value){
  next.revisionSchedule=normalizeRevisionSchedule(source.revisionSchedule);
  next.testResults=Array.isArray(source.testResults)?source.testResults:[];
  next.errorNotebook=Array.isArray(source.errorNotebook)?source.errorNotebook:[];
+ next.questionBank=Array.isArray(source.questionBank)?source.questionBank.filter(item=>item&&typeof item.id==="string"&&["A","B","C","D"].includes(item.selected)&&["A","B","C","D"].includes(item.correctOption)&&typeof item.answeredAt==="string").slice(-20000):[];
  next.pendingTopicEvidence=source.pendingTopicEvidence&&typeof source.pendingTopicEvidence==="object"&&!Array.isArray(source.pendingTopicEvidence)?source.pendingTopicEvidence:{};
  next.masteryProgress=normalizeMasteryProgress(source.masteryProgress);
  next.retestSchedule=normalizeRetestSchedule(source.retestSchedule);
@@ -2299,6 +2331,7 @@ function setWorkspaceView(view){
   revision:"Review completed topics using spaced revision and retests.",
   timeline:"See your complete preparation journey in chronological order.",
   mcq:"Track your Day 2 topic tests, marks and preparation quality.",
+  pyq:"Practise UPSC previous-year questions and review your MCQ performance.",
   charts:"See how your preparation is progressing over time."
  };
  const activeView=titles[view]?view:"overview";
@@ -2308,6 +2341,7 @@ function setWorkspaceView(view){
  document.querySelectorAll("#workspaceNav .cir-tabs__r").forEach(input=>{input.checked=input.value===activeView});
  $("pageTitle").textContent=titles[activeView];
  $("pageHint").textContent=descriptions[activeView];
+ if(activeView==="pyq"){updatePyqMetrics();if(!$("pyqQuestionList").children.length)loadPyqQuestions(true)}
 }
 function activeDevice(){
  const userAgent=navigator.userAgent||"";
@@ -2469,6 +2503,75 @@ function renderTimeline(){
  });
 }
 
+
+let pyqPage=1,pyqHasMore=false,pyqLoading=false,pyqLastQuery="";
+function pyqAttempts(){return Array.isArray(state.questionBank)?state.questionBank:[]}
+function updatePyqMetrics(){
+ const attempts=pyqAttempts().filter(item=>item&&item.selected&&item.correctOption);
+ const correct=attempts.filter(item=>item.selected===item.correctOption).length;
+ $("pyqAttempted").textContent=String(attempts.length);$("pyqCorrect").textContent=String(correct);
+ $("pyqAccuracy").textContent=attempts.length?(correct/attempts.length*100).toFixed(1)+"%":"—";
+}
+function renderPyqQuestions(items,append=false){
+ window.pyqQuestionCache=window.pyqQuestionCache||{};
+ const host=$("pyqQuestionList");if(!append)host.replaceChildren();
+ items.forEach(question=>{
+  if(!question||!question.id||!Array.isArray(question.options))return;
+  window.pyqQuestionCache[question.id]=question;
+  const saved=pyqAttempts().find(item=>item.id===question.id);
+  const card=document.createElement("article");card.className="pyq-question";card.dataset.questionId=question.id;
+  const head=document.createElement("div");head.className="pyq-question-head";
+  [String(question.year||"PYQ"),String(question.subject||"General"),String(question.topic||"Unclassified")].forEach(value=>{const tag=document.createElement("span");tag.className="pyq-tag";tag.textContent=value;head.append(tag)});
+  const prompt=document.createElement("div");prompt.className="pyq-question-prompt";prompt.textContent=question.prompt||"Question text unavailable";
+  const options=document.createElement("div");options.className="pyq-options";const correct=question.correct_option_id||null;
+  question.options.forEach(option=>{
+   const button=document.createElement("button");button.type="button";button.className="pyq-option";button.dataset.optionId=option.id;
+   button.disabled=!!saved||!correct;if(saved?.selected===option.id)button.classList.add("selected");
+   if(saved&&option.id===correct)button.classList.add("correct");
+   if(saved&&saved.selected===option.id&&saved.selected!==correct)button.classList.add("incorrect");
+   const key=document.createElement("span");key.className="pyq-option-key";key.textContent=option.id+".";
+   const text=document.createElement("span");text.textContent=option.text||"";button.append(key,text);options.append(button);
+  });
+  card.append(head,prompt,options);
+  if(saved){const feedback=document.createElement("div");feedback.className="pyq-feedback";const strong=document.createElement("strong");strong.textContent=saved.selected===correct?"Correct answer":"Incorrect answer";feedback.append(strong,document.createTextNode("Your answer: "+saved.selected+" · Correct answer: "+correct));if(question.mnemonic_hint)feedback.append(document.createElement("br"),document.createTextNode("Memory aid: "+question.mnemonic_hint));card.append(feedback)}
+  else if(!correct){const note=document.createElement("div");note.className="pyq-feedback";note.textContent="No answer key is available for this question.";card.append(note)}
+  const meta=document.createElement("div");meta.className="pyq-question-meta";[question.sub_topic,question.question_type,question.ncert_class].filter(Boolean).forEach(value=>{const span=document.createElement("span");span.textContent=String(value);meta.append(span)});card.append(meta);host.append(card);
+ });
+ updatePyqMetrics();
+}
+async function loadPyqQuestions(reset=true){
+ if(pyqLoading)return;pyqLoading=true;const button=$("pyqLoadBtn"),more=$("pyqMoreBtn"),status=$("pyqStatus");button.disabled=true;more.disabled=true;status.textContent="Loading questions from the public PYQ API…";
+ try{
+  if(reset){pyqPage=1;pyqLastQuery=new URLSearchParams({q:$("pyqSearch").value.trim(),subject:$("pyqSubject").value,year:$("pyqYear").value}).toString();$("pyqQuestionList").replaceChildren()}
+  const params=new URLSearchParams(pyqLastQuery);params.set("page",String(pyqPage));params.set("limit","25");
+  const response=await apiFetch("/api/pyq?"+params.toString());if(!response.ok){const detail=await response.json().catch(()=>({}));throw new Error(detail.detail||"Question API request failed ("+response.status+").")}
+  const data=await response.json(),items=Array.isArray(data.questions)?data.questions:Array.isArray(data.data)?data.data:[];
+  renderPyqQuestions(items,!reset);const total=Number(data.total||0);pyqHasMore=!!data.hasMore;
+  $("pyqResultCount").textContent=total?total.toLocaleString("en-IN")+" matches":"Questions loaded";
+  status.textContent=items.length?("Loaded "+items.length+" questions on this page"+(total?" · "+total.toLocaleString("en-IN")+" matching questions":"")+". Select an option to check your answer."):"No questions matched these filters.";
+  more.hidden=!pyqHasMore;pyqPage+=1;
+ }catch(error){status.textContent=error.message||"Could not load questions. Check your internet connection and retry.";more.hidden=true}
+ finally{pyqLoading=false;button.disabled=false;more.disabled=false}
+}
+function handlePyqOptionClick(event){
+ const button=event.target.closest(".pyq-option");if(!button)return;const card=button.closest(".pyq-question");if(!card)return;
+ const questionId=card.dataset.questionId,question=window.pyqQuestionCache?.[questionId];if(!question)return;
+ const selected=button.dataset.optionId,correct=question.correct_option_id;if(!correct||pyqAttempts().some(item=>item.id===questionId))return;
+ state.questionBank=[...pyqAttempts(),{id:questionId,selected,correctOption:correct,answeredAt:new Date().toISOString(),year:question.year,subject:question.subject,topic:question.topic}].slice(-20000);
+ persist();
+ card.querySelectorAll(".pyq-option").forEach(option=>{
+  option.disabled=true;
+  if(option.dataset.optionId===correct)option.classList.add("correct");
+  if(option.dataset.optionId===selected)option.classList.add("selected");
+  if(option.dataset.optionId===selected&&selected!==correct)option.classList.add("incorrect");
+ });
+ const feedback=document.createElement("div");feedback.className="pyq-feedback";
+ const heading=document.createElement("strong");heading.textContent=selected===correct?"Correct answer":"Incorrect answer";
+ feedback.append(heading,document.createTextNode("Your answer: "+selected+" · Correct answer: "+correct));
+ if(question.mnemonic_hint)feedback.append(document.createElement("br"),document.createTextNode("Memory aid: "+question.mnemonic_hint));
+ card.insertBefore(feedback,card.querySelector(".pyq-question-meta"));updatePyqMetrics();
+}
+
 function renderAll(){syncSubjectFilter();renderSettings();renderStats();renderDaily();renderOverviewSchedule();renderSubjectOverview();renderTopics();renderMissingTopics();renderRevision();renderMcqTracker();renderCharts();renderRoadmap();renderLogs();renderTimeline();setWorkspaceView(window.trackerView||"overview")}
 async function showPhoneAccess(){
  const panel=$("phoneAccessPanel"),button=$("phoneAccessBtn");if(!panel)return;
@@ -2484,6 +2587,10 @@ $("missingPriorityFilter")?.addEventListener("change",renderMissingTopics);
 $("phoneAccessBtn")?.addEventListener("click",showPhoneAccess);
 $("closePhoneAccess")?.addEventListener("click",()=>{$("phoneAccessPanel").hidden=true;$("phoneAccessBtn")?.setAttribute("aria-expanded","false")});
 $("mcqPlanSelect")?.addEventListener("change",renderMcqTracker);
+$("pyqLoadBtn")?.addEventListener("click",()=>loadPyqQuestions(true));
+$("pyqMoreBtn")?.addEventListener("click",()=>loadPyqQuestions(false));
+$("pyqQuestionList")?.addEventListener("click",event=>handlePyqOptionClick(event));
+$("pyqSearch")?.addEventListener("keydown",event=>{if(event.key==="Enter")loadPyqQuestions(true)});
 function initFilters(){allSubjects().forEach(s=>{const opt=document.createElement("option");opt.value=s.name;opt.textContent=s.name;$("subjectFilter").append(opt)});$("topicSearch").addEventListener("input",renderTopics);$("subjectFilter").addEventListener("change",renderTopics);$("topicStatus").addEventListener("change",renderTopics);$("revisionSearch").addEventListener("input",renderRevision);$("revisionSubject").addEventListener("change",renderRevision);$("revisionStatus").addEventListener("change",renderRevision)}
 $("timelineFilter")?.addEventListener("change",renderTimeline);
 $("logDate").value=localDate();
