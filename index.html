@@ -2768,7 +2768,7 @@ async function startDay2McqPractice(planIndex){
   }
   if(requestId!==day2RequestId)return;
   const selected=questions.slice(0,50);
-  if(!selected.length)throw new Error("The PYQ provider returned no answer-key verified questions matching "+studyEntry.topic+". Check the provider data or topic labels.");
+  if(selected.length!==50)throw new Error("Only "+selected.length+" matching questions were found. A 50-question test requires all 50; no partial attempt was started.");
   window.pyqQuestionCache=window.pyqQuestionCache||{};
   selected.forEach(question=>{window.pyqQuestionCache[question.id]=question});
   activePyqPractice.questions=selected.map(question=>({...question,options:question.options.map(option=>({...option}))}));
