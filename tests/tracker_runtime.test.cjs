@@ -1242,3 +1242,25 @@ test("automatic recovery scheduler reschedules incomplete phases from today in o
   assert.match(script, /function getStudyPlanDateKey\(entry\)[\s\S]*?buildRecoverySchedule\(\)\.get/);
   assert.match(script, /if\(!progress\.studyDone\)[\s\S]*?pending\.push\(\{entry:study/);
 });
+
+test("MCQ attempt scoring is isolated and retest snapshots preserve exact question options", () => {
+  const start = script.indexOf("function getPlanMcqAttempts(planIndex,setId){");
+  const end = script.indexOf("\nfunction renderMcqTracker()", start);
+  assert.ok(start >= 0 && end > start);
+  const sandbox = {
+    state: {
+      questionBank: [
+        { id: "q1", selected: "A", correctOption: "A", practicePlanIndex: 3, practiceSetId: "set-1" },
+        { id: "q2", selected: "B", correctOption: "A", practicePlanIndex: 3, practiceSetId: "set-1" },
+        { id: "q1", selected: "C", correctOption: "A", practicePlanIndex: 3, practiceSetId: "set-1", attemptId: "retry-1" },
+        { id: "q2", selected: "A", correctOption: "A", practicePlanIndex: 3, practiceSetId: "set-1", attemptId: "retry-1" }
+      ]
+    }
+  };
+  vm.runInNewContext(script.slice(start, end) + "\nthis.base=getPlanMcqResult;this.retry=getAttemptMcqResult;", sandbox);
+  assert.equal(sandbox.base(3, "set-1").attempted, 2);
+  assert.equal(sandbox.base(3, "set-1").correct, 1);
+  assert.equal(sandbox.retry(3, "set-1", "retry-1").attempted, 2);
+  assert.equal(sandbox.retry(3, "set-1", "retry-1").correct, 1);
+  assert.equal(sandbox.retry(3, "set-1", "retry-1").wrong, 1);
+});
