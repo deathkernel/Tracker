@@ -1179,6 +1179,7 @@ function normalizeProgressState(value){
  next.revisionSchedule=normalizeRevisionSchedule(source.revisionSchedule);
  next.testResults=Array.isArray(source.testResults)?source.testResults:[];
  next.errorNotebook=Array.isArray(source.errorNotebook)?source.errorNotebook:[];
+ next.questionBank=Array.isArray(source.questionBank)?source.questionBank.filter(item=>item&&typeof item.id==="string"&&["A","B","C","D"].includes(item.selected)&&["A","B","C","D"].includes(item.correctOption)&&typeof item.answeredAt==="string").slice(-20000):[];
  next.pendingTopicEvidence=source.pendingTopicEvidence&&typeof source.pendingTopicEvidence==="object"&&!Array.isArray(source.pendingTopicEvidence)?source.pendingTopicEvidence:{};
  next.masteryProgress=normalizeMasteryProgress(source.masteryProgress);
  next.retestSchedule=normalizeRetestSchedule(source.retestSchedule);
@@ -2556,8 +2557,19 @@ function handlePyqOptionClick(event){
  const button=event.target.closest(".pyq-option");if(!button)return;const card=button.closest(".pyq-question");if(!card)return;
  const questionId=card.dataset.questionId,question=window.pyqQuestionCache?.[questionId];if(!question)return;
  const selected=button.dataset.optionId,correct=question.correct_option_id;if(!correct||pyqAttempts().some(item=>item.id===questionId))return;
- state.questionBank=[...pyqAttempts(),{id:questionId,selected,correctOption:correct,answeredAt:new Date().toISOString(),year:question.year,subject:question.subject,topic:question.topic}];
- persist();renderPyqQuestions([question],true);
+ state.questionBank=[...pyqAttempts(),{id:questionId,selected,correctOption:correct,answeredAt:new Date().toISOString(),year:question.year,subject:question.subject,topic:question.topic}].slice(-20000);
+ persist();
+ card.querySelectorAll(".pyq-option").forEach(option=>{
+  option.disabled=true;
+  if(option.dataset.optionId===correct)option.classList.add("correct");
+  if(option.dataset.optionId===selected)option.classList.add("selected");
+  if(option.dataset.optionId===selected&&selected!==correct)option.classList.add("incorrect");
+ });
+ const feedback=document.createElement("div");feedback.className="pyq-feedback";
+ const heading=document.createElement("strong");heading.textContent=selected===correct?"Correct answer":"Incorrect answer";
+ feedback.append(heading,document.createTextNode("Your answer: "+selected+" · Correct answer: "+correct));
+ if(question.mnemonic_hint)feedback.append(document.createElement("br"),document.createTextNode("Memory aid: "+question.mnemonic_hint));
+ card.insertBefore(feedback,card.querySelector(".pyq-question-meta"));updatePyqMetrics();
 }
 
 function renderAll(){syncSubjectFilter();renderSettings();renderStats();renderDaily();renderOverviewSchedule();renderSubjectOverview();renderTopics();renderMissingTopics();renderRevision();renderMcqTracker();renderCharts();renderRoadmap();renderLogs();renderTimeline();setWorkspaceView(window.trackerView||"overview")}
