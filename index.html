@@ -2444,34 +2444,41 @@ function renderMcqTracker(){
  entries.forEach(entry=>{
   const planIndex=entry.planIndex,revisionEntry=getStudyPlanEntryByPlanIndex(planIndex,"mcq_revision"),dateKey=getStudyPlanDateKey(revisionEntry);
   const setId=getPlanMcqPracticeSetId(planIndex,dateKey),result=getPlanMcqResult(planIndex,setId),latest=getLatestMcqTest(planIndex);
+  const latestResult=getMcqTestResult(latest);
   const tr=document.createElement("tr");
   const addCell=value=>{const td=document.createElement("td");td.textContent=value;tr.append(td);return td;};
   addCell(dateKey);addCell(entry.rotationSubject||entry.subject);addCell(entry.topic);addCell("50");
-  addCell(result.attempted?String(result.correct):latest?String(latest.correct):"—");
-  addCell(result.attempted?String(result.wrong):latest?String(latest.wrong):"—");
-  addCell(result.attempted?result.percentage.toFixed(0)+"%":latest?latest.percentage.toFixed(0)+"%":"—");
-  addCell(result.attempted?getMcqAssessment(result.percentage).label:latest?getMcqAssessment(latest.percentage).label:"Pending");
+  addCell(latest?String(latestResult.correct):result.attempted?String(result.correct):"—");
+  addCell(latest?String(latestResult.wrong):result.attempted?String(result.wrong):"—");
+  addCell(latest?latestResult.percentage.toFixed(0)+"%":result.attempted?result.percentage.toFixed(0)+"%":"—");
+  addCell(latest?getMcqAssessment(latestResult.percentage).label:result.attempted?getMcqAssessment(result.percentage).label:"Pending");
   addCell(result.attempted+"/50");
   const actionCell=document.createElement("td"),start=document.createElement("button");
-  start.type="button";start.className="btn primary";start.textContent=result.attempted===50?"Review test":result.attempted?"Continue":"Start 50 MCQs";
+  start.type="button";start.className="btn primary";
+  start.textContent=latest?"Retest same questions":result.attempted===50?"Review test":result.attempted?"Continue":"Start 50 MCQs";
   start.disabled=dateKey>localDate();
-  start.title=start.disabled?"Available on the scheduled Day 2 revision date":"Fetch and solve this topic's 50 MCQs";
-  start.addEventListener("click",()=>startDay2McqPractice(planIndex));
+  start.title=start.disabled?"Available on the scheduled Day 2 revision date":latest?"Repeat this completed test using the exact saved questions and options":"Fetch and solve this topic's 50 MCQs";
+  start.addEventListener("click",()=>latest?renderStoredMcqRetest(latest):startDay2McqPractice(planIndex));
   actionCell.append(start);tr.append(actionCell);body.append(tr);
  });
  table.append(body);wrap.append(table);panel.append(wrap);
- const rows=(state.mcqTests||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)||b.savedAt.localeCompare(a.savedAt));
+ const rows=(state.mcqTests||[]).slice().sort((a,b)=>String(b.savedAt||"").localeCompare(String(a.savedAt||"")));
  $("mcqHistoryCount").textContent=rows.length+" completed tests";
  if(!rows.length){history.textContent="No completed 50-question tests yet.";return;}
  const historyWrap=document.createElement("div");historyWrap.className="data-table-wrap";
  const historyTable=document.createElement("table");historyTable.className="data-table";
- historyTable.innerHTML="<thead><tr><th>Date</th><th>Subject</th><th>Topic</th><th>Correct</th><th>Wrong</th><th>Accuracy</th><th>Performance</th></tr></thead>";
+ historyTable.innerHTML="<thead><tr><th>Date</th><th>Subject</th><th>Topic</th><th>Attempt</th><th>Correct</th><th>Wrong</th><th>Accuracy</th><th>Performance</th><th>Action</th></tr></thead>";
  const historyBody=document.createElement("tbody");
- rows.forEach(test=>{const tr=document.createElement("tr");[test.date,test.subject,test.topic,test.correct+"/50",String(test.wrong),test.percentage.toFixed(0)+"%",getMcqAssessment(test.percentage).label].forEach(value=>{const td=document.createElement("td");td.textContent=value;tr.append(td)});historyBody.append(tr)});
- historyTable.append(historyBody);historyWrap.append(historyTable);
- history.replaceChildren(historyWrap);
+ rows.forEach(test=>{
+  const latest=getMcqTestResult(test),tr=document.createElement("tr");
+  [test.date,test.subject,test.topic,"Attempt "+latest.attemptNumber,latest.correct+"/50",String(latest.wrong),latest.percentage.toFixed(0)+"%",getMcqAssessment(latest.percentage).label].forEach(value=>{const td=document.createElement("td");td.textContent=value;tr.append(td)});
+  const action=document.createElement("td"),retest=document.createElement("button");retest.type="button";retest.className="btn";retest.textContent="Retest";
+  retest.disabled=!Array.isArray(test.questions)||!test.questions.length;
+  retest.title=retest.disabled?"Saved question snapshot unavailable":"Repeat the same questions";
+  retest.addEventListener("click",()=>renderStoredMcqRetest(test));action.append(retest);tr.append(action);historyBody.append(tr);
+ });
+ historyTable.append(historyBody);historyWrap.append(historyTable);history.replaceChildren(historyWrap);
 }
-
 function renderTimeline(){
  const host=$("timelineList");if(!host)return;
  const today=localDate(),events=new Map();
