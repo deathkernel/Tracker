@@ -2741,8 +2741,8 @@ async function startDay2McqPractice(planIndex){
  const subject=pyqApiSubjectForEntry(studyEntry);
  const setId=getPlanMcqPracticeSetId(planIndex,dateKey);
  const attemptId="attempt-"+Date.now();
- const existing=getPlanMcqAttempts(planIndex,setId);
- activePyqPractice={planIndex,setId,attemptId,topic:studyEntry.topic,subject:studyEntry.rotationSubject||studyEntry.subject,isRetest:false};
+ const existing=getPlanMcqAttempts(planIndex,setId).filter(item=>!item.attemptId);
+ activePyqPractice={planIndex,setId,attemptId,topic:studyEntry.topic,subject:studyEntry.rotationSubject||studyEntry.subject,isRetest:false,questions:[]};
  $("pyqQuestionList").replaceChildren(document.createTextNode("Loading and strictly filtering topic-matched questions…"));
  setWorkspaceView("pyq");
  renderDay2PracticeBanner("Finding questions strictly related to "+studyEntry.topic+"…");
