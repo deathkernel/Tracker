@@ -2586,7 +2586,7 @@ function renderPyqQuestions(items,append=false){
  items.forEach(question=>{
   if(!question||!question.id||!Array.isArray(question.options))return;
   window.pyqQuestionCache[question.id]=question;
-  const saved=activePyqPractice?pyqAttempts().find(item=>item.id===question.id&&item.practiceSetId===activePyqPractice.setId):pyqAttempts().find(item=>item.id===question.id&&!item.practiceSetId);
+  const saved=activePyqPractice?pyqAttempts().find(item=>item.id===question.id&&item.practiceSetId===activePyqPractice.setId&&item.attemptId===activePyqPractice.attemptId):pyqAttempts().find(item=>item.id===question.id&&!item.practiceSetId);
   const card=document.createElement("article");card.className="pyq-question";card.dataset.questionId=question.id;
   const head=document.createElement("div");head.className="pyq-question-head";
   [String(question.year||"PYQ"),String(question.subject||"General"),String(question.topic||"Unclassified")].forEach(value=>{const tag=document.createElement("span");tag.className="pyq-tag";tag.textContent=value;head.append(tag)});
@@ -2607,6 +2607,25 @@ function renderPyqQuestions(items,append=false){
  });
  updatePyqMetrics();
 }
+function renderStoredMcqRetest(test){
+ if(!test||!Array.isArray(test.questions)||!test.questions.length){notify("The saved question snapshot is unavailable. Retest cannot safely fetch replacements.");return;}
+ day2RequestId+=1;day2Loading=false;
+ activePyqPractice={planIndex:test.planIndex,setId:test.setId,attemptId:"attempt-"+Date.now(),topic:test.topic,subject:test.subject,isRetest:true,sourceTestId:test.id};
+ window.pyqQuestionCache=window.pyqQuestionCache||{};
+ const questions=test.questions.map(question=>({...question,options:Array.isArray(question.options)?question.options.map(option=>({...option})):[]}));
+ questions.forEach(question=>{window.pyqQuestionCache[question.id]=question});
+ $("pyqQuestionList").replaceChildren();
+ setWorkspaceView("pyq");
+ const filters=$("pyqFilters");if(filters)filters.hidden=true;
+ $("pyqSearch").value=test.topic||"";
+ $("pyqSubject").value=pyqApiSubjectForEntry({rotationSubject:test.subject,subject:test.subject});
+ $("pyqYear").value="";
+ renderPyqQuestions(questions,false);
+ renderDay2PracticeBanner("RETEST · "+test.topic+" · Same "+questions.length+" original questions · Attempt "+(test.attempts.length+1)+".");
+ $("pyqResultCount").textContent=questions.length+" saved questions · retest";
+ $("pyqStatus").textContent="Retest uses your original question and option snapshot. Your previous answers and score remain unchanged.";
+}
+
 async function loadPyqQuestions(reset=true){
  if(pyqLoading)return;pyqLoading=true;const button=$("pyqLoadBtn"),more=$("pyqMoreBtn"),status=$("pyqStatus");button.disabled=true;more.disabled=true;status.textContent="Loading questions from the public PYQ API…";
  try{
