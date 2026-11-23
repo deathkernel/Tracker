@@ -2732,8 +2732,9 @@ async function startDay2McqPractice(planIndex){
  const requestId=++day2RequestId;
  const subject=pyqApiSubjectForEntry(studyEntry);
  const setId=getPlanMcqPracticeSetId(planIndex,dateKey);
+ const attemptId="attempt-"+Date.now();
  const existing=getPlanMcqAttempts(planIndex,setId);
- activePyqPractice={planIndex,setId,topic:studyEntry.topic,subject:studyEntry.rotationSubject||studyEntry.subject};
+ activePyqPractice={planIndex,setId,attemptId,topic:studyEntry.topic,subject:studyEntry.rotationSubject||studyEntry.subject,isRetest:false};
  $("pyqQuestionList").replaceChildren(document.createTextNode("Loading and strictly filtering topic-matched questions…"));
  setWorkspaceView("pyq");
  renderDay2PracticeBanner("Finding questions strictly related to "+studyEntry.topic+"…");
@@ -2762,6 +2763,7 @@ async function startDay2McqPractice(planIndex){
   if(!selected.length)throw new Error("The PYQ provider returned no answer-key verified questions matching "+studyEntry.topic+". Check the provider data or topic labels.");
   window.pyqQuestionCache=window.pyqQuestionCache||{};
   selected.forEach(question=>{window.pyqQuestionCache[question.id]=question});
+  activePyqPractice.questions=selected.map(question=>({...question,options:question.options.map(option=>({...option}))}));
   renderPyqQuestions(selected,false);
   const progress=getPlanMcqResult(planIndex,setId);
   const message=existing.length>=selected.length
