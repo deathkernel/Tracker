@@ -4,7 +4,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
-const css = html.match(/<style>([\s\S]*?)<\/style>/)?.[1] || "";\nconst script = html.match(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/i)?.[1] || "";
+const css = html.match(/<style>([\s\S]*?)<\/style>/)?.[1] || "";
+const script = html.match(/<script\b[^>]*>([\s\S]*?)<\/script>/i)?.[1] || "";
 
 function inspectCss(source) {
   let depth = 0;
