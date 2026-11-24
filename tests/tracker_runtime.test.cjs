@@ -211,6 +211,9 @@ test("Day 2 is revision-only and does not depend on MCQ completion", () => {
   assert.match(script,/if\(phase==="mcq_revision"\)return !!progress\.studyDone&&isPhaseChecklistComplete\(progress,"mcq_revision"\)/);
   assert.match(script,/return !!progress\.studyDone&&!!progress\.revisionDone;/);
   assert.doesNotMatch(script,/if\(phase==="mcq_revision"\)[^\n]*getLatestMcqTest/);
+  assert.doesNotMatch(script,/if\(dateKey>localDate\(\)\)\{notify\("This topic's 50-MCQ practice/);
+  assert.doesNotMatch(script,/start\.disabled=dateKey>localDate\(\)/);
+  assert.match(script,/Complete a Day 1 topic to add it to the MCQ practice queue/);
   assert.match(script,/const REVISION_DAY_CHECKLIST=\[[\s\S]*?Revise the concise notes prepared on Day 1/);
 });
 
