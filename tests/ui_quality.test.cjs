@@ -132,6 +132,23 @@ test("dashboard KPI describes all syllabus topics and starts with the correct ba
   assert.match(html, /id="topicsDone">0\/291/);
 });
 
+test("Overview syllabus progress uses one canonical snapshot and ignores stale or invalid topic keys", () => {
+  assert.match(html, /aria-label="Syllabus topics completed"/);
+  assert.match(script, /const getSyllabusProgressSummary=\(\)=>\{/);
+  const start = script.indexOf("const getSyllabusProgressSummary=()=>{");
+  const end = script.indexOf("\nconst totalTopics=", start);
+  const summary = script.slice(start, end);
+  assert.match(summary, /new Set\(Object\.entries\(state\.topics\|\|\{\}\)/);
+  assert.match(summary, /validKeys\.has\(key\)&&done===true/);
+  assert.match(summary, /completed:completedKeys\.size,total,percent:/);
+  const statsStart = script.indexOf("function renderStats(){");
+  const statsEnd = script.indexOf("\nfunction ", statsStart + 10);
+  const stats = script.slice(statsStart, statsEnd);
+  assert.match(stats, /syllabusProgress=getSyllabusProgressSummary\(\)/);
+  assert.match(stats, /syllabusProgress\.completed\+"\/"\+syllabusProgress\.total/);
+  assert.match(stats, /const topicPercent=syllabusProgress\.percent/);
+});
+
 test("toast notifications are announced and mobile tables remain touch-scrollable", () => {
   assert.match(html, /id="toast"[^>]*role="status"[^>]*aria-live="polite"[^>]*aria-atomic="true"/);
   assert.match(css, /\.data-table-wrap[^}]*overflow-x:auto/);
