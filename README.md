@@ -30,7 +30,7 @@ Keep the command window open while using the tracker. Press Ctrl+C to stop the l
 
 ## Preparation tracking
 
-The tracker records daily MCQ counts and study notes. It does not collect study durations or daily hour targets. It tracks the number of questions attempted; it does not store, display, import or run MCQ question content.
+The tracker records daily MCQ counts and study notes, and includes a PYQ question bank sourced from the independent UPSC Prelims Test public API. It supports subject/year/search filters, answer feedback, and scheduled 50-question Day 2 topic tests with saved attempts and same-question retests. Topic-test question snapshots and selected answers are stored with the local tracker data so an unfinished attempt can be resumed. This is not an official UPSC question or answer-key feed; verify disputed answers against official UPSC keys. The tracker does not collect study durations or daily hour targets.
 
 ## Personal data and privacy
 

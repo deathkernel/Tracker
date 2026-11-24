@@ -1152,7 +1152,7 @@ function apiFetch(url,options={}){
 }
 const localDate=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-")};
 const isPlanDateOverdue=(dateKey,today=localDate())=>dateKey<today;
-const defaultState=()=>({version:0,topics:{},daily:{},weekly:{},logs:{},studyPlanDone:{},studyPlanProgress:{},studyPlanProgressSchema:2,revisionDone:{},masteryProgress:{},retestSchedule:{},recoveryQueue:[],settings:{targetDate:"2027-05-23",theme:"light"},customSubjects:[],customDaily:[]});
+const defaultState=()=>({version:0,topics:{},daily:{},weekly:{},logs:{},studyPlanDone:{},studyPlanProgress:{},studyPlanProgressSchema:2,revisionDone:{},masteryProgress:{},retestSchedule:{},recoveryQueue:[],mcqDrafts:[],settings:{targetDate:"2027-05-23",theme:"light"},customSubjects:[],customDaily:[]});
 function removeDuplicateStudyPlanSyllabusCompletions(progress){
  const topics={...(progress.topics||{})};
  const planMappings=STUDY_PLAN_TOPICS.map((entry,planIndex)=>({
@@ -1175,6 +1175,7 @@ function normalizeProgressState(value){
  const source=value&&typeof value==="object"&&!Array.isArray(value)?value:{};
  const next={...defaultState(),...source};
  next.mcqTests=Array.isArray(source.mcqTests)?source.mcqTests.filter(item=>item&&Number.isInteger(item.planIndex)&&item.planIndex>=0&&Number.isInteger(item.correct)&&Number.isInteger(item.wrong)&&Number.isInteger(item.unattempted)&&item.correct>=0&&item.wrong>=0&&item.unattempted>=0&&item.correct+item.wrong+item.unattempted===50&&typeof item.date==="string").map(item=>({...item,attempts:Array.isArray(item.attempts)?item.attempts.filter(attempt=>attempt&&typeof attempt.id==="string"&&attempt.result&&Number.isInteger(attempt.result.correct)&&Number.isInteger(attempt.result.wrong)).slice(-100):[],questions:Array.isArray(item.questions)?item.questions.filter(question=>question&&question.id&&Array.isArray(question.options)&&question.options.length>0).slice(0,50):[]})).slice(-2000):[];
+ next.mcqDrafts=Array.isArray(source.mcqDrafts)?source.mcqDrafts.filter(item=>item&&Number.isInteger(item.planIndex)&&item.planIndex>=0&&typeof item.setId==="string"&&typeof item.attemptId==="string"&&Array.isArray(item.questions)&&item.questions.length===50&&item.questions.every(question=>question&&question.id&&question.correct_option_id&&Array.isArray(question.options)&&question.options.length>=2)).slice(-200):[];
  const sourceSettings=source.settings&&typeof source.settings==="object"&&!Array.isArray(source.settings)?source.settings:{};
  next.settings={...defaultState().settings,...sourceSettings};
  next.topicEvidence=source.topicEvidence&&typeof source.topicEvidence==="object"&&!Array.isArray(source.topicEvidence)?source.topicEvidence:{};
@@ -2425,16 +2426,10 @@ function setWorkspaceView(view){
    updatePyqMetrics();
    const filters=$("pyqFilters");
    if(filters)filters.hidden=!!activePyqPractice;
-   if(!activePyqPractice){
-    const todayDay2Entry=getStudyPlanEntriesForDate(localDate(),"mcq_revision")[0]||null;
-    if(todayDay2Entry){
-     const studyEntry=getStudyPlanEntryByPlanIndex(todayDay2Entry.planIndex,"study");
-     if(studyEntry){
-      startDay2McqPractice(todayDay2Entry.planIndex);
-      return;
-     }
-    }
-    if(!$("pyqQuestionList").children.length)loadPyqQuestions(true);
+   if(activePyqPractice){
+    renderDay2PracticeBanner("Day 2 · "+activePyqPractice.topic+" · Topic practice is active.");
+   }else{
+    renderScheduledDay2Prompt();
    }
   }
 }
@@ -2495,21 +2490,22 @@ function renderMcqTracker(){
  const body=document.createElement("tbody");
  entries.forEach(entry=>{
   const planIndex=entry.planIndex,revisionEntry=getStudyPlanEntryByPlanIndex(planIndex,"mcq_revision"),dateKey=getStudyPlanDateKey(revisionEntry);
-  const setId=getPlanMcqPracticeSetId(planIndex,dateKey),result=getPlanMcqResult(planIndex,setId),latest=getLatestMcqTest(planIndex);
+  const setId=getPlanMcqPracticeSetId(planIndex,dateKey),draft=getMcqDraft(planIndex,setId),latest=getLatestMcqTest(planIndex);
   const latestResult=getMcqTestResult(latest);
+  const savedResult=draft?getPlanMcqResult(planIndex,setId,draft.attemptId):latest?{attempted:50,correct:latestResult.correct,wrong:latestResult.wrong,unattempted:0,percentage:latestResult.percentage}:getPlanMcqResult(planIndex,setId);
   const tr=document.createElement("tr");
   const addCell=value=>{const td=document.createElement("td");td.textContent=value;tr.append(td);return td;};
   addCell(dateKey);addCell(entry.rotationSubject||entry.subject);addCell(entry.topic);addCell("50");
-  addCell(latest?String(latestResult.correct):result.attempted?String(result.correct):"—");
-  addCell(latest?String(latestResult.wrong):result.attempted?String(result.wrong):"—");
-  addCell(latest?latestResult.percentage.toFixed(0)+"%":result.attempted?result.percentage.toFixed(0)+"%":"—");
-  addCell(latest?getMcqAssessment(latestResult.percentage).label:result.attempted?getMcqAssessment(result.percentage).label:"Pending");
-  addCell(result.attempted+"/50");
+  addCell(savedResult.attempted?String(savedResult.correct):"—");
+  addCell(savedResult.attempted?String(savedResult.wrong):"—");
+  addCell(savedResult.attempted?savedResult.percentage.toFixed(0)+"%":"—");
+  addCell(savedResult.attempted?getMcqAssessment(savedResult.percentage).label:"Pending");
+  addCell(savedResult.attempted+"/50");
   const actionCell=document.createElement("td"),start=document.createElement("button");
   start.type="button";start.className="btn primary";
-  start.textContent=latest?"Retest same questions":result.attempted===50?"Review test":result.attempted?"Continue":"Start 50 MCQs";
-  start.title=latest?"Repeat this completed test using the exact saved questions and options":"Fetch and solve this topic's 50 MCQs";
-  start.addEventListener("click",()=>latest?renderStoredMcqRetest(latest):startDay2McqPractice(planIndex));
+  start.textContent=draft?"Continue saved test":latest?"Retest same questions":savedResult.attempted===50?"Review test":"Start 50 MCQs";
+  start.title=draft?"Resume the exact saved 50-question attempt":latest?"Repeat this completed test using the exact saved questions and options":"Fetch and solve this topic’s 50 MCQs";
+  start.addEventListener("click",()=>draft?startDay2McqPractice(planIndex):latest?renderStoredMcqRetest(latest):startDay2McqPractice(planIndex));
   actionCell.append(start);tr.append(actionCell);body.append(tr);
  });
  table.append(body);wrap.append(table);panel.append(wrap);
@@ -2631,6 +2627,17 @@ function renderDay2PracticeBanner(message){
  banner.append(document.createTextNode(" "),exitButton);
  banner.hidden=false;
 }
+function renderScheduledDay2Prompt(){
+ const banner=$("pyqPracticeBanner");
+ if(!banner||activePyqPractice)return;
+ const entry=getStudyPlanEntriesForDate(localDate(),"mcq_revision")[0]||null;
+ const studyEntry=entry?getStudyPlanEntryByPlanIndex(entry.planIndex,"study"):null;
+ if(!studyEntry){banner.hidden=true;return;}
+ banner.replaceChildren(document.createTextNode("Today’s scheduled topic: "+studyEntry.topic+". The PYQ bank remains available below."));
+ const start=document.createElement("button");start.type="button";start.className="btn primary";start.textContent="Start today’s 50-MCQ test";
+ start.addEventListener("click",()=>startDay2McqPractice(entry.planIndex));
+ banner.append(document.createTextNode(" "),start);banner.hidden=false;
+}
 function exitDay2McqPractice(){
  day2RequestId+=1;day2Loading=false;
  activePyqPractice=null;
@@ -2641,6 +2648,7 @@ function exitDay2McqPractice(){
  $("pyqStatus").textContent="Browse the PYQ bank or use the filters to load questions.";
 }
 function pyqAttempts(){return Array.isArray(state.questionBank)?state.questionBank:[]}
+function getMcqDraft(planIndex,setId){return (state.mcqDrafts||[]).find(item=>item.planIndex===planIndex&&item.setId===setId)||null;}
 function updatePyqMetrics(){
  const attempts=pyqAttempts().filter(item=>item&&item.selected&&item.correctOption);
  const correct=attempts.filter(item=>item.selected===item.correctOption).length;
@@ -2677,10 +2685,13 @@ function renderPyqQuestions(items,append=false){
 function renderStoredMcqRetest(test){
  if(!test||!Array.isArray(test.questions)||!test.questions.length){notify("The saved question snapshot is unavailable. Retest cannot safely fetch replacements.");return;}
  day2RequestId+=1;day2Loading=false;
- activePyqPractice={planIndex:test.planIndex,setId:test.setId,attemptId:"attempt-"+Date.now(),topic:test.topic,subject:test.subject,isRetest:true,sourceTestId:test.id,questions:test.questions};
+ const attemptId="attempt-"+Date.now();
+ activePyqPractice={planIndex:test.planIndex,setId:test.setId,attemptId,topic:test.topic,subject:test.subject,isRetest:true,sourceTestId:test.id,questions:test.questions};
  window.pyqQuestionCache=window.pyqQuestionCache||{};
  const questions=test.questions.map(question=>({...question,options:Array.isArray(question.options)?question.options.map(option=>({...option})):[]}));
  if(questions.length!==50||questions.some(question=>!question.correct_option_id||!Array.isArray(question.options)||question.options.length<2)){notify("The saved test does not contain a complete verified 50-question snapshot. Retest was not started.");activePyqPractice=null;return;}
+ state.mcqDrafts=[...(state.mcqDrafts||[]).filter(item=>!(item.planIndex===test.planIndex&&item.setId===test.setId)),{planIndex:test.planIndex,setId:test.setId,attemptId,topic:test.topic,subject:test.subject,isRetest:true,sourceTestId:test.id,questions}].slice(-200);
+ persist();
  questions.forEach(question=>{window.pyqQuestionCache[question.id]=question});
  $("pyqQuestionList").replaceChildren();
  setWorkspaceView("pyq");
@@ -2689,7 +2700,7 @@ function renderStoredMcqRetest(test){
  $("pyqSubject").value=pyqApiSubjectForEntry({rotationSubject:test.subject,subject:test.subject});
  $("pyqYear").value="";
  renderPyqQuestions(questions,false);
- renderDay2PracticeBanner("RETEST · "+test.topic+" · Same "+questions.length+" original questions · Attempt "+(test.attempts.length+1)+".");
+ renderDay2PracticeBanner("RETEST · "+test.topic+" · Same "+questions.length+" original questions · Attempt "+((test.attempts||[]).length+1)+".");
  $("pyqResultCount").textContent=questions.length+" saved questions · retest";
  $("pyqStatus").textContent="Retest uses your original question and option snapshot. Your previous answers and score remain unchanged.";
 }
@@ -2701,7 +2712,7 @@ async function loadPyqQuestions(reset=true){
   const params=new URLSearchParams(pyqLastQuery);params.set("page",String(pyqPage));params.set("limit","25");
   const response=await apiFetch("/api/pyq?"+params.toString());if(!response.ok){const detail=await response.json().catch(()=>({}));throw new Error(detail.detail||"Question API request failed ("+response.status+").")}
   const data=await response.json(),items=Array.isArray(data.questions)?data.questions:Array.isArray(data.data)?data.data:[];
-  renderPyqQuestions(items,!reset);const total=Number(data.total||0);pyqHasMore=!!data.hasMore;
+  renderPyqQuestions(items,!reset);const total=Number(data.total||0);pyqHasMore=typeof data.hasMore==="boolean"?data.hasMore:Number.isFinite(total)?pyqPage*25<total:items.length===25;
   $("pyqResultCount").textContent=total?total.toLocaleString("en-IN")+" matches":"Questions loaded";
   status.textContent=items.length?("Loaded "+items.length+" questions on this page"+(total?" · "+total.toLocaleString("en-IN")+" matching questions":"")+". Select an option to check your answer."):"No questions matched these filters.";
   more.hidden=!pyqHasMore;pyqPage+=1;
@@ -2710,13 +2721,13 @@ async function loadPyqQuestions(reset=true){
 }
 function pyqApiSubjectForEntry(entry){
  const subject=String(entry.rotationSubject||entry.subject||"").toLowerCase();
- if(subject.includes("history")||subject.includes("art & culture"))return "History";
+ if(subject.includes("history")||subject.includes("art & culture")||subject.includes("ancient india")||subject.includes("medieval india")||subject.includes("modern india"))return "History";
  if(subject.includes("science"))return "Science";
  if(subject.includes("polity"))return "Polity";
  if(subject.includes("economy"))return "Economy";
  if(subject.includes("geography"))return "Geography";
  if(subject.includes("environment"))return "Environment";
- return "";
+ return null;
 }
 function updatePlanMcqResult(planIndex,setId,entry){
  if(!activePyqPractice)return;
@@ -2744,6 +2755,7 @@ function updatePlanMcqResult(planIndex,setId,entry){
   target.attempts.push(completedAttempt);
   target.correct=result.correct;target.wrong=result.wrong;target.percentage=percentage;target.savedAt=savedAt;
  }
+ state.mcqDrafts=(state.mcqDrafts||[]).filter(item=>item.attemptId!==attemptId);
  persist();renderMcqTracker();renderDaily();renderOverviewSchedule();
  renderDay2PracticeBanner((isRetest?"Retest completed: ":"Completed: ")+result.correct+"/50 correct · "+result.wrong+" incorrect · "+percentage.toFixed(0)+"% accuracy. This attempt has been saved separately.");
 }
@@ -2752,83 +2764,71 @@ function getDay2TopicTokens(topic){
  return [...new Set(String(topic||"").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"").match(/[a-z0-9]+/g)||[])].filter(token=>token.length>2&&!ignored.has(token));
 }
 function isDay2TopicMatch(question,targetTokens){
- const metadata=[
-  question?.topic,
-  question?.sub_topic,
-  ...(Array.isArray(question?.keywords)?question.keywords:[question?.keywords]),
-  ...(Array.isArray(question?.concepts)?question.concepts:[question?.concepts]),
-  question?.prompt
- ].filter(Boolean).join(" ").toLowerCase();
+ const metadata=[question?.topic,question?.sub_topic,...(Array.isArray(question?.keywords)?question.keywords:[question?.keywords]),...(Array.isArray(question?.concepts)?question.concepts:[question?.concepts])].filter(Boolean).join(" ").toLowerCase();
  const metadataTokens=new Set(metadata.match(/[a-z0-9]+/g)||[]);
- if(!targetTokens.length)return false;
- const aliases={
-  rise:["rise","rising","emergence","establishment"],
-  power:["power","rule","control","dominance","authority"],
-  expansion:["expansion","expand","expanding","conquest","annexation","territorial"],
-  british:["british","britain","english","east india company","eic"]
- };
- const matched=targetTokens.filter(token=>{
-  const candidates=[token,...(aliases[token]||[])];
-  return candidates.some(candidate=>candidate.includes(" ")?metadata.includes(candidate):metadataTokens.has(candidate));
- }).length;
- const required=targetTokens.length<=2?1:Math.max(2,Math.ceil(targetTokens.length*0.4));
+ if(!targetTokens.length||!metadataTokens.size)return false;
+ const aliases={rise:["rising","emergence","establishment"],power:["rule","control","dominance","authority"],expansion:["expand","expanding","conquest","annexation","territorial"],british:["britain","english","east","india","company"]};
+ const matched=targetTokens.filter(token=>[token,...(aliases[token]||[])].some(candidate=>candidate.includes(" ")?metadata.includes(candidate):metadataTokens.has(candidate))).length;
+ const required=Math.max(1,Math.ceil(targetTokens.length*0.6));
  return matched>=required;
 }
 async function startDay2McqPractice(planIndex){
  if(day2Loading)return;
  const studyEntry=getStudyPlanEntryByPlanIndex(planIndex,"study"),revisionEntry=getStudyPlanEntryByPlanIndex(planIndex,"mcq_revision");
- if(!studyEntry||!revisionEntry){notify("Today's Day 2 topic could not be matched to its Day 1 study entry.");return;}
- const dateKey=getStudyPlanDateKey(revisionEntry);
- const rawTopic=String(studyEntry.topic||"");
+ if(!studyEntry||!revisionEntry){notify("This topic could not be matched to its Day 1 study entry.");return;}
+ const dateKey=getStudyPlanDateKey(revisionEntry),rawTopic=String(studyEntry.topic||"");
  const topicQuery=rawTopic.includes(":")?rawTopic.slice(rawTopic.indexOf(":")+1).trim():rawTopic.trim();
  const targetTokens=getDay2TopicTokens(topicQuery);
  if(!targetTokens.length){notify("This study topic needs a clearer topic label before matching MCQs.");return;}
- day2Loading=true;
- const requestId=++day2RequestId;
  const subject=pyqApiSubjectForEntry(studyEntry);
- const setId=getPlanMcqPracticeSetId(planIndex,dateKey);
- const attemptId="attempt-"+Date.now();
- const existing=getPlanMcqAttempts(planIndex,setId).filter(item=>!item.attemptId);
- activePyqPractice={planIndex,setId,attemptId,topic:studyEntry.topic,subject:studyEntry.rotationSubject||studyEntry.subject,isRetest:false,questions:[]};
- $("pyqQuestionList").replaceChildren(document.createTextNode("Loading and strictly filtering topic-matched questions…"));
+ if(!subject){notify("No safe PYQ subject mapping exists for this topic. Choose the PYQ bank filters instead.");return;}
+ day2Loading=true;
+ const requestId=++day2RequestId,setId=getPlanMcqPracticeSetId(planIndex,dateKey),draft=getMcqDraft(planIndex,setId);
+ const attemptId=draft?.attemptId||"attempt-"+Date.now();
+ activePyqPractice={planIndex,setId,attemptId,topic:studyEntry.topic,subject:studyEntry.rotationSubject||studyEntry.subject,isRetest:!!draft?.isRetest,sourceTestId:draft?.sourceTestId||null,questions:[]};
+ $("pyqQuestionList").replaceChildren(document.createTextNode(draft?"Restoring your saved 50-question attempt…":"Loading and strictly filtering topic-matched questions…"));
  setWorkspaceView("pyq");
- renderDay2PracticeBanner("Finding questions strictly related to "+studyEntry.topic+"…");
  const filters=$("pyqFilters");if(filters)filters.hidden=true;
- $("pyqSearch").value=topicQuery;$("pyqSubject").value=subject;
- $("pyqYear").value="";
+ $("pyqSearch").value=topicQuery;$("pyqSubject").value=subject;$("pyqYear").value="";
  try{
-  const questions=[],seen=new Set();let page=1,hasMore=true;
-  while(questions.length<50&&hasMore&&page<=10){
-   const params=new URLSearchParams({subject,page:String(page),limit:"100"});
-   const response=await apiFetch("/api/pyq?"+params.toString());
-   if(!response.ok){const detail=await response.json().catch(()=>({}));throw new Error(detail.detail||"Question API request failed ("+response.status+").");}
-   const data=await response.json(),items=Array.isArray(data.questions)?data.questions:Array.isArray(data.data)?data.data:[];
-   items.forEach(question=>{
-    if(!question||!question.id||seen.has(String(question.id))||!Array.isArray(question.options)||!question.correct_option_id)return;
-    seen.add(String(question.id));
-    if(isDay2TopicMatch(question,targetTokens))questions.push(question);
-   });
-   const total=Number(data.total);
-   hasMore=typeof data.hasMore==="boolean"?data.hasMore:Number.isFinite(total)?page*100<total:items.length===100;
-   page+=1;
+  let selected=[];
+  if(draft){
+   selected=draft.questions.map(question=>({...question,options:question.options.map(option=>({...option}))}));
+   if(selected.length!==50||selected.some(question=>!question.correct_option_id||!Array.isArray(question.options)||question.options.length<2))throw new Error("The saved test snapshot is incomplete. It cannot be resumed safely.");
+  }else{
+   const questions=[],seen=new Set();let page=1,hasMore=true;
+   while(questions.length<50&&hasMore&&page<=10){
+    const params=new URLSearchParams({subject,page:String(page),limit:"100"});
+    const response=await apiFetch("/api/pyq?"+params.toString());
+    if(!response.ok){const detail=await response.json().catch(()=>({}));throw new Error(detail.detail||"Question API request failed ("+response.status+").");}
+    const data=await response.json(),items=Array.isArray(data.questions)?data.questions:Array.isArray(data.data)?data.data:[];
+    items.forEach(question=>{
+     if(!question||!question.id||seen.has(String(question.id))||!Array.isArray(question.options)||!question.correct_option_id)return;
+     seen.add(String(question.id));
+     if(isDay2TopicMatch(question,targetTokens))questions.push(question);
+    });
+    const total=Number(data.total);
+    hasMore=typeof data.hasMore==="boolean"?data.hasMore:Number.isFinite(total)?page*100<total:items.length===100;
+    page+=1;
+    if(requestId!==day2RequestId)return;
+   }
    if(requestId!==day2RequestId)return;
+   selected=questions.slice(0,50);
+   if(selected.length!==50)throw new Error("Only "+selected.length+" strictly topic-matched questions with answer keys were found. No unrelated questions were added and no test was started.");
+   selected=selected.map(question=>({...question,options:question.options.map(option=>({...option}))}));
+   state.mcqDrafts=[...(state.mcqDrafts||[]).filter(item=>!(item.planIndex===planIndex&&item.setId===setId)),{planIndex,setId,attemptId,topic:studyEntry.topic,subject:studyEntry.rotationSubject||studyEntry.subject,isRetest:false,questions:selected}].slice(-200);
+   persist();
   }
   if(requestId!==day2RequestId)return;
-  const selected=questions.slice(0,50);
-  if(selected.length!==50)throw new Error("Only "+selected.length+" matching questions were found. A 50-question test requires all 50; no partial attempt was started.");
+  activePyqPractice.questions=selected;
   window.pyqQuestionCache=window.pyqQuestionCache||{};
   selected.forEach(question=>{window.pyqQuestionCache[question.id]=question});
-  activePyqPractice.questions=selected.map(question=>({...question,options:question.options.map(option=>({...option}))}));
   renderPyqQuestions(selected,false);
-  const progress=getPlanMcqResult(planIndex,setId);
-  const message=existing.length>=selected.length
-   ?"Your saved topic practice is loaded. "+selected.length+" matching questions are available."
-   :"Day 2 · "+studyEntry.topic+" · "+selected.length+" topic-matched questions loaded · "+progress.attempted+"/50 answered.";
+  const progress=getPlanMcqResult(planIndex,setId,attemptId);
+  const message=(draft?.isRetest?"RETEST · ":"Day 2 · ")+studyEntry.topic+" · "+progress.attempted+"/50 answered · "+progress.correct+" correct · "+progress.wrong+" incorrect.";
   renderDay2PracticeBanner(message);
-  $("pyqResultCount").textContent=selected.length+" topic-matched questions";
-  $("pyqStatus").textContent=selected.length<50
-   ?"Loaded all available matching, answer-key verified PYQs. The source bank has fewer than 50 for this topic; no unrelated questions were added."
-   :"Loaded 50 topic-matched, answer-key verified questions. Answers are saved automatically.";
+  $("pyqResultCount").textContent=selected.length+" saved topic-matched questions";
+  $("pyqStatus").textContent=draft?"Your exact saved questions and previous answers have been restored. Continue where you left off.":"Loaded 50 topic-matched, answer-key verified questions. Your attempt snapshot is saved automatically.";
   $("pyqMoreBtn").hidden=true;
  }catch(error){
   if(requestId!==day2RequestId)return;
@@ -2861,7 +2861,7 @@ function handlePyqOptionClick(event){
  card.insertBefore(feedback,card.querySelector(".pyq-question-meta"));updatePyqMetrics();
  if(activePyqPractice){
   const entry=getStudyPlanEntryByPlanIndex(activePyqPractice.planIndex,"study");
-  const progress=getPlanMcqResult(activePyqPractice.planIndex,activePyqPractice.setId+":"+activePyqPractice.attemptId);
+  const progress=getPlanMcqResult(activePyqPractice.planIndex,activePyqPractice.setId,activePyqPractice.attemptId);
   renderDay2PracticeBanner((activePyqPractice.isRetest?"Retest · ":"Day 2 · ")+activePyqPractice.topic+" · "+progress.attempted+"/50 answered · "+progress.correct+" correct · "+progress.wrong+" incorrect.");
   renderMcqTracker();updatePlanMcqResult(activePyqPractice.planIndex,activePyqPractice.setId,entry);
  }

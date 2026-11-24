@@ -1316,21 +1316,47 @@ test("README describes the active and deferred study-plan scope accurately", () 
 });
 
 
-test("Day 2 practice uses its Day 1 topic and hides generic PYQ search controls", () => {
-  assert.match(script, /getStudyPlanEntriesForDate\(localDate\(\),"mcq_revision"\)/);
-  assert.match(script, /startDay2McqPractice\(todayDay2Entry\.planIndex\)/);
+test("PYQ navigation keeps the question bank available and offers Day 2 practice explicitly", () => {
+  const viewStart = script.indexOf("function setWorkspaceView(view){");
+  const viewEnd = script.indexOf("\nfunction activeDevice()", viewStart);
+  assert.ok(viewStart >= 0 && viewEnd > viewStart);
+  const view = script.slice(viewStart, viewEnd);
+  assert.match(script, /function renderScheduledDay2Prompt\(\)/);
+  assert.match(view, /renderScheduledDay2Prompt\(\)/);
+  assert.doesNotMatch(view, /startDay2McqPractice\(/);
   assert.match(html, /\.pyq-filters\[hidden\]\{display:none!important\}/);
   assert.match(script, /const topicQuery=rawTopic\.includes\(":"\)/);
-  assert.doesNotMatch(script, /Complete the Day 1 checklist first to unlock/);
-  assert.doesNotMatch(script, /getStudyPlanProgress\(studyEntry\)\.studyDone\)\{notify\("Complete Day 1/);
 });
 
-test("Day 2 fetch searches the full subject bank and matches enriched question content", () => {
+test("Day 2 practice uses subject-scoped questions and requires a complete verified set", () => {
   assert.match(script, /new URLSearchParams\(\{subject,page:String\(page\),limit:"100"\}\)/);
   assert.match(script, /question\?\.concepts/);
-  assert.match(script, /question\?\.prompt/);
+  assert.doesNotMatch(script, /question\?\.prompt/);
   assert.match(script, /if\(selected.length!==50\)throw new Error/);
+  assert.match(script, /No safe PYQ subject mapping exists/);
   assert.doesNotMatch(script, /new URLSearchParams\(\{q:topicQuery,subject,page:String\(page\),limit:"100"\}\)/);
+});
+
+test("Day 2 topic matching uses question metadata, not incidental prompt mentions", () => {
+  const start = script.indexOf("function getDay2TopicTokens(topic){");
+  const end = script.indexOf("\nasync function startDay2McqPractice", start);
+  assert.ok(start >= 0 && end > start);
+  const sandbox = {};
+  vm.runInNewContext(script.slice(start, end) + "\nthis.tokens=getDay2TopicTokens;this.matches=isDay2TopicMatch;", sandbox);
+  const tokens = Array.from(sandbox.tokens("The Rise and Expansion of British Power in India"));
+  assert.equal(sandbox.matches({ topic: "British power expansion", prompt: "An unrelated question" }, tokens), true);
+  assert.equal(sandbox.matches({ topic: "Constitution", prompt: "The British expansion in India" }, tokens), false);
+  assert.equal(sandbox.matches({ topic: "Constitution" }, tokens), false);
+});
+
+test("MCQ draft snapshots support exact resume and attempt-scoped progress", () => {
+  assert.match(script, /mcqDrafts:\[\]/);
+  assert.match(script, /function getMcqDraft\(planIndex,setId\)/);
+  assert.match(script, /const attemptId=draft\?\.attemptId\|\|"attempt-"\+Date\.now\(\)/);
+  assert.match(script, /getPlanMcqResult\(planIndex,setId,attemptId\)/);
+  assert.match(script, /getPlanMcqResult\(activePyqPractice\.planIndex,activePyqPractice\.setId,activePyqPractice\.attemptId\)/);
+  assert.match(script, /Continue saved test/);
+  assert.match(script, /state\.mcqDrafts=\(state\.mcqDrafts\|\|\[\]\)\.filter\(item=>item\.attemptId!==attemptId\)/);
 });
 
 
