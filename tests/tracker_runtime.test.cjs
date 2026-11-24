@@ -1344,7 +1344,7 @@ test("Day 2 topic matching uses question metadata, not incidental prompt mention
   const sandbox = {};
   vm.runInNewContext(script.slice(start, end) + "\nthis.tokens=getDay2TopicTokens;this.matches=isDay2TopicMatch;", sandbox);
   const tokens = Array.from(sandbox.tokens("The Rise and Expansion of British Power in India"));
-  assert.equal(sandbox.matches({ topic: "British expansion", prompt: "An unrelated question" }, tokens), true);
+  assert.equal(sandbox.matches({ topic: "British power expansion", prompt: "An unrelated question" }, tokens), true);
   assert.equal(sandbox.matches({ topic: "Constitution", prompt: "The British expansion in India" }, tokens), false);
   assert.equal(sandbox.matches({ topic: "Constitution" }, tokens), false);
 });
