@@ -870,7 +870,7 @@ body.dark #workspaceNav .nav-brand-mark{background:var(--blue);color:#10141d}
  </section>
  <section class="card" data-page="missing" hidden>
   <div class="card-head"><div><h2>Missing Topics</h2><p class="small-note">Only past scheduled topics with incomplete study or MCQ + revision are shown. Today’s and future topics stay out of this list.</p></div><span class="chip" id="missingTopicCount">0 remaining</span></div>
-  <div class="toolbar"><input id="missingTopicSearch" aria-label="Search missing topics" type="search" placeholder="Search missing topics…"><select id="missingSubjectFilter" aria-label="Filter missing topics by subject"><option value="all">All subjects</option></select><select id="missingPriorityFilter" aria-label="Filter missing topics by overdue phase"><option value="all">All overdue phases</option><option value="study">Study pending</option><option value="mcq_revision">MCQ + Revision pending</option></select></div>
+  <div class="toolbar"><input id="missingTopicSearch" aria-label="Search missing topics" type="search" placeholder="Search missing topics…"><select id="missingSubjectFilter" aria-label="Filter missing topics by subject"><option value="all">All subjects</option></select><select id="missingPriorityFilter" aria-label="Filter missing topics by overdue phase"><option value="all">All overdue phases</option><option value="study">Study pending</option><option value="mcq_revision">Revision pending</option></select></div>
   <div id="missingTopicList"></div>
  </section>
  <section class="card" data-page="syllabus" hidden>
@@ -1871,14 +1871,24 @@ function renderMissingTopics(){
  const host=$("missingTopicList");if(!host)return;
  const query=$("missingTopicSearch").value.trim().toLowerCase(),subjectFilter=$("missingSubjectFilter").value,phaseFilter=$("missingPriorityFilter").value,today=localDate();
  host.innerHTML="";
+ const overdueEntries=getOverdueStudyPlanEntries(today),overdueByPlan=new Map();
+ overdueEntries.forEach(entry=>{
+  if(!overdueByPlan.has(entry.planIndex))overdueByPlan.set(entry.planIndex,new Set());
+  overdueByPlan.get(entry.planIndex).add(entry.phase);
+ });
  const overdue=STUDY_PLAN_TOPICS.map((topic,planIndex)=>{
+  const phases=overdueByPlan.get(planIndex);
+  if(!phases?.size)return null;
   const studyEntry=getStudyPlanEntryByPlanIndex(planIndex,"study"),revisionEntry=getStudyPlanEntryByPlanIndex(planIndex,"mcq_revision");
   if(!studyEntry||!revisionEntry)return null;
-  const studyDueDate=getStudyPlanDateKey(studyEntry),revisionDueDate=getStudyPlanDateKey(revisionEntry);
-  const phases=[];
-  if(studyDueDate<today&&!isStudyPlanEntryDone(studyEntry))phases.push("study");
-  if(revisionDueDate<today&&!isStudyPlanEntryDone(revisionEntry))phases.push("mcq_revision");
-  return phases.length?{subject:topic.subject,topic:topic.topic,planIndex,phases,studyDueDate,revisionDueDate}:null;
+  return {
+   subject:topic.subject,
+   topic:topic.topic,
+   planIndex,
+   phases:[...phases],
+   studyDueDate:getOriginalStudyPlanDateKey(studyEntry),
+   revisionDueDate:getOriginalStudyPlanDateKey(revisionEntry)
+  };
  }).filter(Boolean);
  refreshRecoveryQueue(today);
  const table=document.createElement("table");table.className="data-table topic-table";
@@ -1891,18 +1901,25 @@ function renderMissingTopics(){
   if(!displayPhases.length)return;
   shown++;
   const row=document.createElement("tr");
-  const phaseCell=document.createElement("td");phaseCell.textContent=displayPhases.map(phase=>phase==="study"?"Study pending":"MCQ + Revision pending").join(" · ");
+  const phaseCell=document.createElement("td");phaseCell.textContent=displayPhases.map(phase=>phase==="study"?"Study pending":"Revision pending").join(" · ");
   const subjectCell=document.createElement("td");subjectCell.textContent=item.subject;
   const topicCell=document.createElement("td");topicCell.textContent=item.topic;
   const dueDate=displayPhases.map(phase=>phase==="study"?item.studyDueDate:item.revisionDueDate).sort()[0];
   const dateCell=document.createElement("td");dateCell.textContent=new Date(dueDate+"T00:00:00").toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
   const actionCell=document.createElement("td"),button=document.createElement("button");button.type="button";button.className="btn";button.textContent="Open in Roadmap";
-  button.addEventListener("click",()=>{setWorkspaceView("plan");const target=document.getElementById("plan-"+dueDate+"-"+(displayPhases[0]==="study"?"study":"mcq_revision")+"-"+item.planIndex);target?.scrollIntoView({behavior:"smooth",block:"center"});if(target){target.classList.add("missing-target-row");setTimeout(()=>target.classList.remove("missing-target-row"),2200);}});
+  button.addEventListener("click",()=>{
+   const actionPhase=displayPhases[0],actionEntry=getStudyPlanEntryByPlanIndex(item.planIndex,actionPhase),recoveryDate=getStudyPlanDateKey(actionEntry);
+   setWorkspaceView("plan");
+   const target=document.getElementById("plan-"+recoveryDate+"-"+actionPhase+"-"+item.planIndex);
+   target?.scrollIntoView({behavior:"smooth",block:"center"});
+   if(target){target.classList.add("missing-target-row");setTimeout(()=>target.classList.remove("missing-target-row"),2200);}
+  });
   actionCell.append(button);row.append(phaseCell,subjectCell,topicCell,dateCell,actionCell);body.append(row);
  });
  table.append(body);const wrap=document.createElement("div");wrap.className="data-table-wrap";wrap.append(table);host.append(wrap);
  if(!shown)host.innerHTML='<div class="empty">No overdue missing topics. Today’s and future topics are not included.</div>';
- $("missingTopicCount").textContent=shown+" overdue";$("missingNavCount").textContent=new Set((state.recoveryQueue||[]).map(item=>item.plan_key||("plan:"+item.planIndex))).size;
+ $("missingTopicCount").textContent=shown+" overdue";
+ $("missingNavCount").textContent=new Set((state.recoveryQueue||[]).map(item=>item.plan_key||("plan:"+item.planIndex))).size;
  const filter=$("missingSubjectFilter"),selected=filter.value;filter.innerHTML='<option value="all">All subjects</option>';
  [...new Set(STUDY_PLAN_TOPICS.map(entry=>entry.subject))].forEach(subject=>{const option=document.createElement("option");option.value=subject;option.textContent=subject;filter.append(option)});
  filter.value=[...new Set(STUDY_PLAN_TOPICS.map(entry=>entry.subject))].includes(selected)?selected:"all";
@@ -2105,18 +2122,19 @@ function isStudyPlanEntryDone(entry){
  if(entry.phase==="study")return !!progress.studyDone;
  return !!progress.studyDone&&!!progress.revisionDone;
 }
+function getOverdueStudyPlanEntries(today=localDate()){
+ return DAILY_STUDY_PLAN.filter(entry=>getOriginalStudyPlanDateKey(entry)<today&&!isStudyPlanEntryDone(entry));
+}
 function refreshRecoveryQueue(today=localDate()){
- const queue=DAILY_STUDY_PLAN.filter(entry=>{
-  const dueDate=getStudyPlanDateKey(entry);
-  return dueDate<today&&!isStudyPlanEntryDone(entry);
- }).map(entry=>({
+ const queue=getOverdueStudyPlanEntries(today).map(entry=>({
   key:"plan:"+entry.planIndex+":"+entry.phase,
   plan_key:"plan:"+entry.planIndex,
   planIndex:entry.planIndex,
   subject:entry.subject,
   topic:entry.topic,
   phase:entry.phase,
-  due_date:getStudyPlanDateKey(entry),
+  due_date:getOriginalStudyPlanDateKey(entry),
+  recovery_date:getStudyPlanDateKey(entry),
   status:"pending"
  })).sort((a,b)=>a.due_date.localeCompare(b.due_date)||a.planIndex-b.planIndex||a.phase.localeCompare(b.phase));
  state.recoveryQueue=queue;
