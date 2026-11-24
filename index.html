@@ -2769,7 +2769,7 @@ function isDay2TopicMatch(question,targetTokens){
  if(!targetTokens.length||!metadataTokens.size)return false;
  const aliases={rise:["rising","emergence","establishment"],power:["rule","control","dominance","authority"],expansion:["expand","expanding","conquest","annexation","territorial"],british:["britain","english","east","india","company"]};
  const matched=targetTokens.filter(token=>[token,...(aliases[token]||[])].some(candidate=>candidate.includes(" ")?metadata.includes(candidate):metadataTokens.has(candidate))).length;
- const required=Math.max(1,Math.ceil(targetTokens.length*0.5));
+ const required=Math.max(1,Math.ceil(targetTokens.length*0.6));
  return matched>=required;
 }
 async function startDay2McqPractice(planIndex){
