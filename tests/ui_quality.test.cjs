@@ -140,7 +140,7 @@ test("Overview syllabus progress uses one canonical snapshot and ignores stale o
   const end = script.indexOf("\nconst totalTopics=", start);
   const summary = script.slice(start, end);
   assert.match(summary, /new Set\(Object\.entries\(state\.topics\|\|\{\}\)/);
-  assert.match(summary, /validKeys\.has\(key\)&&done===true/);
+  assert.match(summary, /validKeys\.has\(key\)&&!!done/);
   assert.match(summary, /completed:completedKeys\.size,total,percent:/);
   const statsStart = script.indexOf("function renderStats(){");
   const statsEnd = script.indexOf("\nfunction ", statsStart + 10);
