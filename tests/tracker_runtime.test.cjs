@@ -202,13 +202,75 @@ test("pipelined Day 2 uses the same topic's stable progress record", () => {
   assert.match(script, /revisionEntries:getStudyPlanEntriesForDate/);
 });
 
-test("Day 2 is a revision-only phase with no new-topic MCQ task", () => {
+test("Day 2 is revision-only and does not depend on MCQ completion", () => {
   const completion = script.slice(script.indexOf("async function completePlanRevision"),script.indexOf("function renderPhaseChecklist"));
   assert.match(completion,/if\(!canCompleteStudyPlanPhase\(entry,"mcq_revision"\)\)/);
   assert.doesNotMatch(completion,/progress\.mcqDone=true/);
   assert.doesNotMatch(completion,/How many MCQs did you attempt/);
   assert.match(completion,/askRecallQuality\(entry\.topic,"revision"\)/);
+  assert.match(script,/if\(phase==="mcq_revision"\)return !!progress\.studyDone&&isPhaseChecklistComplete\(progress,"mcq_revision"\)/);
+  assert.match(script,/return !!progress\.studyDone&&!!progress\.revisionDone;/);
+  assert.doesNotMatch(script,/if\(phase==="mcq_revision"\)[^\n]*getLatestMcqTest/);
   assert.match(script,/const REVISION_DAY_CHECKLIST=\[[\s\S]*?Revise the concise notes prepared on Day 1/);
+});
+
+test("MCQ progress is independent and cannot reopen completed study or revision phases", () => {
+  const doneStart = script.indexOf("function isStudyPlanEntryDone(entry){");
+  const doneEnd = script.indexOf("\nfunction refreshRecoveryQueue", doneStart);
+  const phaseStart = script.indexOf("function canCompleteStudyPlanPhase(entry,phase){");
+  const phaseEnd = script.indexOf("\nfunction getStudyPlanEntriesForDate", phaseStart);
+  assert.ok(doneStart >= 0 && doneEnd > doneStart);
+  assert.ok(phaseStart >= 0 && phaseEnd > phaseStart);
+  const progress = { studyDone: true, mcqDone: false, revisionDone: true };
+  const sandbox = {
+    getStudyPlanProgress: () => progress,
+    isPhaseChecklistComplete: () => true
+  };
+  vm.runInNewContext(
+    script.slice(doneStart, doneEnd) + "\n" +
+    script.slice(phaseStart, phaseEnd) +
+    "\nthis.isDone=isStudyPlanEntryDone;this.canComplete=canCompleteStudyPlanPhase;",
+    sandbox
+  );
+  const study = { planIndex: 0, phase: "study" };
+  const revision = { planIndex: 0, phase: "mcq_revision" };
+  assert.equal(sandbox.isDone(study), true);
+  assert.equal(sandbox.isDone(revision), true);
+  assert.equal(sandbox.canComplete(revision, "mcq_revision"), true);
+});
+
+test("completed Day 1 and Day 2 phases are excluded from recovery when MCQs remain pending", () => {
+  const lookupStart = script.indexOf("function getStudyPlanEntryByPlanIndex(planIndex,phase){");
+  const lookupEnd = script.indexOf("\nfunction studyPlanDateOffset", lookupStart);
+  const doneStart = script.indexOf("function isStudyPlanEntryDone(entry){");
+  const doneEnd = script.indexOf("\nfunction refreshRecoveryQueue", doneStart);
+  const recoveryStart = script.indexOf("function buildRecoverySchedule(today=localDate()){");
+  const recoveryEnd = script.indexOf("\nfunction getStudyPlanDateKey", recoveryStart);
+  assert.ok(lookupStart >= 0 && lookupEnd > lookupStart);
+  assert.ok(doneStart >= 0 && doneEnd > doneStart);
+  assert.ok(recoveryStart >= 0 && recoveryEnd > recoveryStart);
+  const study = { planIndex: 0, phase: "study" };
+  const revision = { planIndex: 0, phase: "mcq_revision" };
+  const sandbox = {
+    ACTIVE_STUDY_PLAN: [{ planIndex: 0 }],
+    DAILY_STUDY_PLAN: [study, revision],
+    getStudyPlanProgress: () => ({ studyDone: true, mcqDone: false, revisionDone: true }),
+    getOriginalStudyPlanDateKey: entry => entry.phase === "study" ? "2026-11-20" : "2026-11-21",
+    localDate: () => "2026-11-24",
+    addDaysToDateKey: (date, days) => {
+      const value = new Date(date + "T00:00:00");
+      value.setDate(value.getDate() + days);
+      return value.toISOString().slice(0, 10);
+    }
+  };
+  vm.runInNewContext(
+    script.slice(lookupStart, lookupEnd) + "\n" +
+    script.slice(doneStart, doneEnd) + "\n" +
+    script.slice(recoveryStart, recoveryEnd) +
+    "\nthis.build=buildRecoverySchedule;",
+    sandbox
+  );
+  assert.equal(sandbox.build("2026-11-24").size, 0);
 });
 test("Day 1 and Day 2 checklists gate their own Study Plan phases, not manual syllabus completion", () => {
   assert.match(script, /const STUDY_DAY_CHECKLIST=/);
