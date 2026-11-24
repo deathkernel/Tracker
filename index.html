@@ -2475,10 +2475,12 @@ function getMcqTestById(testId){
  return (state.mcqTests||[]).find(test=>test.id===testId)||null;
 }
 function getMcqTestResult(test){
- const answers=Array.isArray(test?.attempts)?test.attempts.slice(1):[];
- const latest=Array.isArray(test?.attempts)?test.attempts[test.attempts.length-1]:null;
- const result=latest?.result||test;
- return {correct:Number(result.correct)||0,wrong:Number(result.wrong)||0,percentage:Number(result.percentage)||0,attemptNumber:answers.length+1};
+ if(!test||typeof test!=="object")return {correct:0,wrong:0,percentage:0,attemptNumber:0};
+ const attempts=Array.isArray(test.attempts)?test.attempts:[];
+ const answers=attempts.slice(1);
+ const latest=attempts.length?attempts[attempts.length-1]:null;
+ const result=latest?.result||latest||test;
+ return {correct:Number(result?.correct)||0,wrong:Number(result?.wrong)||0,percentage:Number(result?.percentage)||0,attemptNumber:answers.length+1};
 }
 function getMcqAssessment(percentage){
  if(percentage>=80)return{label:"Good",detail:"Strong performance. Maintain revision and accuracy.",tone:"good"};
