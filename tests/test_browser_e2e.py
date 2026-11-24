@@ -359,8 +359,10 @@ def test_customization_management_and_device_theme_profiles(tracker_url):
             page.locator('label[for="nav-settings"]').click()
 
             assert page.locator("body").get_attribute("data-theme-profile") == "desktop"
-            page.locator("#themeToggle").check()
-            assert "dark" in page.locator("body").get_attribute("class").split()
+            # The interface is light-only: the theme control is hidden and the
+            # legacy dark class never stays on <body>.
+            assert page.locator("#themeToggle").is_hidden()
+            assert "dark" not in (page.locator("body").get_attribute("class") or "").split()
             page.set_viewport_size({"width": 390, "height": 844})
             assert page.locator("body").get_attribute("data-theme-profile") == "desktop"
 
@@ -398,7 +400,7 @@ def test_customization_management_and_device_theme_profiles(tracker_url):
             )
             settings_label.click()
             assert page.locator("#targetDate").input_value() == "2027-05-24"
-            assert "dark" in page.locator("body").get_attribute("class").split()
+            assert "dark" not in (page.locator("body").get_attribute("class") or "").split()
             assert page.locator("#customSyllabusManager").get_by_text("Advanced comprehension").count() == 1
             assert page.locator("#customDailyManager").get_by_text("Review flashcards daily").count() == 1
 

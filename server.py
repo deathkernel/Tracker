@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 
 from revision_engine import next_revision_schedule, next_retest_schedule, update_mastery_progress
 from pydantic import BaseModel, ConfigDict, Field
@@ -26,6 +26,16 @@ BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = Path(os.environ.get("TRACKER_DB_PATH", str(BASE_DIR / "tracker.db")))
 INDEX_PATH = BASE_DIR / "index.html"
 FAVICON_PATH = BASE_DIR / "favicon.svg"
+THEME_PATH = BASE_DIR / "theme.css"
+# Injected into the dashboard <head>. The stylesheet is the monochrome light
+# theme; the small script keeps the legacy "dark" class off <body> because the
+# interface is light-only.
+THEME_SNIPPET = (
+    '<link rel="stylesheet" href="/theme.css">'
+    '<script>new MutationObserver(function(){var b=document.body;'
+    'if(b&&b.classList.contains("dark"))b.classList.remove("dark")})'
+    '.observe(document.documentElement,{attributes:true,subtree:true,attributeFilter:["class"]})</script>'
+)
 LAN_ACCESS_TOKEN = os.environ.get("TRACKER_ACCESS_TOKEN") or secrets.token_urlsafe(32)
 STUDY_CYCLE_START_DATE = date(2026, 11, 20)
 # Must stay in sync with BASE_STUDY_PLAN length in index.html (client uses
@@ -499,8 +509,20 @@ def favicon_ico_compatibility() -> RedirectResponse:
     return RedirectResponse(url="/favicon.svg", status_code=307)
 
 
+@app.get("/theme.css")
+def theme_stylesheet() -> FileResponse:
+    if not THEME_PATH.exists():
+        raise HTTPException(status_code=404, detail="theme.css not found")
+    return FileResponse(THEME_PATH, media_type="text/css", headers={"Cache-Control": "no-cache"})
+
+
 @app.get("/")
-def dashboard() -> FileResponse:
+def dashboard() -> Response:
     if not INDEX_PATH.exists():
         raise HTTPException(status_code=404, detail="index.html not found")
-    return FileResponse(INDEX_PATH)
+    if not THEME_PATH.exists():
+        return FileResponse(INDEX_PATH)
+    html = INDEX_PATH.read_text(encoding="utf-8")
+    if THEME_SNIPPET not in html and "</head>" in html:
+        html = html.replace("</head>", THEME_SNIPPET + "</head>", 1)
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
