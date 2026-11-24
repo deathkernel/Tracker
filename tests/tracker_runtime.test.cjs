@@ -1364,3 +1364,40 @@ test("MCQ attempt scoring is isolated and retest snapshots preserve exact questi
   assert.equal(sandbox.retry(3, "set-1", "retry-1").correct, 1);
   assert.equal(sandbox.retry(3, "set-1", "retry-1").wrong, 1);
 });
+
+
+test("exam countdown uses one DST-safe calendar-day calculation and distinguishes past, today and future", () => {
+  const start = script.indexOf("function dateKeyToUtcDayNumber(dateKey){");
+  const end = script.indexOf("\nfunction completionColorClass", start);
+  assert.ok(start >= 0 && end > start);
+  let today = "2026-11-24";
+  const sandbox = { localDate: () => today, Date, Math };
+  vm.runInNewContext(script.slice(start, end) + "\nthis.countdown=getExamCountdown;this.days=daysUntilExam;", sandbox);
+
+  assert.deepEqual(JSON.parse(JSON.stringify(sandbox.countdown("2027-05-23"))), {
+    days: 180,
+    status: "days remaining"
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(sandbox.countdown("2027-08-20"))), {
+    days: 269,
+    status: "days remaining"
+  });
+  assert.equal(sandbox.days("2026-11-24"), 0);
+  assert.equal(sandbox.countdown("2026-11-24").status, "Exam day");
+  assert.equal(sandbox.countdown("2026-11-23").status, "Exam date passed");
+  assert.equal(sandbox.countdown("2027-02-30").status, "Date unavailable");
+  assert.equal(sandbox.countdown("not-a-date").status, "Date unavailable");
+
+  today = "2027-03-13";
+  assert.equal(sandbox.days("2027-03-15"), 2);
+  assert.equal(sandbox.days("2027-03-14"), 1);
+});
+
+test("all dashboard and analytics countdowns share the canonical date helper and refresh at local midnight", () => {
+  assert.match(script, /const totalDays=\(\)=>daysUntilExam\(\(state\.settings\|\|\{\}\)\.targetDate\|\|"2027-05-23"\)/);
+  assert.match(script, /const prelimsCountdown=getExamCountdown\(targetDate\),mainsCountdown=getExamCountdown\("2027-08-20"\)/);
+  assert.match(script, /const countdown=getExamCountdown\(exam\.dateKey\);number\.textContent=countdown\.days;unit\.className="exam-chart-unit";unit\.textContent=countdown\.status/);
+  assert.match(script, /function scheduleCountdownRefresh\(\)[\s\S]*?new Date\(now\.getFullYear\(\),now\.getMonth\(\),now\.getDate\(\)\+1,0,0,1\)/);
+  assert.match(script, /scheduleCountdownRefresh\(\);document\.addEventListener\("visibilitychange"/);
+  assert.match(script, /if\(!document\.hidden\)\{renderStats\(\);renderCharts\(\)\}/);
+});
