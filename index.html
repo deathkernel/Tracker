@@ -1517,7 +1517,7 @@ const getSyllabusProgressSummary=()=>{
 const totalTopics=()=>getSyllabusProgressSummary().total;
 const validTopicKeys=()=>new Set(allSubjects().flatMap(subject=>subject.topics.map(topic=>subject.name+"::"+topic[0])));
 const doneTopics=()=>getSyllabusProgressSummary().completed;
-const totalDays=()=>Math.max(0,Math.ceil((new Date(((state.settings||{}).targetDate||"2027-05-23")+"T00:00:00")-new Date(localDate()+"T00:00:00"))/86400000));
+const totalDays=()=>daysUntilExam((state.settings||{}).targetDate||"2027-05-23");
 const weekIndex=()=>{const start=new Date("2026-11-17T00:00:00"),now=new Date(localDate()+"T00:00:00");return Math.max(0,Math.min(26,Math.floor((now-start)/604800000)))};
 function getStudyPlanCounts(){const today=localDate(),todayDate=new Date(today+"T00:00:00"),missedDates=new Set();let completed=0,upcoming=0;DAILY_STUDY_PLAN.forEach(entry=>{const dateKey=getStudyPlanDateKey(entry),date=new Date(dateKey+"T00:00:00");if(isStudyPlanEntryDone(entry))completed++;else if(date<todayDate)missedDates.add(dateKey);else if(date>todayDate)upcoming++;});return{completed,missed:missedDates.size,upcoming}}
 function localDateKey(date){return [date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-")}
