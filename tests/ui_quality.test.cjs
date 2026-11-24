@@ -5,6 +5,7 @@ const path = require("node:path");
 
 const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
 const css = html.match(/<style>([\s\S]*?)<\/style>/)?.[1] || "";
+const script = html.match(/<script\b[^>]*>([\s\S]*?)<\/script>/i)?.[1] || "";
 
 function inspectCss(source) {
   let depth = 0;
@@ -130,6 +131,23 @@ test("search and filter controls expose accessible names", () => {
 test("dashboard KPI describes all syllabus topics and starts with the correct base total", () => {
   assert.match(html, /class="stat-label">Syllabus topics completed/);
   assert.match(html, /id="topicsDone">0\/291/);
+});
+
+test("Overview syllabus progress uses one canonical snapshot and ignores stale or invalid topic keys", () => {
+  assert.match(html, /aria-label="Syllabus topics completed"/);
+  assert.match(script, /const getSyllabusProgressSummary=\(\)=>\{/);
+  const start = script.indexOf("const getSyllabusProgressSummary=()=>{");
+  const end = script.indexOf("\nconst totalTopics=", start);
+  const summary = script.slice(start, end);
+  assert.match(summary, /new Set\(Object\.entries\(state\.topics\|\|\{\}\)/);
+  assert.match(summary, /validKeys\.has\(key\)&&done===true/);
+  assert.match(summary, /completed:completedKeys\.size,total,percent:/);
+  const statsStart = script.indexOf("function renderStats(){");
+  const statsEnd = script.indexOf("\nfunction ", statsStart + 10);
+  const stats = script.slice(statsStart, statsEnd);
+  assert.match(stats, /syllabusProgress=getSyllabusProgressSummary\(\)/);
+  assert.match(stats, /syllabusProgress\.completed\+"\/"\+syllabusProgress\.total/);
+  assert.match(stats, /const topicPercent=syllabusProgress\.percent/);
 });
 
 test("toast notifications are announced and mobile tables remain touch-scrollable", () => {
