@@ -432,3 +432,11 @@ label[for="themeToggle"] { display: none !important; }
 
 /* ---------- Analytics metric cards ---------------------------------------- */
 .analytics-metrics-grid > .analytics-metric-card:nth-child(5) .analytics-metric-value { color: var(--bad-ink); }
+
+/* ---------- Task checkbox ------------------------------------------------- */
+/* The animated checklist control was hard-coded violet. Done = green. */
+.checkbox-wrapper-12 input[type="checkbox"] { border-color: var(--mono-300); }
+.checkbox-wrapper-12 input[type="checkbox"]:hover { border-color: var(--mono-400); }
+.checkbox-wrapper-12 input[type="checkbox"]:checked { border-color: var(--ok); }
+/* The old "splash" animation ends on violet and beats normal rules, so switch it off. */
+.checkbox-wrapper-12 .cbx input:checked + label { animation: none !important; background: var(--ok); }
