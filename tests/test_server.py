@@ -26,6 +26,21 @@ def test_health_and_dashboard_assets(client):
     assert client.get("/strict_rules.js").status_code == 404
 
 
+def test_favicon_assets_serve_and_redirect_without_404(client):
+    svg = client.get("/favicon.svg")
+    assert svg.status_code == 200
+    assert svg.headers["content-type"].startswith("image/svg+xml")
+    assert "<svg" in svg.text
+
+    legacy_icon = client.get("/favicon.ico", follow_redirects=False)
+    assert legacy_icon.status_code == 307
+    assert legacy_icon.headers["location"] == "/favicon.svg"
+
+    followed_icon = client.get("/favicon.ico")
+    assert followed_icon.status_code == 200
+    assert followed_icon.headers["content-type"].startswith("image/svg+xml")
+
+
 def test_state_round_trip_preserves_strict_exam_data(client):
     initial = client.get("/api/state")
     assert initial.status_code == 200
