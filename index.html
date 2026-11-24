@@ -2427,7 +2427,7 @@ function setWorkspaceView(view){
    const filters=$("pyqFilters");
    if(filters)filters.hidden=!!activePyqPractice;
    if(activePyqPractice){
-    renderDay2PracticeBanner("Day 2 · "+activePyqPractice.topic+" · Your saved answers are restored.");
+    renderDay2PracticeBanner("Day 2 · "+activePyqPractice.topic+" · Topic practice is active.");
    }else{
     renderScheduledDay2Prompt();
    }
