@@ -1202,7 +1202,7 @@ test("MCQ Tracker has persistent history and same-question retest controls", () 
   assert.ok(script.includes("function getAttemptMcqResult(planIndex,setId,attemptId)"));
   assert.ok(script.includes("function renderStoredMcqRetest(test)"));
   assert.ok(script.includes("questions:test.questions"));
-  assert.ok(script.includes("start.textContent=latest?\"Retest same questions\""));
+  assert.ok(script.includes("start.textContent=draft?\"Continue saved test\":latest?\"Retest same questions\""));
   assert.ok(script.includes('retest.textContent="Retest"'));
   assert.ok(script.includes("retest.addEventListener(\"click\",()=>renderStoredMcqRetest(test))"));
   assert.ok(script.includes("item.attemptId===activePyqPractice.attemptId"));
