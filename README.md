@@ -23,10 +23,20 @@ Keep the command window open while using the tracker. Press Ctrl+C to stop the l
 - Daily activity log for MCQ counts and study notes.
 - JSON backup/restore.
 - Customize the exam target date.
-- Switch between light and dark themes.
 - Add your own subjects, topics and daily checklist tasks.
 - Local SQLite persistence with browser storage fallback.
 - No login, signup, cloud account or paid hosting.
+
+## Design
+
+The interface uses a calm, monochromatic light theme defined in `theme.css`. The server loads it after the page's built-in styles, so the whole look can be changed in that one file.
+
+- **One hue.** Every neutral surface, border, button, chip and active navigation state is a tint or shade of a single slate-blue ramp (`--mono-50` to `--mono-600`). There are no dark surfaces and no dark theme.
+- **Colour means status.** Green marks done or good, amber marks pending or in progress, and red marks missed or needs work. Nothing else is coloured, so a coloured element always asks for attention.
+- **Persistent sidebar.** On desktop the navigation stays beside the content instead of sitting below the summary cards. On phones it becomes a bottom dock.
+- **Readable text.** Body, muted and status text all meet WCAG AA contrast (4.5:1) on the surfaces they appear on.
+
+To adjust the palette, edit the variables at the top of `theme.css`.
 
 ## Preparation tracking
 

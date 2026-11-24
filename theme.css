@@ -1,0 +1,434 @@
+/* ==========================================================================
+   Tracker theme — calm monochrome UI + status indicator colours
+
+   Loaded AFTER the inline <style> in index.html (the server injects the
+   <link>), so on equal specificity everything here wins.
+
+   Design rules
+   - ONE hue family (slate-blue, ~220deg). Every neutral surface, border,
+     button, chip and nav state is a tint/shade of it ("--mono-*").
+   - Light only: no dark surfaces, no dark theme. Text uses a mid slate that
+     still clears WCAG AA on white.
+   - Colour is reserved for MEANING. Green = done / good, amber = pending /
+     in progress / average, red = missed / needs work. Nothing else is
+     coloured, so a coloured element always means "look at this".
+   ========================================================================== */
+
+:root,
+body,
+body.dark {
+  color-scheme: light;
+
+  /* monochrome ramp */
+  --mono-50: #f3f6fc;
+  --mono-100: #e8eef9;
+  --mono-200: #d5dff2;
+  --mono-300: #b9c8e6;
+  --mono-400: #93a9d6;
+  --mono-500: #6f89c2;
+  --mono-600: #4d68a3;
+
+  /* surfaces + text */
+  --bg: #f6f8fc;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-hover: var(--mono-50);
+  --ink: #3a4d78;
+  --muted: #58698f;
+  --line: #e2e8f3;
+
+  /* indicator colours (soft fill + readable ink + solid for bars/dots) */
+  --ok: #3f9e70;
+  --ok-ink: #1d6b46;
+  --ok-bg: #e9f7ef;
+  --ok-line: #c3e6d3;
+  --warn: #dc9b30;
+  --warn-ink: #85560a;
+  --warn-bg: #fff4dd;
+  --warn-line: #f3dba7;
+  --bad: #d5645d;
+  --bad-ink: #a2382f;
+  --bad-bg: #fdecea;
+  --bad-line: #f4c5c0;
+
+  /* keep the names the existing stylesheet and script already use */
+  --blue: var(--mono-600);
+  --blue-soft: var(--mono-100);
+  --green: var(--ok-ink);
+  --green-soft: var(--ok-bg);
+  --amber: var(--warn-ink);
+  --amber-soft: var(--warn-bg);
+  --red: var(--bad-ink);
+  --red-soft: var(--bad-bg);
+
+  --shadow: 0 1px 2px rgba(58, 77, 120, 0.04), 0 6px 18px rgba(58, 77, 120, 0.05);
+  --shadow-card: 0 1px 2px rgba(58, 77, 120, 0.04), 0 4px 14px rgba(58, 77, 120, 0.045);
+  --shadow-hover: 0 2px 6px rgba(58, 77, 120, 0.06), 0 10px 26px rgba(58, 77, 120, 0.08);
+  --focus-ring: 0 0 0 3px rgba(111, 137, 194, 0.32);
+}
+
+body,
+body.dark {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+a { color: var(--mono-600); }
+
+/* ---------- Header -------------------------------------------------------- */
+.mark,
+#workspaceNav .nav-brand-mark,
+body.dark #workspaceNav .nav-brand-mark {
+  background: var(--mono-100);
+  color: var(--mono-600);
+  border: 1px solid var(--mono-200);
+}
+.eyebrow,
+.focus-label { color: var(--mono-600); }
+h1, h2, h3,
+.page-context h2 { color: var(--ink); }
+.subtitle { color: var(--muted); }
+.date-chip {
+  background: var(--mono-50);
+  border: 1px solid var(--mono-200);
+  color: var(--mono-600);
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+/* ---------- Buttons ------------------------------------------------------- */
+.btn {
+  background: var(--surface);
+  border: 1px solid var(--mono-200);
+  color: var(--ink);
+  border-radius: 10px;
+  font-weight: 600;
+}
+.btn:hover {
+  background: var(--mono-50);
+  border-color: var(--mono-300);
+  transform: none;
+}
+.btn.primary,
+body.dark .btn.primary {
+  background: var(--mono-600);
+  border-color: var(--mono-600);
+  color: #fff;
+}
+.btn.primary:hover {
+  background: #42598c;
+  border-color: #42598c;
+}
+.btn.danger,
+body.dark .btn.danger {
+  background: var(--bad-bg);
+  border-color: var(--bad-line);
+  color: var(--bad-ink);
+}
+.btn.danger:hover { background: #fadcd8; border-color: var(--bad); }
+
+/* ---------- Cards, chips, inputs ----------------------------------------- */
+.card,
+.settings-section,
+.customize-card,
+.phone-access-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+}
+.card-head h2 { font-size: 17px; letter-spacing: -0.02em; }
+.chip,
+.nav-count {
+  background: var(--mono-50);
+  border: 1px solid var(--mono-200);
+  color: var(--mono-600);
+  border-radius: 999px;
+  font-weight: 650;
+}
+.badge,
+.today-topic-subject {
+  background: var(--mono-100);
+  border-color: var(--mono-200);
+  color: var(--mono-600);
+}
+input,
+select,
+textarea {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--mono-200);
+  border-radius: 10px;
+}
+input::placeholder,
+textarea::placeholder { color: #6b7da0; }
+input:hover,
+select:hover,
+textarea:hover { border-color: var(--mono-300); }
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--mono-400);
+  box-shadow: var(--focus-ring);
+}
+.small-note,
+.stat-foot,
+.stat-label,
+.page-hint { color: var(--muted); }
+
+/* ---------- Stat + countdown cards --------------------------------------- */
+.stat,
+.exam-countdown-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-card);
+}
+.stat::after { display: none; }
+.stat:hover,
+.exam-countdown-card:hover,
+.today-topic-card:hover {
+  transform: none;
+  border-color: var(--mono-300);
+  box-shadow: var(--shadow-hover);
+}
+/* Indicator strip on each card. Drawn as a clipped ::before so the edge stays
+   straight. Neutral for plain numbers, green / red where the number itself
+   means "good" / "needs attention". */
+.stat,
+.exam-countdown-card { --strip: var(--mono-300); position: relative; overflow: hidden; }
+.stat::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  width: auto;
+  height: 3px;
+  background: var(--strip);
+  opacity: 1;
+  transform: none;
+}
+.stat:hover::before { opacity: 1; transform: none; }
+.stat:nth-child(1),
+.stat:nth-child(2) { --strip: var(--mono-400); }
+.stat:nth-child(3) { --strip: var(--ok); }      /* study days recorded */
+.stat:nth-child(4) { --strip: var(--bad); }     /* missed days */
+.stat-value { color: var(--ink); }
+.exam-countdown-card { --strip: var(--mono-400); }
+.exam-countdown-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--strip);
+}
+.exam-countdown-card.mains-countdown { --strip: var(--mono-300); }
+.exam-countdown-label { color: var(--muted); }
+.exam-countdown-remaining,
+.exam-chart-number { color: var(--mono-600); }
+
+/* ---------- Progress + completion indicators ----------------------------- */
+.progress,
+.stat-completion-track,
+.table-progress,
+.subject-bar {
+  background: var(--mono-100);
+  border-radius: 999px;
+}
+.progress > span,
+.table-progress span,
+.subject-bar span { background: var(--mono-400); }
+.progress.green > span { background: var(--ok); }
+
+.stat-completion-track.is-low > span { background: var(--bad); }
+.stat-completion-track.is-medium > span { background: var(--warn); }
+.stat-completion-track.is-high > span { background: var(--ok); }
+.topic-completion-value.is-low { color: var(--bad-ink); }
+.topic-completion-value.is-medium { color: var(--warn-ink); }
+.topic-completion-value.is-high { color: var(--ok-ink); }
+
+/* ---------- Daily tasks + today's study card ----------------------------- */
+.task {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.task:hover { border-color: var(--mono-300); background: var(--mono-50); }
+.task.completed,
+.today-topic-card.is-complete {
+  background: var(--ok-bg);
+  border-color: var(--ok-line);
+}
+.task.completed .task-title,
+.topic.done span { color: var(--ok-ink); }
+.task input,
+.topic input,
+.weekly-check input,
+.table-status input,
+.daily-plan-table input { accent-color: var(--ok); }
+
+.today-focus {
+  background: var(--mono-50);
+  border: 1px solid var(--mono-200);
+  border-radius: 14px;
+}
+.today-topic-card {
+  background: var(--surface);
+  border: 1px solid var(--mono-200);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+}
+.today-topic-card.is-complete .today-topic-footer { border-top-color: var(--ok-line); }
+.today-topic-meta span,
+.today-topic-meta span + span {
+  background: var(--mono-50);
+  border: 1px solid var(--mono-200);
+  color: var(--mono-600);
+}
+.today-topic-status { color: var(--warn-ink); }
+.today-topic-status::before { background: var(--warn); }
+.today-topic-card.is-complete .today-topic-status { color: var(--ok-ink); }
+.today-topic-card.is-complete .today-topic-status::before { background: var(--ok); }
+.study-complete-btn { background: var(--mono-600); border-color: var(--mono-600); color: #fff; }
+
+/* ---------- Tables -------------------------------------------------------- */
+.data-table-wrap { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.data-table th,
+.analytics-table th {
+  background: var(--mono-50);
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+}
+.data-table th,
+.data-table td { text-align: left; }
+.data-table td { border-bottom: 1px solid var(--line); color: var(--ink); }
+.data-table tbody tr:hover td { background: var(--mono-50); }
+.table-status { color: var(--warn-ink); }
+.table-status.done { color: var(--ok-ink); font-weight: 700; }
+
+.missed-plan-row,
+.missed-plan-row td { background: var(--bad-bg); }
+.missed-plan-row td:nth-child(5) { color: var(--bad-ink); font-weight: 700; }
+.missing-target-row { outline: 2px solid var(--mono-500); background: var(--mono-50) !important; }
+
+/* ---------- Timeline, PYQ, status tags ----------------------------------- */
+.timeline-tag.status-complete { background: var(--ok-bg); color: var(--ok-ink); border: 1px solid var(--ok-line); }
+.timeline-tag.status-pending { background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-line); }
+.timeline-tag.status-missed { background: var(--bad-bg); color: var(--bad-ink); border: 1px solid var(--bad-line); }
+.timeline-event { border-left-color: var(--mono-300); }
+.timeline-event.is-missed { border-left-color: var(--bad); }
+.timeline-event.is-complete { border-left-color: var(--ok); }
+.timeline-event.is-pending { border-left-color: var(--warn); }
+
+.pyq-option { border-color: var(--line); background: var(--surface); }
+.pyq-option:hover { border-color: var(--mono-300); background: var(--mono-50); }
+.pyq-option.correct { border-color: var(--ok); background: var(--ok-bg); }
+.pyq-option.incorrect { border-color: var(--bad); background: var(--bad-bg); }
+.pyq-status { background: var(--mono-50); border-color: var(--mono-200); color: var(--mono-600); }
+
+/* ---------- Charts -------------------------------------------------------- */
+.legend-dot { background: var(--ok); }
+.legend-dot.pending { background: var(--mono-200); }
+.donut { background: conic-gradient(var(--ok) calc(var(--pct) * 1%), var(--mono-100) 0); }
+.chart-card,
+.analytics-metric-card,
+.analytics-graph-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+.analytics-heat-active { fill: var(--mono-500); stroke: var(--mono-500); }
+.analytics-heat-empty { fill: var(--mono-50); stroke: var(--mono-200); }
+.analytics-treemap-cell { fill: var(--mono-100); stroke: #fff; }
+.analytics-lollipop-line { stroke: var(--mono-300); }
+.analytics-area-fill { fill: rgba(77, 104, 163, 0.12); }
+
+/* ---------- Toast (light, not dark) --------------------------------------- */
+.toast {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--mono-200);
+  box-shadow: var(--shadow-hover);
+}
+
+/* ---------- Navigation ---------------------------------------------------- */
+#workspaceNav.cir-tabs {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-card);
+}
+#workspaceNav .cir-tabs__t {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  font-weight: 600;
+}
+#workspaceNav .cir-tabs__t:hover {
+  background: var(--mono-50);
+  color: var(--ink);
+  transform: none;
+}
+#workspaceNav .cir-tabs__r:checked + .cir-tabs__t {
+  background: var(--mono-100);
+  border-color: var(--mono-200);
+  color: var(--mono-600);
+  box-shadow: none;
+}
+#workspaceNav .cir-tabs__t::after { background: var(--mono-500); }
+#workspaceNav .nav-brand strong { color: var(--ink); }
+#workspaceNav .nav-brand small,
+#workspaceNav .nav-section-label { color: var(--muted); }
+#workspaceNav .nav-divider,
+#workspaceNav .nav-brand { border-color: var(--line); background-color: transparent; }
+#workspaceNav .nav-divider { background: var(--line); }
+
+/* ---------- Desktop layout: persistent sidebar ---------------------------- */
+/* The sidebar now sits beside everything (it used to start below the stat
+   cards, so you had to scroll past them to reach it). */
+@media (min-width: 1001px) {
+  .shell {
+    width: min(100% - 48px, 1520px);
+    max-width: 1520px;
+    grid-template-columns: 264px minmax(0, 1fr);
+    grid-template-areas:
+      "navigation header"
+      "navigation phone"
+      "navigation stats"
+      "navigation countdown"
+      "navigation context"
+      "navigation workspace"
+      "navigation footer";
+    column-gap: 32px;
+    padding: 24px 0 48px;
+  }
+  .nav-caption { display: none; }
+  .header .mark { display: none; }          /* brand lives in the sidebar */
+  .header { padding-bottom: 18px; margin-bottom: 20px; }
+  #workspaceNav.cir-tabs {
+    grid-row: 1 / -1;
+    top: 24px;
+    align-self: start;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    border-radius: 18px;
+    padding: 12px 10px 14px;
+  }
+  .page-context { margin-top: 4px; }
+}
+
+/* ---------- Mobile dock --------------------------------------------------- */
+@media (max-width: 760px) {
+  #workspaceNav.cir-tabs {
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid var(--mono-200);
+    box-shadow: 0 8px 28px rgba(58, 77, 120, 0.14);
+  }
+}
+
+/* ---------- Light only: drop the dark-theme control ----------------------- */
+.theme-checkbox,
+.settings-section:has(#themeProfileLabel),
+label[for="themeToggle"] { display: none !important; }
+
+/* ---------- Table alignment ----------------------------------------------- */
+/* Topic names are text, so left-align them. Numeric columns elsewhere stay
+   centred on purpose. */
+.topic-table td:nth-child(3) { text-align: left; }
+
+/* ---------- Analytics metric cards ---------------------------------------- */
+.analytics-metrics-grid > .analytics-metric-card:nth-child(5) .analytics-metric-value { color: var(--bad-ink); }
