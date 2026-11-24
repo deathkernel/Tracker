@@ -1509,7 +1509,7 @@ const dailyItems=()=>[...DAILY,...(state.customDaily||[])];
 const getSyllabusProgressSummary=()=>{
  const subjects=allSubjects();
  const validKeys=new Set(subjects.flatMap(subject=>subject.topics.map(topic=>subject.name+"::"+topic[0])));
- const completedKeys=new Set(Object.entries(state.topics||{}).filter(([key,done])=>validKeys.has(key)&&done===true).map(([key])=>key));
+ const completedKeys=new Set(Object.entries(state.topics||{}).filter(([key,done])=>validKeys.has(key)&&!!done).map(([key])=>key));
  const total=subjects.reduce((count,subject)=>count+subject.topics.length,0);
  return{completed:completedKeys.size,total,percent:total?Math.round(completedKeys.size/total*100):0};
 };
