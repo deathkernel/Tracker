@@ -2447,7 +2447,7 @@ function renderMcqTracker(){
  if(!panel||!history)return;
  const entries=DAILY_STUDY_PLAN.filter(entry=>entry.phase==="study"&&!!getStudyPlanProgress(entry).studyDone);
  panel.replaceChildren();
- if(!entries.length){panel.textContent="No Day 2 topics are scheduled.";return;}
+ if(!entries.length){panel.textContent="Complete a Day 1 topic to add it to the MCQ practice queue.";return;}
  const wrap=document.createElement("div");wrap.className="data-table-wrap";
  const table=document.createElement("table");table.className="data-table mcq-sheet";
  table.innerHTML="<thead><tr><th>Study date</th><th>Subject</th><th>Topic</th><th>Total</th><th>Correct</th><th>Wrong</th><th>Accuracy</th><th>Performance</th><th>Progress</th><th>Action</th></tr></thead>";
