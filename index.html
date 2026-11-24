@@ -795,7 +795,7 @@ body.dark #workspaceNav .nav-brand-mark{background:var(--blue);color:#10141d}
 <section class="grid-stats">
  <div class="stat"><div class="stat-label">Days to target</div><div class="stat-value" id="daysLeft">—</div><div class="stat-foot">Target: 23 May 2027</div></div>
  <div class="stat"><div class="stat-label">Syllabus topics completed</div><div class="stat-value" id="topicsDone">0/291</div><div class="stat-foot" id="topicSub">0% of mapped topics</div>
-  <div class="stat-completion-track is-low" id="topicProgressTrack" role="progressbar" aria-label="PYQ topics completed" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="topicProgressFill"></span></div></div>
+  <div class="stat-completion-track is-low" id="topicProgressTrack" role="progressbar" aria-label="Syllabus topics completed" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="topicProgressFill"></span></div></div>
  <div class="stat"><div class="stat-label">Study days recorded</div><div class="stat-value" id="daysDone">0</div><div class="stat-foot">Days with a saved study log</div></div>
  <div class="stat"><div class="stat-label">Missed study days</div><div class="stat-value" id="missedDays">0</div><div class="stat-foot">Past plan days not completed</div></div>
 </section>
@@ -1506,9 +1506,16 @@ function handleCustomDailyAction(event){
  }
 }
 const dailyItems=()=>[...DAILY,...(state.customDaily||[])];
-const totalTopics=()=>allSubjects().reduce((n,s)=>n+s.topics.length,0);
+const getSyllabusProgressSummary=()=>{
+ const subjects=allSubjects();
+ const validKeys=new Set(subjects.flatMap(subject=>subject.topics.map(topic=>subject.name+"::"+topic[0])));
+ const completedKeys=new Set(Object.entries(state.topics||{}).filter(([key,done])=>validKeys.has(key)&&done===true).map(([key])=>key));
+ const total=subjects.reduce((count,subject)=>count+subject.topics.length,0);
+ return{completed:completedKeys.size,total,percent:total?Math.round(completedKeys.size/total*100):0};
+};
+const totalTopics=()=>getSyllabusProgressSummary().total;
 const validTopicKeys=()=>new Set(allSubjects().flatMap(subject=>subject.topics.map(topic=>subject.name+"::"+topic[0])));
-const doneTopics=()=>{const valid=validTopicKeys();return Object.keys(state.topics||{}).filter(key=>valid.has(key)&&!!state.topics[key]).length};
+const doneTopics=()=>getSyllabusProgressSummary().completed;
 const totalDays=()=>Math.max(0,Math.ceil((new Date(((state.settings||{}).targetDate||"2027-05-23")+"T00:00:00")-new Date(localDate()+"T00:00:00"))/86400000));
 const weekIndex=()=>{const start=new Date("2026-11-17T00:00:00"),now=new Date(localDate()+"T00:00:00");return Math.max(0,Math.min(26,Math.floor((now-start)/604800000)))};
 function getStudyPlanCounts(){const today=localDate(),todayDate=new Date(today+"T00:00:00"),missedDates=new Set();let completed=0,upcoming=0;DAILY_STUDY_PLAN.forEach(entry=>{const dateKey=getStudyPlanDateKey(entry),date=new Date(dateKey+"T00:00:00");if(isStudyPlanEntryDone(entry))completed++;else if(date<todayDate)missedDates.add(dateKey);else if(date>todayDate)upcoming++;});return{completed,missed:missedDates.size,upcoming}}
@@ -1520,7 +1527,7 @@ function completionColorClass(percent){
  if(value>=40)return "is-medium";
  return "is-low";
 }
-function renderStats(){const logs=Object.values(state.logs),planCounts=getStudyPlanCounts(),targetDate=(state.settings||{}).targetDate||"2027-05-23";$("daysLeft").textContent=totalDays();$("targetDate").value=targetDate;$("targetDate").min=getMinimumTargetDateKey();$("topicsDone").textContent=doneTopics()+"/"+totalTopics();const topicPercent=totalTopics()?Math.round(doneTopics()/totalTopics()*100):0;const topicLevel=completionColorClass(topicPercent);const topicSub=$("topicSub");topicSub.textContent=topicPercent+"% of mapped topics";topicSub.className="stat-foot topic-completion-value "+topicLevel;const topicTrack=$("topicProgressTrack"),topicFill=$("topicProgressFill");if(topicTrack&&topicFill){topicFill.style.width=topicPercent+"%";topicTrack.className="stat-completion-track "+topicLevel;topicTrack.setAttribute("aria-valuenow",String(topicPercent));topicTrack.setAttribute("aria-valuetext",topicPercent+"% of mapped topics completed")}$("daysDone").textContent=logs.length;$("missedDays").textContent=planCounts.missed;$("topicCompletion").textContent=doneTopics()+" of "+totalTopics();$("prelimsRemaining").textContent=daysUntilExam(targetDate);const prelimsDate=document.querySelector(".prelims-countdown .exam-countdown-date");if(prelimsDate)prelimsDate.textContent=new Date(targetDate+"T00:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});$("mainsRemaining").textContent=daysUntilExam("2027-08-20");$("todayLabel").textContent=new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short",year:"numeric"})}
+function renderStats(){const logs=Object.values(state.logs),planCounts=getStudyPlanCounts(),targetDate=(state.settings||{}).targetDate||"2027-05-23",syllabusProgress=getSyllabusProgressSummary();$("daysLeft").textContent=totalDays();$("targetDate").value=targetDate;$("targetDate").min=getMinimumTargetDateKey();$("topicsDone").textContent=syllabusProgress.completed+"/"+syllabusProgress.total;const topicPercent=syllabusProgress.percent;const topicLevel=completionColorClass(topicPercent);const topicSub=$("topicSub");topicSub.textContent=topicPercent+"% of mapped topics";topicSub.className="stat-foot topic-completion-value "+topicLevel;const topicTrack=$("topicProgressTrack"),topicFill=$("topicProgressFill");if(topicTrack&&topicFill){topicFill.style.width=topicPercent+"%";topicTrack.className="stat-completion-track "+topicLevel;topicTrack.setAttribute("aria-valuenow",String(topicPercent));topicTrack.setAttribute("aria-valuetext",topicPercent+"% of mapped topics completed")}$("daysDone").textContent=logs.length;$("missedDays").textContent=planCounts.missed;$("topicCompletion").textContent=doneTopics()+" of "+totalTopics();$("prelimsRemaining").textContent=daysUntilExam(targetDate);const prelimsDate=document.querySelector(".prelims-countdown .exam-countdown-date");if(prelimsDate)prelimsDate.textContent=new Date(targetDate+"T00:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});$("mainsRemaining").textContent=daysUntilExam("2027-08-20");$("todayLabel").textContent=new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"short",year:"numeric"})}
 function createAnimatedCheckbox(checked=false,ariaLabel="Toggle checkbox"){
  const wrapper=document.createElement("span");wrapper.className="checkbox-wrapper-12";
  const cbx=document.createElement("span");cbx.className="cbx";
