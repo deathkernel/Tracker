@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 
 from revision_engine import next_revision_schedule, next_retest_schedule, update_mastery_progress
 from pydantic import BaseModel, ConfigDict, Field
@@ -25,6 +25,7 @@ from pydantic import BaseModel, ConfigDict, Field
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = Path(os.environ.get("TRACKER_DB_PATH", str(BASE_DIR / "tracker.db")))
 INDEX_PATH = BASE_DIR / "index.html"
+FAVICON_PATH = BASE_DIR / "favicon.svg"
 LAN_ACCESS_TOKEN = os.environ.get("TRACKER_ACCESS_TOKEN") or secrets.token_urlsafe(32)
 STUDY_CYCLE_START_DATE = date(2026, 11, 20)
 # Must stay in sync with BASE_STUDY_PLAN length in index.html (client uses
@@ -484,6 +485,18 @@ def strict_engine_asset() -> Response:
 @app.get("/strict_rules.js")
 def strict_rules_asset() -> Response:
     raise HTTPException(status_code=404, detail="Strict rules asset is not included in this build.")
+
+
+@app.get("/favicon.svg", include_in_schema=False)
+def favicon_svg() -> FileResponse:
+    if not FAVICON_PATH.exists():
+        raise HTTPException(status_code=404, detail="favicon.svg not found")
+    return FileResponse(FAVICON_PATH, media_type="image/svg+xml")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon_ico_compatibility() -> RedirectResponse:
+    return RedirectResponse(url="/favicon.svg", status_code=307)
 
 
 @app.get("/")
