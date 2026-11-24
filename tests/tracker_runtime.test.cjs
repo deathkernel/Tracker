@@ -1214,7 +1214,7 @@ test("MCQ Tracker has persistent history and same-question retest controls", () 
   assert.ok(script.includes("questions:questions.map(question=>({...question,options:question.options.map(option=>({...option}))}))"));
   assert.ok(script.includes("if(result.attempted!==50)return"));
   assert.ok(script.includes('table.className="data-table mcq-sheet"'));
-  assert.ok(script.includes("Answers are saved automatically."));
+  assert.ok(script.includes("Your attempt snapshot is saved automatically."));
   assert.doesNotMatch(script, /correctInput|mcq-correct-input/);
   assert.ok(script.includes('const entries=DAILY_STUDY_PLAN.filter(entry=>entry.phase==="study"&&!!getStudyPlanProgress(entry).studyDone);'));
 });
