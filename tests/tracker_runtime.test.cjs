@@ -375,7 +375,7 @@ test("Missing Topics keeps originally overdue phases visible after recovery resc
 
 test("only overdue study phases enter the recovery queue", () => {
   assert.match(script, /function refreshRecoveryQueue\(today=localDate\(\)\)/);
-  assert.match(script, /dueDate<today&&!isStudyPlanEntryDone\(entry\)/);
+  assert.match(script, /getOriginalStudyPlanDateKey\(entry\)<today&&!isStudyPlanEntryDone\(entry\)/);
   assert.match(script, /state\.recoveryQueue=queue/);
 });
 
