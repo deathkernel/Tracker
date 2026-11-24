@@ -341,9 +341,41 @@ test("Missing Topics resolves shuffled schedule rows by stable original plan ind
   assert.doesNotMatch(missing, /DAILY_STUDY_PLAN\[planIndex\*2/);
 });
 
+test("Missing Topics keeps originally overdue phases visible after recovery rescheduling",()=>{
+ const start=script.indexOf("function getOverdueStudyPlanEntries(today=localDate()){");
+ const end=script.indexOf("\nfunction refreshRecoveryQueue(",start);
+ assert.ok(start>=0&&end>start);
+ const entries=[
+  {planIndex:0,phase:"study"},
+  {planIndex:0,phase:"mcq_revision"},
+  {planIndex:1,phase:"study"},
+  {planIndex:2,phase:"study"}
+ ];
+ const sandbox={
+  DAILY_STUDY_PLAN:entries,
+  getOriginalStudyPlanDateKey:entry=>({
+   "0:study":"2026-11-20",
+   "0:mcq_revision":"2026-11-21",
+   "1:study":"2026-11-22",
+   "2:study":"2026-11-26"
+  }[entry.planIndex+":"+entry.phase]),
+  isStudyPlanEntryDone:entry=>entry.planIndex===1,
+  localDate:()=>"2026-11-24"
+ };
+ vm.runInNewContext(script.slice(start,end)+"\nthis.getOverdue=getOverdueStudyPlanEntries;",sandbox);
+ const overdue=sandbox.getOverdue("2026-11-24");
+ assert.deepEqual(Array.from(overdue,entry=>entry.planIndex+":"+entry.phase),["0:study","0:mcq_revision"]);
+ assert.equal(overdue.some(entry=>entry.planIndex===2),false);
+ assert.match(script,/due_date:getOriginalStudyPlanDateKey\(entry\)/);
+ assert.match(script,/recovery_date:getStudyPlanDateKey\(entry\)/);
+ assert.match(script,/const actionPhase=displayPhases\[0\],[\s\S]*?recoveryDate=getStudyPlanDateKey\(actionEntry\)/);
+ assert.match(script,/Revision pending/);
+ assert.doesNotMatch(script,/MCQ \+ Revision pending/);
+});
+
 test("only overdue study phases enter the recovery queue", () => {
   assert.match(script, /function refreshRecoveryQueue\(today=localDate\(\)\)/);
-  assert.match(script, /dueDate<today&&!isStudyPlanEntryDone\(entry\)/);
+  assert.match(script, /getOriginalStudyPlanDateKey\(entry\)<today&&!isStudyPlanEntryDone\(entry\)/);
   assert.match(script, /state\.recoveryQueue=queue/);
 });
 
