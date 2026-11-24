@@ -2685,10 +2685,13 @@ function renderPyqQuestions(items,append=false){
 function renderStoredMcqRetest(test){
  if(!test||!Array.isArray(test.questions)||!test.questions.length){notify("The saved question snapshot is unavailable. Retest cannot safely fetch replacements.");return;}
  day2RequestId+=1;day2Loading=false;
- activePyqPractice={planIndex:test.planIndex,setId:test.setId,attemptId:"attempt-"+Date.now(),topic:test.topic,subject:test.subject,isRetest:true,sourceTestId:test.id,questions:test.questions};
+ const attemptId="attempt-"+Date.now();
+ activePyqPractice={planIndex:test.planIndex,setId:test.setId,attemptId,topic:test.topic,subject:test.subject,isRetest:true,sourceTestId:test.id,questions:test.questions};
  window.pyqQuestionCache=window.pyqQuestionCache||{};
  const questions=test.questions.map(question=>({...question,options:Array.isArray(question.options)?question.options.map(option=>({...option})):[]}));
  if(questions.length!==50||questions.some(question=>!question.correct_option_id||!Array.isArray(question.options)||question.options.length<2)){notify("The saved test does not contain a complete verified 50-question snapshot. Retest was not started.");activePyqPractice=null;return;}
+ state.mcqDrafts=[...(state.mcqDrafts||[]).filter(item=>!(item.planIndex===test.planIndex&&item.setId===test.setId)),{planIndex:test.planIndex,setId:test.setId,attemptId,topic:test.topic,subject:test.subject,isRetest:true,sourceTestId:test.id,questions}].slice(-200);
+ persist();
  questions.forEach(question=>{window.pyqQuestionCache[question.id]=question});
  $("pyqQuestionList").replaceChildren();
  setWorkspaceView("pyq");
@@ -2697,7 +2700,7 @@ function renderStoredMcqRetest(test){
  $("pyqSubject").value=pyqApiSubjectForEntry({rotationSubject:test.subject,subject:test.subject});
  $("pyqYear").value="";
  renderPyqQuestions(questions,false);
- renderDay2PracticeBanner("RETEST · "+test.topic+" · Same "+questions.length+" original questions · Attempt "+(test.attempts.length+1)+".");
+ renderDay2PracticeBanner("RETEST · "+test.topic+" · Same "+questions.length+" original questions · Attempt "+((test.attempts||[]).length+1)+".");
  $("pyqResultCount").textContent=questions.length+" saved questions · retest";
  $("pyqStatus").textContent="Retest uses your original question and option snapshot. Your previous answers and score remain unchanged.";
 }
