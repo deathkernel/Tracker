@@ -2082,7 +2082,7 @@ function getPhaseChecklistCount(progress,phase){
 function canCompleteStudyPlanPhase(entry,phase){
  const progress=getStudyPlanProgress(entry);
  if(phase==="study")return isPhaseChecklistComplete(progress,"study");
- if(phase==="mcq_revision")return !!progress.studyDone&&isPhaseChecklistComplete(progress,"mcq_revision")&&!!getLatestMcqTest(entry.planIndex);
+ if(phase==="mcq_revision")return !!progress.studyDone&&isPhaseChecklistComplete(progress,"mcq_revision");
  return false;
 }
 function getStudyPlanEntriesForDate(dateKey,phase){
@@ -2103,7 +2103,7 @@ function isStudyPlanEntryDone(entry){
  if(!entry)return false;
  const progress=getStudyPlanProgress(entry);
  if(entry.phase==="study")return !!progress.studyDone;
- return !!progress.studyDone&&!!progress.mcqDone&&!!progress.revisionDone;
+ return !!progress.studyDone&&!!progress.revisionDone;
 }
 function refreshRecoveryQueue(today=localDate()){
  const queue=DAILY_STUDY_PLAN.filter(entry=>{
@@ -2447,10 +2447,10 @@ function renderMcqTracker(){
  if(!panel||!history)return;
  const entries=DAILY_STUDY_PLAN.filter(entry=>entry.phase==="study"&&!!getStudyPlanProgress(entry).studyDone);
  panel.replaceChildren();
- if(!entries.length){panel.textContent="No Day 2 topics are scheduled.";return;}
+ if(!entries.length){panel.textContent="Complete a Day 1 topic to add it to the MCQ practice queue.";return;}
  const wrap=document.createElement("div");wrap.className="data-table-wrap";
  const table=document.createElement("table");table.className="data-table mcq-sheet";
- table.innerHTML="<thead><tr><th>Day 2 date</th><th>Subject</th><th>Topic</th><th>Total</th><th>Correct</th><th>Wrong</th><th>Accuracy</th><th>Performance</th><th>Progress</th><th>Action</th></tr></thead>";
+ table.innerHTML="<thead><tr><th>Study date</th><th>Subject</th><th>Topic</th><th>Total</th><th>Correct</th><th>Wrong</th><th>Accuracy</th><th>Performance</th><th>Progress</th><th>Action</th></tr></thead>";
  const body=document.createElement("tbody");
  entries.forEach(entry=>{
   const planIndex=entry.planIndex,revisionEntry=getStudyPlanEntryByPlanIndex(planIndex,"mcq_revision"),dateKey=getStudyPlanDateKey(revisionEntry);
@@ -2467,8 +2467,7 @@ function renderMcqTracker(){
   const actionCell=document.createElement("td"),start=document.createElement("button");
   start.type="button";start.className="btn primary";
   start.textContent=latest?"Retest same questions":result.attempted===50?"Review test":result.attempted?"Continue":"Start 50 MCQs";
-  start.disabled=dateKey>localDate();
-  start.title=start.disabled?"Available on the scheduled Day 2 revision date":latest?"Repeat this completed test using the exact saved questions and options":"Fetch and solve this topic's 50 MCQs";
+  start.title=latest?"Repeat this completed test using the exact saved questions and options":"Fetch and solve this topic's 50 MCQs";
   start.addEventListener("click",()=>latest?renderStoredMcqRetest(latest):startDay2McqPractice(planIndex));
   actionCell.append(start);tr.append(actionCell);body.append(tr);
  });
@@ -2507,7 +2506,7 @@ function renderTimeline(){
  DAILY_STUDY_PLAN.filter(isTimelinePlanEntry).forEach(entry=>{
   const date=getStudyPlanDateKey(entry),progress=getStudyPlanProgress(entry);
   const done=isStudyPlanEntryDone(entry);
-  const phase=entry.phase==="study"?"New topic study":"Revision + MCQ practice";
+  const phase=entry.phase==="study"?"New topic study":"Revision only";
   const checklist=entry.phase==="study"?getPhaseChecklistCount(progress,"study"):getPhaseChecklistCount(progress,"mcq_revision");
   const total=entry.phase==="study"?STUDY_DAY_CHECKLIST.length:REVISION_DAY_CHECKLIST.length;
   const latest=getLatestMcqTest(entry.planIndex);
@@ -2739,7 +2738,6 @@ async function startDay2McqPractice(planIndex){
  const studyEntry=getStudyPlanEntryByPlanIndex(planIndex,"study"),revisionEntry=getStudyPlanEntryByPlanIndex(planIndex,"mcq_revision");
  if(!studyEntry||!revisionEntry){notify("Today's Day 2 topic could not be matched to its Day 1 study entry.");return;}
  const dateKey=getStudyPlanDateKey(revisionEntry);
- if(dateKey>localDate()){notify("This topic's 50-MCQ practice unlocks on "+dateKey+".");return;}
  const rawTopic=String(studyEntry.topic||"");
  const topicQuery=rawTopic.includes(":")?rawTopic.slice(rawTopic.indexOf(":")+1).trim():rawTopic.trim();
  const targetTokens=getDay2TopicTokens(topicQuery);
