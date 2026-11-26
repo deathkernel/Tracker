@@ -24,3 +24,9 @@ env/
 Thumbs.db
 .vscode/
 .idea/
+
+# Capacitor / Node
+node_modules/
+android/
+ios/
+dist/
