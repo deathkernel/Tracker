@@ -1,0 +1,69 @@
+{
+  "name": "UPSC Tracker - Due Revision Queue",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 7,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "revision-trigger",
+      "name": "Daily 07:00 IST",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.name AS subject, t.title AS topic, t.topic_key, rs.due_date, rs.interval_days, COALESCE(mp.mastery_level,0) AS mastery_level, COALESCE(mp.reviews,0) AS reviews FROM revision_schedule rs JOIN topics t ON t.id = rs.topic_id JOIN subjects s ON s.id = t.subject_id LEFT JOIN mastery_progress mp ON mp.topic_id = t.id WHERE rs.due_date <= (NOW() AT TIME ZONE 'Asia/Kolkata')::date ORDER BY rs.due_date, mp.mastery_level ASC NULLS FIRST LIMIT 30;",
+        "options": {}
+      },
+      "id": "pg-revision",
+      "name": "Fetch Due Revisions",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        500,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "name": "Tracker PostgreSQL"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily 07:00 IST": {
+      "main": [
+        [
+          {
+            "node": "Fetch Due Revisions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "timezone": "Asia/Kolkata",
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
