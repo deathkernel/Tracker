@@ -55,3 +55,10 @@ The topic list and mapped PYQ counts are curated editorial references for this p
 ## Exam date
 
 The default target is 23 May 2027. You can change it in the dashboard. Confirm official exam dates and notices on the UPSC website.
+
+
+## Android / iOS app (Capacitor)
+
+The repository includes an initial Capacitor native-app shell. See [CAPACITOR.md](CAPACITOR.md) before building. Install Node.js, run `npm install`, then `npx cap add android` and `npm run cap:sync`. Android builds require Android Studio and the Android SDK; iOS builds require macOS and Xcode.
+
+**Current scope:** the Capacitor shell is a setup screen that can check whether an existing Tracker server is reachable. The full dashboard still runs in the Python/FastAPI service and uses its SQLite database. Native embedding of the full dashboard and secure transfer of the LAN bearer token are not implemented yet. Do not disable the API access guard or expose the local server to the public internet.
